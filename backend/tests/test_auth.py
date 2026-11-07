@@ -199,7 +199,7 @@ def test_version_one_upgrade_preserves_records_without_automatic_assignment(lega
         headers = {"Authorization": f"Bearer {first.api_key}"}
         assert client.get(f"/cases/{case_id}", headers=headers).status_code == 404
         with sqlite3.connect(path) as connection:
-            assert connection.execute("PRAGMA user_version").fetchone()[0] == 8
+            assert connection.execute("PRAGMA user_version").fetchone()[0] == 9
             assert connection.execute("SELECT merchant_id FROM cases").fetchone()[0] == str(LEGACY_MERCHANT_ID)
             assert connection.execute("PRAGMA foreign_key_check").fetchall() == []
         counts = store.claim_legacy(first.merchant.id)

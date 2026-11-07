@@ -36,6 +36,7 @@ from .approvals import invalidate_approvals
 from .errors import StoreError
 from .case_workspace import provider_hold, require_open
 from .paypal_history import history_state
+from .resolution_state import refund_promise_gate
 
 
 LEGACY_MERCHANT_ID = UUID("00000000-0000-0000-0000-000000000000")
@@ -95,6 +96,7 @@ class SQLiteStore:
             directory / "006_execution_identity.sql",
             directory / "007_case_events.sql",
             directory / "008_refund_history_and_case_lifecycle.sql",
+            directory / "009_resolution_workspace.sql",
         ]
         with self.transaction(write=True) as connection:
             version = connection.execute("PRAGMA user_version").fetchone()[0]
@@ -439,6 +441,7 @@ class SQLiteStore:
             ),
             lifecycle_revision=revision,
             ignore_active=ignore_active,
+            promise_gate=refund_promise_gate(connection, case),
         )
 
     def update_commitment(self, case_id, payload: CommitmentUpdate, merchant_id):

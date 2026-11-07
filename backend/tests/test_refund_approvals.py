@@ -439,5 +439,5 @@ def test_version_two_upgrade_keeps_existing_identity_and_case(tmp_path):
         assert upgraded.get(f"/cases/{case_id}").status_code == 200
         assert upgraded.get(f"/cases/{case_id}/refund-approvals").json() == []
     with sqlite3.connect(database) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 8
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 9
         assert connection.execute("PRAGMA foreign_key_check").fetchall() == []

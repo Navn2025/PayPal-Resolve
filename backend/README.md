@@ -195,10 +195,10 @@ app instances using the same file cannot independently reserve the same balance.
 Reconciliation reads one consistent transaction snapshot. Lock contention exceeding
 the wait timeout returns `503`.
 
-Schema version 8 is recorded in SQLite's `user_version`. Startup applies the
+Schema version 9 is recorded in SQLite's `user_version`. Startup applies the
 initial, merchant-ownership, refund-approval, capture-verification, durable
 execution/refund-evidence, provider-identity, case-event/condition-epoch, and
-refund-history/case-lifecycle migrations
+refund-history/case-lifecycle and shared resolution workspace migrations
 atomically as needed. Version-1
 records are preserved as described above. An unknown newer version fails startup
 instead of resetting it. Future schema changes need new migrations.
@@ -360,6 +360,14 @@ were cleaned up, and the write flag was enabled only inside that test process.
 The test commitment was explicitly synthetic; no customer conversation was invented.
 
 ## Case workspace and recovery worker
+
+The [resolution workspace API](../docs/RESOLUTION_WORKSPACE.md) adds
+`/resolution-cases` for several independently verified promises in one case,
+including cases without a captured payment. It can link an existing refund case
+and use internal return evidence or carrier milestones as prerequisites for that
+refund. It exposes revisions, a private evidence timeline and a dispute evidence
+export. The guide lists the optional read-only provider connectors and request
+examples.
 
 Use the [workflow guide](../docs/PAYPAL_RECONCILIATION.md) for attachment uploads,
 close/reopen, the review queue, and webhook registration and processing.

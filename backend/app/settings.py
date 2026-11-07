@@ -25,6 +25,10 @@ class Settings(BaseSettings):
     paypal_sandbox_client_id: SecretStr | None = None
     paypal_sandbox_client_secret: SecretStr | None = None
     paypal_sandbox_merchant_id: str | None = None
+    resolution_connector_merchant_id: UUID | None = None
+    shopify_shop_domain: str | None = None
+    shopify_admin_token: SecretStr | None = None
+    easypost_api_key: SecretStr | None = None
 
     @field_validator("database_path", mode="before")
     @classmethod

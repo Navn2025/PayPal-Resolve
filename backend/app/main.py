@@ -35,6 +35,7 @@ from .storage import SQLiteStore, StoreError
 from .paypal import PayPalSandboxClient
 from .executions import RefundExecutionService
 from .workspace_routes import router as workspace_router
+from .resolution_routes import router as resolution_router
 
 
 router = APIRouter()
@@ -392,6 +393,7 @@ def create_app(
 
     application.include_router(router)
     application.include_router(workspace_router)
+    application.include_router(resolution_router)
     return application
 
 

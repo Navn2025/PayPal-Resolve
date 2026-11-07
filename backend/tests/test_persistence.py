@@ -121,7 +121,7 @@ def test_unknown_schema_fails_startup_without_resetting_existing_data(tmp_path):
         connection.execute("CREATE TABLE sentinel (value TEXT)")
         connection.execute("INSERT INTO sentinel VALUES ('preserve me')")
         connection.execute("PRAGMA user_version = 999")
-    with pytest.raises(RuntimeError, match="Unsupported database schema version: 9"):
+    with pytest.raises(RuntimeError, match="Unsupported database schema version: 999"):
         with TestClient(create_app(database)):
             pass
     with sqlite3.connect(database) as connection:
@@ -141,7 +141,7 @@ def test_first_migration_is_recorded_and_repeated_startup_preserves_data(
                 case_id = client.post("/cases", json=durable_case).json()["id"]
             assert client.get(f"/cases/{case_id}").status_code == 200
     with sqlite3.connect(database) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 8
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 9
         assert connection.execute("SELECT count(*) FROM cases").fetchone()[0] == 1
         assert connection.execute("SELECT count(*) FROM captures").fetchone()[0] == 1
 

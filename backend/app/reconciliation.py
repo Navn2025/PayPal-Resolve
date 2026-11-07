@@ -61,6 +61,7 @@ def reconcile_case(
     provider_review=False,
     lifecycle_revision=0,
     ignore_active=False,
+    promise_gate=None,
 ) -> ReconciliationResponse:
     records = [
         refund
@@ -86,6 +87,12 @@ def reconcile_case(
         status, action = "execution_pending", "monitor_refund_execution"
     elif provider_review:
         status, action = "provider_review", "review_provider_evidence"
+    elif promise_gate is not None and promise_gate.outcome != "fulfilled":
+        status, action = (
+            ("promise_review", "review_resolution_promise")
+            if promise_gate.outcome == "needs_review"
+            else ("awaiting_prerequisite", "verify_resolution_prerequisite")
+        )
     elif commitment is None:
         status, action = "no_commitment", "review_complaint"
     elif commitment.status != "accepted":
@@ -133,6 +140,8 @@ def reconcile_case(
         fingerprint_data["provider_review"] = True
     if lifecycle_revision:
         fingerprint_data["lifecycle_revision"] = lifecycle_revision
+    if promise_gate is not None:
+        fingerprint_data["promise_gate"] = promise_gate.fingerprint
     return ReconciliationResponse(
         case_id=case.id,
         capture_verification=capture_verification,
@@ -141,6 +150,9 @@ def reconcile_case(
         refund_verifications=refund_verifications or [],
         paypal_refund_history=paypal_history,
         paypal_history_current=history_current,
+        resolution_promise_fingerprint=promise_gate.fingerprint
+        if promise_gate
+        else None,
         state_fingerprint=hashlib.sha256(
             json.dumps(fingerprint_data, sort_keys=True, separators=(",", ":")).encode()
         ).hexdigest(),

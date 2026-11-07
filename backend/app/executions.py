@@ -21,6 +21,7 @@ from .paypal import PayPalSandboxClient, PayPalWriteError
 from .storage import SQLiteStore, from_cents, to_cents
 from .case_workspace import add_exception, auto_resolve, require_open
 from .paypal_history import PayPalHistoryService
+from .resolution_state import refund_promise_gate
 
 
 SUBMISSION_LEASE = timedelta(seconds=60)
@@ -417,7 +418,19 @@ class RefundExecutionService:
                         error_code="approval_changed_before_submission",
                     )
                     return None
-            elif "custom_id" in body:
+            else:
+                gate = refund_promise_gate(connection, case)
+                approved_gate = json.loads(row["approval_json"])["basis"].get(
+                    "resolution_promise_fingerprint"
+                )
+                if (gate.fingerprint if gate else None) != approved_gate or (
+                    gate and gate.outcome != "fulfilled"
+                ):
+                    raise StoreError(
+                        409,
+                        "Resolution promise changed; recover the original refund by provider ID",
+                    )
+            if row["attempt_count"] and "custom_id" in body:
                 basis = self.store._reconcile(connection, case, ignore_active=True)
                 original = json.loads(row["approval_json"])["basis"][
                     "paypal_refund_history"

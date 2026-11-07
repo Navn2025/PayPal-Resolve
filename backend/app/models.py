@@ -226,6 +226,7 @@ class ReconciliationResponse(BaseModel):
     refund_verifications: list["PayPalRefundVerification"] = Field(default_factory=list)
     paypal_refund_history: PayPalRefundHistory | None = None
     paypal_history_current: bool = False
+    resolution_promise_fingerprint: str | None = None
     active_refund_execution_id: UUID | None = None
     failed_refund_execution_id: UUID | None = None
     state_fingerprint: str = Field(pattern=r"^[a-f0-9]{64}$")
@@ -251,6 +252,8 @@ class ReconciliationResponse(BaseModel):
         "execution_failed",
         "closed",
         "provider_review",
+        "promise_review",
+        "awaiting_prerequisite",
     ]
     next_action: Literal[
         "review_complaint",
@@ -262,6 +265,8 @@ class ReconciliationResponse(BaseModel):
         "monitor_refund_execution",
         "review_failed_execution",
         "review_provider_evidence",
+        "review_resolution_promise",
+        "verify_resolution_prerequisite",
     ]
     verified_with_paypal: Literal[False] = False
 

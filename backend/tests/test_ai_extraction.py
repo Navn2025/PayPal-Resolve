@@ -103,7 +103,14 @@ def test_valid_extraction_returns_traceable_proposal_without_recording(client, a
     assert body["status"] == "ok"
     assert body["source"] == "merchant_supplied"
     assert body["dropped"] == []
-    assert body["proposals"] == [{**proposal(), "needs_review": False}]
+    assert body["proposals"] == [
+        {
+            **proposal(),
+            "needs_review": False,
+            "supporting_message_ids": [],
+            "possible_revision": False,
+        }
+    ]
     request = ai.calls[0]
     assert request["temperature"] == 0
     assert request["response_format"] == {"type": "json_object"}
@@ -330,3 +337,116 @@ def test_requires_merchant_credentials(client, ai):
     client.headers.pop("Authorization")
 
     assert ai({"proposals": []}).status_code == 401
+
+
+RESTATED = [
+    {"id": "m1", "sender": "buyer", "text": "The lamp broke.", "sent_at": "2026-11-08T09:00:00Z"},
+    {
+        "id": "m2",
+        "sender": "merchant",
+        "text": "Once you send a photo, we will refund $40.",
+        "sent_at": "2026-11-08T09:01:00Z",
+    },
+    {"id": "m3", "sender": "buyer", "text": "Photo sent.", "sent_at": "2026-11-08T09:02:00Z"},
+    {
+        "id": "m4",
+        "sender": "merchant",
+        "text": "Thanks! As promised, we will refund $40. Also, we will refund $60 instead "
+        "if the base is cracked too.",
+        "sent_at": "2026-11-08T09:03:00Z",
+    },
+]
+
+
+def restated(source, quote, amount=4000, condition="Once you send a photo", **fields):
+    return proposal(
+        source_message_id=source,
+        exact_quote=quote,
+        amount_cents=amount,
+        condition=condition,
+        deadline=None,
+        **fields,
+    )
+
+
+def test_restatements_merge_into_the_first_statement(ai):
+    body = ai(
+        {
+            "proposals": [
+                # Listed out of order; the earliest message must become the source.
+                restated("m4", "we will refund $40", condition="once you send a photo."),
+                restated("m2", "we will refund $40"),
+                restated("m4", "As promised, we will refund $40", condition="Once you send a photo"),
+            ]
+        },
+        messages=RESTATED,
+    ).json()
+
+    assert [
+        (p["source_message_id"], p["supporting_message_ids"], p["possible_revision"])
+        for p in body["proposals"]
+    ] == [("m2", ["m4"], False)]
+    assert body["proposals"][0]["exact_quote"] == "we will refund $40"
+    # The second m4 statement repeats a message already recorded as support.
+    assert [(d["reason"], d["source_message_id"]) for d in body["dropped"]] == [
+        ("duplicate", "m4")
+    ]
+
+
+def test_changed_amount_or_condition_is_a_possible_revision_not_a_merge(ai):
+    body = ai(
+        {
+            "proposals": [
+                restated("m2", "we will refund $40"),
+                restated(
+                    "m4",
+                    "we will refund $60 instead",
+                    amount=6000,
+                    condition="if the base is cracked too",
+                ),
+                restated("m4", "As promised, we will refund $40", condition=None),
+                proposal(
+                    kind="return",
+                    amount_cents=None,
+                    condition=None,
+                    source_message_id="m2",
+                    exact_quote="Once you send a photo",
+                ),
+            ]
+        },
+        messages=RESTATED,
+    ).json()
+
+    assert [
+        (p["kind"], p["source_message_id"], p["amount_cents"], p["possible_revision"])
+        for p in body["proposals"]
+    ] == [
+        ("refund", "m2", 4000, False),
+        ("return", "m2", None, False),
+        ("refund", "m4", 6000, True),
+        # A dropped condition is a change of terms, so it is not merged either.
+        ("refund", "m4", 4000, True),
+    ]
+    assert all(p["supporting_message_ids"] == [] for p in body["proposals"])
+    assert body["status"] == "ok" and body["dropped"] == []
+
+
+def test_distinct_amounts_in_one_message_are_not_revisions(ai):
+    messages = [
+        MESSAGES[0],
+        {**MESSAGES[1], "text": "We will refund $20 for the cup and $30 for the plate."},
+    ]
+    body = ai(
+        {
+            "proposals": [
+                proposal(amount_cents=2000, condition=None, exact_quote="refund $20 for the cup"),
+                proposal(amount_cents=3000, condition=None, exact_quote="$30 for the plate"),
+            ]
+        },
+        messages=messages,
+    ).json()
+
+    assert [(p["amount_cents"], p["possible_revision"]) for p in body["proposals"]] == [
+        (2000, False),
+        (3000, False),
+    ]

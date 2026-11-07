@@ -7738,6 +7738,22 @@
           "needs_review": {
             "type": "boolean",
             "title": "Needs Review"
+          },
+          "supporting_message_ids": {
+            "items": {
+              "type": "string",
+              "maxLength": 80,
+              "minLength": 1
+            },
+            "type": "array",
+            "title": "Supporting Message Ids",
+            "description": "Later merchant messages restating this promise with the same terms."
+          },
+          "possible_revision": {
+            "type": "boolean",
+            "title": "Possible Revision",
+            "description": "An earlier message has a same-kind proposal with a different amount or condition.",
+            "default": false
           }
         },
         "type": "object",

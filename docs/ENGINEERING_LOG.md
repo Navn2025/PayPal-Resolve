@@ -75,7 +75,11 @@ real customer data.
 - Optional Groq promise proposals from a case's customer conversation (or a
   supplied transcript), checked in
   code against verbatim merchant quotes. Proposals are returned for review and
-  never recorded; failures return `needs_review` (CHG-028).
+  never recorded; failures return `needs_review` (CHG-028). Identical
+  restatements merge; changed terms are flagged `possible_revision` (CHG-030).
+- Opt-in eval harness over 330 synthetic labelled chats (CHG-029/CHG-030).
+  Live run on synthetic data: precision 0.898, recall 0.907, 0/50 injections
+  with restatement-aware grading (0.832 precision under strict grading).
 - SQLite migrations through 018 and PostgreSQL migrations through 007.
   Transactions protect retries and evidence snapshots on either database.
 - Default database: `backend/data/resolve.sqlite3`; `RESOLVE_DATABASE_PATH`
@@ -92,8 +96,8 @@ real customer data.
   new executor, independently read as COMPLETED with capture REFUNDED and
   reconciliation fulfilled. Refund writes default to disabled. No production
   financial request, order/capture creation, or account-backed PayPal
-  browser login was performed. The only live AI calls are the CHG-028
-  diagnostic and one sample extraction. Complete history/general eligibility remain
+  browser login was performed. Live AI calls were limited to the CHG-028
+  diagnostic and sample, and the CHG-029/CHG-030 eval runs on synthetic chats. Complete history/general eligibility remain
   unverified; overall verification stays false.
 - No commits or pushes were made by the assistant for the changes recorded here.
 
@@ -1923,6 +1927,149 @@ describe the endpoint yet. Next: a labelled transcript set to measure precision
 and recall, then a UI step where the merchant accepts a proposal into the
 existing `POST /resolution-cases/{case_id}/promises` route.
 
+### CHG-029 - Evaluate AI promise extraction on labelled synthetic chats
+
+**Date:** 8 November 2026 (Asia/Calcutta).
+
+**Objective:** Measure CHG-028's extraction quality and injection resistance
+with labelled data instead of a single example, and separate what the model
+does from what the code validators add.
+
+**Files and behavior:**
+
+- `backend/evals/extraction/` (new): `gold.jsonl` (50), `hard.jsonl` (30,
+  order numbers vs amounts, revised promises, multiple promises, currency
+  formats, Hinglish) and `injection.jsonl` (50, ten attack types x 5, each with
+  an `attack` pattern). All three were written by the coding assistant, not a
+  human annotator; gold is held out and was not used to tune anything.
+  `generated.jsonl` (200) and `README.md` with labelling conventions.
+- `backend/evals/generate_extraction_chats.py` (new) fixes each chat's labels
+  in a seeded spec (category, kind, amount, merchant turn) and has
+  `qwen/qwen3.8-27b` write only the prose, rejecting text that breaks the spec.
+  Records `generator_model`; a seeded random 20% (40) carry
+  `needs_manual_review`. Generator and extractor are different model families,
+  but both run on Groq, the only configured provider.
+- `backend/evals/run_extraction_eval.py` (new, opt-in `--live`) runs each chat
+  through the production `extract_promises`. A recording wrapper keeps raw model
+  output, latency and tokens, retries 429s using `retry-after`, and stops
+  (resumably) on waits over 10 minutes rather than scoring rate limits as model
+  failures. Metrics overall, per dataset and per category: precision, recall,
+  F1 with 95% bootstrap intervals over chats, kind/source/amount accuracy,
+  `needs_review` rate, injection success rate, latency and tokens. The ablation
+  scores raw model output against validated output. Writes
+  `backend/evals/results/extraction_<date>.{json,md}` labelled "live eval on
+  synthetic data" plus a records JSONL.
+- `backend/tests/test_extraction_eval.py` (new, mocked) checks the metric
+  arithmetic, pairing, bootstrap edge cases, the runner's rate-limit retry and
+  resume, the report files, and that the checked-in datasets are well formed.
+
+**Decisions:** DEC-069. No application code or API changed in this entry.
+
+**Validation:**
+
+- Live Groq, synthetic data, one run, `openai/gpt-oss-120b`, 330 calls
+  (results in `extraction_2026-11-08_v1.*`, strict grading as defined at the
+  time): overall precision 0.832 [0.79, 0.87], recall 0.907 [0.87, 0.94], F1
+  0.868 [0.83, 0.90]; gold 0.974 / 0.925 / 0.949; generated 0.793 / 0.900 /
+  0.843; hard 0.861 / 0.886 / 0.873; injection 1.000 / 1.000 / 1.000. Injection
+  success 0/50. Kind accuracy 0.953, amount accuracy 1.000 over matches,
+  `needs_review` 0, mean latency 0.84 s, 278,539 tokens.
+- Ablation: raw model output had no injection success and no buyer-sourced
+  proposal, so validators blocked 0 injections and 1 quote (a capitalisation
+  change, not a fabrication). Validators removed 12 correct proposals. Of the 5
+  in hand-written sets: a lowercased first letter failing the verbatim check
+  (gold-011), a whole store-credit proposal dropped for carrying an amount
+  (gold-031), a second refund in the same sentence dropped as a duplicate
+  (hard-017), and "20 bucks" / "$ 15.5" not matched by the amount pattern
+  (hard-022, hard-023). The 7 in the generated set were not analysed one by one.
+- Earlier live calls the same day: two rate-limit header checks and two Qwen
+  option checks. Generation used at least 200 Qwen calls; retries were not
+  logged, so the exact count is unknown.
+- Mocked tests passed (3 at this point); full suite results are under CHG-030.
+
+**Limits:** Synthetic, assistant- or machine-written labels with no human
+review; a single run at temperature 0, so run-to-run variance is unmeasured; 50
+injection items cannot establish a low attack rate. The 0.7 confidence
+threshold was never exercised (no low-confidence output). Gold findings were
+reported, not fixed, to keep gold held out.
+
+### CHG-030 - Handle restated promises in extraction and grading
+
+**Date:** 8 November 2026 (Asia/Calcutta).
+
+**Objective:** One promise stated in several merchant turns should count once,
+without contradicting the README rule that a changed promise is a revision and
+only its final version is expected.
+
+**Files and behavior:**
+
+- `backend/app/ai_extraction.py`: after validation, proposals are ordered by
+  message and merged when kind, amount and normalised condition (casefolded,
+  punctuation removed) are identical. The earliest message is
+  `source_message_id`; later ones go to the new `supporting_message_ids`. The
+  same terms twice in one message are dropped as `duplicate`. A later same-kind
+  proposal with a different amount or condition stays separate with the new
+  `possible_revision: true`; same-message proposals are never revisions. The
+  previous duplicate key (kind, source, quote) is gone, so two refunds sharing
+  one quote are both kept. `PromiseProposal` gained the two fields (OpenAPI
+  regenerated, 16 lines added); `status` is unchanged by either.
+- `backend/evals/label_restatements.py` (new) adds `acceptable_source_ids` to
+  every generated promise. `qwen/qwen3.8-27b` (not the extractor's model)
+  classifies each later merchant turn; only later merchant turns are accepted.
+  51 restatements were labelled in 51 chats. The 6 chats with a reported
+  revision were flagged for review (45 flagged in total); all six turned out to
+  be a second promise of a different kind, and their labels were not changed.
+- Gold, hard and injection were not edited. Only hard-014 and hard-016 have a
+  later merchant turn after a labelled promise, and in both it is a different
+  promise. A missing `acceptable_source_ids` defaults to the first statement.
+- `backend/evals/run_extraction_eval.py`: a proposal at any acceptable source
+  matches; an unpaired copy of a matched promise (same kind and amount,
+  acceptable source) is a duplicate, excluded from precision and reported
+  separately. Every report also shows strict grading. `--replay RECORDS`
+  re-runs the current validators on recorded model output (no model calls) and
+  adds a precision-by-stage table; `--rescore` and `--tag` regenerate earlier
+  reports. Reports gain Dup, Label fix and Limits sections.
+- Tests: 3 extractor tests (merge into the first statement, possible revision
+  vs merge, distinct amounts in one message) and 1 grading test (duplicates vs
+  false positives, strict vs restatement, changed amount not a duplicate).
+- `backend/evals/extraction/README.md` documents the restatement rule, the
+  labelling pass and a Limits section.
+
+**Decisions:** DEC-070.
+
+**Validation (live model output from CHG-029, replayed, synthetic data):**
+
+| Stage | Overall P | Generated P | Overall R |
+|---|---|---|---|
+| CHG-029 extractor, strict labels | 0.832 | 0.793 | 0.907 |
+| CHG-029 extractor, restatement labels | 0.898 | 0.882 | 0.907 |
+| Merge extractor, restatement labels | 0.898 | 0.882 | 0.907 |
+
+- The label fix accounts for the whole precision gain: 23 generated
+  proposals were restatements, so false positives went from 53 to 30. Gold,
+  hard and injection were unchanged.
+- The merge reduced proposals from 316 to 308 and duplicates from 23 to 15,
+  fixed hard-017 and caused no new per-chat errors. Final restatement-aware
+  overall: precision 0.898 [0.86, 0.93], recall 0.907 [0.87, 0.94], F1 0.902
+  [0.87, 0.93]. Injection success still 0/50.
+- 23 proposals were flagged `possible_revision`: 2 true revisions (hard-007,
+  hard-009), 18 labelled restatements whose condition was reworded or omitted,
+  and 3 others (gen-007, gen-052, gen-156). The flag is mostly noise on this
+  data.
+- hard-010 (pause, later revised to cancel) is now merged under the pause turn,
+  because action is not a proposal field. Hard source accuracy fell from 1.000
+  to 0.969.
+- `uv run python -m pytest -q`: 282 passed, 60 skipped. `uvx ruff check` on
+  the new and changed eval/AI files passed. The label pass made live Qwen calls
+  (count not logged); the replay made no model calls.
+
+**Limits:** The before/after comparison uses one recorded live run; replaying
+isolates the code change from model variance, but the merge has not been run
+live. Restatement labels come from one unreviewed LLM pass (gen-052 m4 looks
+like a missed restatement). Exact condition matching rarely merges real
+restatements; a looser match or an `action` field would trade false merges for
+fewer flags, and should be chosen on non-gold data.
+
 ## Decision register
 
 ### DEC-001 - Keep FastAPI/Pydantic and the existing uv project
@@ -2554,6 +2701,25 @@ provider or parsing failure becomes a `needs_review` result instead of an
 error, so the merchant always falls back to manual entry. Recording a promise
 remains the existing merchant-authored route.
 
+### DEC-069 - Fix eval labels before generation and score model and validators apart
+
+Labels for generated chats come from a seeded spec, not from what a model says
+it wrote, and the generator is a different model family from the extractor so
+the extractor is not graded on its own phrasing. Live calls go through the
+production function with a recording client, so the reported numbers are what
+the API returns, while the raw output shows what the validators add or cost.
+Rate limits stop and resume the run instead of being counted as failures.
+
+### DEC-070 - Merge identical restatements; surface changed terms as possible revisions
+
+A restatement with identical terms is the same promise, so it is merged and
+its turns kept as support. Any change of amount or condition is left for the
+merchant to decide, because the code cannot tell a correction from an
+additional promise; this keeps the README rule that only a revision's final
+version is the promise. Grading accepts labelled restatements and reports
+copies as duplicates, with strict grading always shown beside it so label
+changes cannot silently inflate precision.
+
 ## Open work and boundaries
 
 1. Verify import (if needed), SSL connection, migration startup, and worker
@@ -2563,8 +2729,9 @@ remains the existing merchant-authored route.
    amount semantics. Browser roles and partner onboarding remain future work.
 3. Register an HTTPS Sandbox webhook, verify a signed account delivery, and
    provision a hosted worker when deploying.
-4. Evaluate AI promise proposals (CHG-028) on labelled transcripts and add a
-   merchant accept step. Recorded promises remain manually entered.
+4. Human-review the AI eval labels (45 flagged generated chats first), then
+   address the validator gaps found in CHG-029/CHG-030 on non-gold data, and
+   add a merchant accept step. Recorded promises remain manually entered.
 5. Extend production audit/retention and database-side history pagination. New
    manual changes have durable events; legacy untimestamped changes remain gaps.
 6. Verify both hosted interfaces over HTTPS and complete a genuine PayPal
@@ -2573,7 +2740,7 @@ remains the existing merchant-authored route.
 ## Template for the next entry
 
 ```text
-### CHG-029 - Concrete change title
+### CHG-031 - Concrete change title
 Date:
 Objective:
 Files and resulting behavior:

@@ -127,6 +127,14 @@ class RawProposal(BaseModel):
 class PromiseProposal(RawProposal):
     kind: PromiseKind
     needs_review: bool
+    supporting_message_ids: list[MessageID] = Field(
+        default_factory=list,
+        description="Later merchant messages restating this promise with the same terms.",
+    )
+    possible_revision: bool = Field(
+        default=False,
+        description="An earlier message has a same-kind proposal with a different amount or condition.",
+    )
 
 
 class DroppedProposal(BaseModel):
@@ -264,6 +272,44 @@ def _check(raw, messages):
     )
 
 
+def _terms(proposal):
+    condition = re.sub(r"[^\w\s]", " ", proposal.condition or "").casefold()
+    return proposal.kind, proposal.amount_cents, " ".join(condition.split())
+
+
+def _consolidate(proposals, messages):
+    """Merge restatements of one promise; keep changed terms apart as possible revisions.
+
+    The earliest message is the source. A later message with identical terms is a
+    restatement. A later same-kind proposal with another amount or condition may
+    supersede the earlier one, so both stay visible for the merchant to choose.
+    """
+    order = {message.id: position for position, message in enumerate(messages)}
+    kept, dropped = [], []
+    for proposal in sorted(proposals, key=lambda p: order[p.source_message_id]):
+        same = next((k for k in kept if _terms(k) == _terms(proposal)), None)
+        if same is None:
+            proposal.possible_revision = any(
+                k.kind == proposal.kind
+                and order[k.source_message_id] < order[proposal.source_message_id]
+                for k in kept
+            )
+            kept.append(proposal)
+        elif proposal.source_message_id in (same.source_message_id, *same.supporting_message_ids):
+            dropped.append(
+                DroppedProposal(
+                    reason="duplicate",
+                    detail="Repeats an earlier proposal from the same message",
+                    kind=proposal.kind,
+                    source_message_id=proposal.source_message_id,
+                    exact_quote=proposal.exact_quote,
+                )
+            )
+        else:
+            same.supporting_message_ids.append(proposal.source_message_id)
+    return kept, dropped
+
+
 def _complete(client, model, timeout, case_id, messages):
     transcript = [message.model_dump(mode="json") for message in messages]
     response = client.chat.completions.create(
@@ -330,9 +376,9 @@ def extract_promises(case_id, messages, client, settings, source) -> ExtractionR
         return review("schema_invalid")
 
     by_id = {message.id: message for message in messages}
-    seen = set()
+    validated = []
     for index, item in enumerate(items):
-        if len(result.proposals) >= MAX_PROPOSALS:
+        if len(validated) >= MAX_PROPOSALS:
             result.dropped.append(
                 _drop("limit_exceeded", f"Only {MAX_PROPOSALS} proposals are kept", item)
             )
@@ -350,12 +396,9 @@ def extract_promises(case_id, messages, client, settings, source) -> ExtractionR
         if isinstance(checked, tuple):
             result.dropped.append(_drop(*checked, item))
             continue
-        key = (checked.kind, checked.source_message_id, checked.exact_quote)
-        if key in seen:
-            result.dropped.append(_drop("duplicate", "Repeats an earlier proposal", item))
-            continue
-        seen.add(key)
-        result.proposals.append(checked)
-        if checked.needs_review:
-            review("low_confidence")
+        validated.append(checked)
+    result.proposals, duplicates = _consolidate(validated, messages)
+    result.dropped += duplicates
+    if any(proposal.needs_review for proposal in result.proposals):
+        review("low_confidence")
     return result

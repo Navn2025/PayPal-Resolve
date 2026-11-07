@@ -204,7 +204,7 @@ lock shared by Resolve processes connected to the same schema. Both paths
 serialize financial state changes and give reconciliation a consistent read
 snapshot. Lock contention exceeding the wait timeout returns `503`.
 
-Schema version 15 is recorded in SQLite's `user_version`. Startup applies the
+Schema version 18 is recorded in SQLite's `user_version`. Startup applies the
 initial, merchant-ownership, refund-approval, capture-verification, durable
 execution/refund-evidence, provider-identity, case-event/condition-epoch, and
 refund-history/case-lifecycle, shared resolution workspace, customer portal,
@@ -212,13 +212,30 @@ intake/triage, hosted follow-up, case ordering, and merchant browser authenticat
 atomically as needed. Version-1
 records are preserved as described above. An unknown newer version fails startup
 instead of resetting it. The PayPal flow claim column is installed by SQLite
-migration 015 and PostgreSQL migration 004. Future schema changes need new migrations.
+migration 015 and PostgreSQL migration 004. Buyer Google sign-in and the email
+transport settings add SQLite 016 and PostgreSQL 005. Email notification flags
+are added by SQLite 017 and PostgreSQL 006. Evidence SDK records and check
+snapshots are added by SQLite 018 and PostgreSQL 007. Put future schema
+changes in new migrations.
 
 Old in-memory records are not automatically imported. Databases and `.env` files
 are ignored by Git. Stop the server before copying the file for a local backup.
 Keep the file on local disk; this is not a multi-host or network-filesystem setup.
 
 ## API contract
+
+See [buyer sign-in and email](../docs/CUSTOMER_SIGN_IN.md) for Google sign-in,
+the default Resend transport, and the optional Nodemailer SMTP transport.
+
+Use the [Resolve Evidence SDK](../sdk/typescript/README.md) from a merchant's
+server with the FastAPI base URL and an existing merchant access key. It can
+open or reuse a case, link order/payment references, and record merchant evidence
+such as a refund approval. Refresh uses the configured PayPal Sandbox connection
+to read one USD capture and its supported order/refund records. The evidence
+summary reports the most recent check, preserves previously verified facts on
+failure, and identifies what could not be verified. Use the case timeline and
+bundle for support staff; the existing private buyer link shows status labels
+without exposing evidence or payment references.
 
 See [customer intake and case triage](../docs/CUSTOMER_WORKFLOW.md) for order
 invites, the public status timeline, scoped evidence uploads, inbox filters,

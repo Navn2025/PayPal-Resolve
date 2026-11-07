@@ -43,5 +43,6 @@ conversation text. See [hosted follow-up](HOSTED_FOLLOWUP.md).
 
 The app runs on loopback during development, so these links work on the
 machine running Resolve. Use a hosted HTTPS environment before sharing links
-with customers on other devices. There is no general customer account or
-public issue intake; each link is limited to its assigned case.
+with customers on other devices. Each link is limited to its assigned case.
+Buyers can also return through [My cases](CUSTOMER_SIGN_IN.md) if their order
+invite was associated with a verified address.

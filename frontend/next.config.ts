@@ -3,6 +3,9 @@ import type { NextConfig } from "next";
 const config: NextConfig = {
   poweredByHeader: false,
   devIndicators: false,
+  logging: {
+    incomingRequests: { ignore: [/^\/api\/customer-account\/google\/callback/, /^\/api\/auth\/paypal\/callback/] },
+  },
   distDir: process.env.RESOLVE_UI_TEST_SERVER === "1" ? ".next-test" : ".next",
   turbopack: { root: process.cwd() },
   async headers() {

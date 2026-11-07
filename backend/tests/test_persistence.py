@@ -154,11 +154,41 @@ def test_sqlite_14_upgrades_both_paypal_flow_variants(tmp_path, already_has_clai
         with TestClient(app) as client:
             assert client.get("/health").status_code == 200
     with sqlite3.connect(database) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 15
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 18
         flows = connection.execute(
             "SELECT state_hash,claimed_at FROM merchant_paypal_flows"
         ).fetchall()
         assert flows == [("existing", "already claimed" if already_has_claim else None)]
+
+
+@pytest.mark.parametrize("already_has_flags", [False, True])
+def test_sqlite_16_upgrades_both_notification_variants(tmp_path, already_has_flags):
+    database = tmp_path / "customer-16.sqlite3"
+    with sqlite3.connect(database) as db:
+        files = sorted((BACKEND_DIR / "migrations").glob("[0-9][0-9][0-9]_*.sql"))
+        for path in files[:16]:
+            db.executescript(path.read_text(encoding="utf-8"))
+        db.execute("PRAGMA user_version = 16")
+        if already_has_flags:
+            db.executescript(files[16].read_text(encoding="utf-8"))
+        db.execute("INSERT INTO merchants VALUES ('existing','Existing merchant','2026-01-01')")
+        db.execute(
+            """INSERT INTO customer_intake_invites
+               (token_hash,merchant_id,order_reference,created_at,expires_at)
+               VALUES ('prior','existing','ORDER-16','2026-01-01','2030-01-01')"""
+        )
+        if already_has_flags:
+            db.execute("UPDATE customer_intake_invites SET email_notifications=0")
+    app = create_app(database, settings=Settings(_env_file=None))
+    for _ in range(2):
+        with TestClient(app) as client:
+            assert client.get("/health").status_code == 200
+    with sqlite3.connect(database) as db:
+        assert db.execute("PRAGMA user_version").fetchone()[0] == 18
+        assert db.execute(
+            "SELECT order_reference,email_notifications FROM customer_intake_invites"
+        ).fetchone() == ("ORDER-16", int(not already_has_flags))
+        assert db.execute("SELECT email_notifications FROM customer_case_contacts").fetchall() == []
 
 
 def test_first_migration_is_recorded_and_repeated_startup_preserves_data(
@@ -173,7 +203,7 @@ def test_first_migration_is_recorded_and_repeated_startup_preserves_data(
                 case_id = client.post("/cases", json=durable_case).json()["id"]
             assert client.get(f"/cases/{case_id}").status_code == 200
     with sqlite3.connect(database) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 15
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 18
         assert connection.execute("SELECT count(*) FROM cases").fetchone()[0] == 1
         assert connection.execute("SELECT count(*) FROM captures").fetchone()[0] == 1
 

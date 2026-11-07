@@ -1,0 +1,13 @@
+version: 1
+simulation: customer-google
+claims:
+  - id: google-oidc-web-code
+    status: supported
+    claim: Google documents HTTPS authorization-code exchange and signed ID tokens verified with its published JWKS.
+    source: https://developers.google.com/identity/openid-connect/openid-connect
+    verification: CHG-025. Two backend tests passed with 28 mocked requests and no pass-through. The local mock requires exact redirect, one-time code and the PKCE verifier. A separate fixture publishes an ephemeral RSA public key.
+  - id: google-email-authority
+    status: supported
+    claim: Google may not be authoritative for third-party email addresses even with email_verified.
+    source: https://developers.google.com/identity/gsi/web/guides/verify-google-id-token
+    verification: A browser test used four mocked requests and no pass-through to open a matching buyer case with email delivery disabled. Tests reject non-authoritative addresses and invalid signatures. The local mock does not represent an actual Google account.

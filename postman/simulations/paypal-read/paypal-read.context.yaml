@@ -93,6 +93,13 @@ assumptions:
     verification: CHG-022. Three backend tests passed with 13 mocked requests and zero pass-through. Fourteen browser tests passed with the PayPal and email fixtures, 33 mocked requests and zero pass-through. An actual registered PayPal callback remains unverified.
     source: https://developer.paypal.com/log-in/build ; https://developer.paypal.com/api/identity/v1/userinfo-get ; backend/tests/test_merchant_auth.py ; frontend/tests/site-auth.spec.ts
     updated_at: '2026-11-07'
+  - id: evidence-sdk-order-1042
+    status: supported
+    claim: The SDK records a merchant approval and separately verifies a USD 25 partial refund through the configured PayPal Sandbox read adapter.
+    reason: A disposable FastAPI and SQLite instance checked capture, order and refund facts through the TLS proxy. The SDK kept prior verified facts on a simulated outage, and did not submit a financial POST.
+    verification: CHG-027; four Node tests passed, including the runnable example, with 25 mocked requests and zero pass-through. Other tenants were denied, and the buyer response omitted private notes and provider identifiers. Capture-to-order discovery and external partial refunds still need account-backed validation.
+    source: sdk/typescript/test/client.test.mjs ; https://developer.paypal.com/api/payments/v2/captures-get ; https://developer.paypal.com/api/orders/v2/orders-get ; https://developer.paypal.com/api/payments/v2/refunds-get
+    updated_at: '2026-11-07'
 fingerprints:
   - id: paypal-read-local
     date: '2026-11-07'

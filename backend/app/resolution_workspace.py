@@ -70,12 +70,13 @@ class ResolutionWorkspace:
 
     @staticmethod
     def _event(connection, case, kind, source, data, row=None):
+        event_id = str(uuid4())
         connection.execute(
             """INSERT INTO resolution_events
                (id,resolution_id,merchant_id,promise_id,revision,event_type,source,recorded_at,data_json)
                VALUES (?,?,?,?,?,?,?,?,?)""",
             (
-                str(uuid4()),
+                event_id,
                 case["id"],
                 case["merchant_id"],
                 row["id"] if row else None,
@@ -86,42 +87,46 @@ class ResolutionWorkspace:
                 json.dumps(data, separators=(",", ":")),
             ),
         )
+        return event_id
 
     def create(self, merchant_id, payload):
         with self.store.transaction(write=True) as connection:
-            self.store._require_merchant(connection, merchant_id)
-            identifier = uuid4()
-            if payload.refund_case_id:
-                self.store._require_case(
-                    connection, payload.refund_case_id, merchant_id
+            return self._view(
+                connection, self._create(connection, merchant_id, payload)
+            )
+
+    def _create(self, connection, merchant_id, payload):
+        self.store._require_merchant(connection, merchant_id)
+        identifier = uuid4()
+        if payload.refund_case_id:
+            self.store._require_case(connection, payload.refund_case_id, merchant_id)
+            if connection.execute(
+                "SELECT 1 FROM resolution_cases WHERE merchant_id=? AND refund_case_id=?",
+                (str(merchant_id), str(payload.refund_case_id)),
+            ).fetchone():
+                raise StoreError(
+                    409, "Refund case is already linked to a resolution case"
                 )
-                if connection.execute(
-                    "SELECT 1 FROM resolution_cases WHERE merchant_id=? AND refund_case_id=?",
-                    (str(merchant_id), str(payload.refund_case_id)),
-                ).fetchone():
-                    raise StoreError(
-                        409, "Refund case is already linked to a resolution case"
-                    )
-            connection.execute(
-                "INSERT INTO resolution_cases VALUES (?,?,?,?,?,?)",
-                (
-                    str(identifier),
-                    str(merchant_id),
-                    str(payload.refund_case_id) if payload.refund_case_id else None,
-                    payload.title,
-                    payload.order_reference,
-                    now_text(),
-                ),
-            )
-            case = self._case(connection, identifier, merchant_id)
-            self._event(
-                connection,
-                case,
-                "case_created",
-                "merchant_recorded",
-                payload.model_dump(mode="json"),
-            )
-            return self._view(connection, case)
+        connection.execute(
+            "INSERT INTO resolution_cases VALUES (?,?,?,?,?,?)",
+            (
+                str(identifier),
+                str(merchant_id),
+                str(payload.refund_case_id) if payload.refund_case_id else None,
+                payload.title,
+                payload.order_reference,
+                now_text(),
+            ),
+        )
+        case = self._case(connection, identifier, merchant_id)
+        self._event(
+            connection,
+            case,
+            "case_created",
+            "merchant_recorded",
+            payload.model_dump(mode="json"),
+        )
+        return case
 
     def list(self, merchant_id, limit, offset):
         with self.store.transaction() as connection:
@@ -578,15 +583,23 @@ class ResolutionWorkspace:
         )
 
     @staticmethod
-    def _timeline(connection, case, limit, offset):
+    def _timeline(connection, case, limit, offset, before_sequence=None):
         total = connection.execute(
             "SELECT count(*) FROM resolution_events WHERE resolution_id=?",
             (case["id"],),
         ).fetchone()[0]
-        rows = connection.execute(
-            "SELECT * FROM resolution_events WHERE resolution_id=? ORDER BY sequence DESC LIMIT ? OFFSET ?",
-            (case["id"], limit, offset),
+        sequence_filter = " AND sequence<?" if before_sequence is not None else ""
+        parameters = (
+            (case["id"], before_sequence)
+            if before_sequence is not None
+            else (case["id"],)
         )
+        rows = connection.execute(
+            "SELECT * FROM resolution_events WHERE resolution_id=?"
+            + sequence_filter
+            + " ORDER BY sequence DESC LIMIT ? OFFSET ?",
+            (*parameters, limit + 1, offset),
+        ).fetchall()
         return ResolutionTimeline(
             items=[
                 ResolutionEvent(
@@ -596,17 +609,20 @@ class ResolutionWorkspace:
                     else None,
                     data=json.loads(row["data_json"]),
                 )
-                for row in rows
+                for row in rows[:limit]
             ],
             total=total,
             limit=limit,
             offset=offset,
+            next_before_sequence=rows[limit - 1]["sequence"]
+            if len(rows) > limit
+            else None,
         )
 
-    def timeline(self, case_id, merchant_id, limit, offset):
+    def timeline(self, case_id, merchant_id, limit, offset, before_sequence=None):
         with self.store.transaction() as connection:
             case = self._case(connection, case_id, merchant_id)
-            result = self._timeline(connection, case, limit, offset)
+            result = self._timeline(connection, case, limit, offset, before_sequence)
         return self._refund_timeline(
             result, case["refund_case_id"], merchant_id, limit, offset
         )

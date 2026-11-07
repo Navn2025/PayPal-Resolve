@@ -2640,6 +2640,89 @@
         ]
       }
     },
+    "/customer-account/capabilities": {
+      "get": {
+        "tags": [
+          "Customer portal"
+        ],
+        "summary": "Customer Account Capabilities",
+        "operationId": "customer_account_capabilities_customer_account_capabilities_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerAccountCapabilities"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/customer-account/google/start": {
+      "post": {
+        "tags": [
+          "Customer portal"
+        ],
+        "summary": "Start Google Sign In",
+        "operationId": "start_google_sign_in_customer_account_google_start_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoogleStart"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/customer-account/google/finish": {
+      "post": {
+        "tags": [
+          "Customer portal"
+        ],
+        "summary": "Finish Google Sign In",
+        "operationId": "finish_google_sign_in_customer_account_google_finish_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GoogleFinish"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountToken"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/customer-account/request-sign-in": {
       "post": {
         "tags": [
@@ -3681,6 +3764,56 @@
         }
       }
     },
+    "/resolution-cases/upsert": {
+      "post": {
+        "tags": [
+          "Resolution workspace"
+        ],
+        "summary": "Upsert Evidence Case",
+        "description": "Create or reuse a resolution case by an exact merchant-scoped external reference.",
+        "operationId": "upsert_evidence_case_resolution_cases_upsert_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EvidenceCaseUpsert"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvidenceCaseView"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "External reference has different case data"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ]
+      }
+    },
     "/resolution-cases/{case_id}": {
       "get": {
         "tags": [
@@ -3711,10 +3844,186 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ResolutionView"
+                  "$ref": "#/components/schemas/EvidenceCaseView"
                 }
               }
             }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/resolution-cases/{case_id}/evidence/records": {
+      "post": {
+        "tags": [
+          "Resolution workspace"
+        ],
+        "summary": "Link Evidence Record",
+        "description": "Associate a record reference without contacting its provider.",
+        "operationId": "link_evidence_record_resolution_cases__case_id__evidence_records_post",
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EvidenceRecordInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LinkedEvidenceRecord"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicting record association"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/resolution-cases/{case_id}/evidence/events": {
+      "post": {
+        "tags": [
+          "Resolution workspace"
+        ],
+        "summary": "Submit Merchant Evidence",
+        "description": "Record merchant evidence once. This cannot approve or execute money movement.",
+        "operationId": "submit_merchant_evidence_resolution_cases__case_id__evidence_events_post",
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EvidenceInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvidenceReceipt"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Source event ID has different evidence"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/resolution-cases/{case_id}/evidence/refresh": {
+      "post": {
+        "tags": [
+          "Resolution workspace"
+        ],
+        "summary": "Refresh Case Evidence",
+        "description": "Check linked PayPal Sandbox records; report incomplete checks without removing prior facts.",
+        "operationId": "refresh_case_evidence_resolution_cases__case_id__evidence_refresh_post",
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvidenceRefreshResult"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Linked records changed during the check"
           },
           "422": {
             "description": "Validation Error",
@@ -4069,7 +4378,7 @@
           "Resolution workspace"
         ],
         "summary": "Resolution Timeline",
-        "description": "Read promise history and the associated refund audit events.",
+        "description": "Read case events newest first; use before_sequence for paging through new activity.",
         "operationId": "resolution_timeline_resolution_cases__case_id__timeline_get",
         "security": [
           {
@@ -4109,6 +4418,24 @@
               "minimum": 0,
               "default": 0,
               "title": "Offset"
+            }
+          },
+          {
+            "name": "before_sequence",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "maximum": 9007199254740991,
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Before Sequence"
             }
           }
         ],
@@ -4191,7 +4518,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ResolutionBundle"
+                  "$ref": "#/components/schemas/EvidenceBundle"
                 }
               }
             }
@@ -4729,6 +5056,24 @@
         ],
         "title": "ConditionCheckCreate"
       },
+      "CustomerAccountCapabilities": {
+        "properties": {
+          "email_enabled": {
+            "type": "boolean",
+            "title": "Email Enabled"
+          },
+          "google_enabled": {
+            "type": "boolean",
+            "title": "Google Enabled"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email_enabled",
+          "google_enabled"
+        ],
+        "title": "CustomerAccountCapabilities"
+      },
       "CustomerCase": {
         "properties": {
           "title": {
@@ -4995,6 +5340,543 @@
         ],
         "title": "EmailSignIn"
       },
+      "EvidenceBundle": {
+        "properties": {
+          "case": {
+            "$ref": "#/components/schemas/EvidenceCaseView"
+          },
+          "timeline": {
+            "$ref": "#/components/schemas/ResolutionTimeline"
+          },
+          "refund_attachments": {
+            "items": {
+              "$ref": "#/components/schemas/CaseAttachment"
+            },
+            "type": "array",
+            "title": "Refund Attachments"
+          },
+          "linked_records": {
+            "items": {
+              "$ref": "#/components/schemas/LinkedEvidenceRecord"
+            },
+            "type": "array",
+            "title": "Linked Records"
+          }
+        },
+        "type": "object",
+        "required": [
+          "case",
+          "timeline",
+          "refund_attachments",
+          "linked_records"
+        ],
+        "title": "EvidenceBundle"
+      },
+      "EvidenceCaseUpsert": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "order_reference": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 160,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order Reference"
+          },
+          "refund_case_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refund Case Id"
+          },
+          "external_reference": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "External Reference"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "title",
+          "external_reference"
+        ],
+        "title": "EvidenceCaseUpsert"
+      },
+      "EvidenceCaseView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "order_reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order Reference"
+          },
+          "refund_case_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refund Case Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "waiting",
+              "pending",
+              "fulfilled",
+              "needs_review"
+            ],
+            "title": "Outcome"
+          },
+          "promises": {
+            "items": {
+              "$ref": "#/components/schemas/PromiseView"
+            },
+            "type": "array",
+            "title": "Promises"
+          },
+          "external_reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "External Reference"
+          },
+          "evidence_summary": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidenceSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "order_reference",
+          "refund_case_id",
+          "created_at",
+          "outcome",
+          "promises"
+        ],
+        "title": "EvidenceCaseView"
+      },
+      "EvidenceInput": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Source"
+          },
+          "source_event_id": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Source Event Id"
+          },
+          "evidence_type": {
+            "type": "string",
+            "enum": [
+              "refund_approved",
+              "return_confirmed",
+              "support_note"
+            ],
+            "title": "Evidence Type"
+          },
+          "occurred_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Occurred At"
+          },
+          "summary": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Summary"
+          },
+          "amount": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string",
+                "const": "USD"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "source",
+          "source_event_id",
+          "evidence_type",
+          "occurred_at",
+          "summary"
+        ],
+        "title": "EvidenceInput"
+      },
+      "EvidenceIssue": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "missing",
+              "unsupported",
+              "unavailable",
+              "mismatch"
+            ],
+            "title": "Status"
+          },
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "status",
+          "detail"
+        ],
+        "title": "EvidenceIssue"
+      },
+      "EvidenceReceipt": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Source"
+          },
+          "source_event_id": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Source Event Id"
+          },
+          "evidence_type": {
+            "type": "string",
+            "enum": [
+              "refund_approved",
+              "return_confirmed",
+              "support_note"
+            ],
+            "title": "Evidence Type"
+          },
+          "occurred_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Occurred At"
+          },
+          "summary": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Summary"
+          },
+          "amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string",
+                "const": "USD"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "recorded_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Recorded At"
+          },
+          "verification": {
+            "type": "string",
+            "const": "merchant_reported",
+            "title": "Verification",
+            "default": "merchant_reported"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "source",
+          "source_event_id",
+          "evidence_type",
+          "occurred_at",
+          "summary",
+          "id",
+          "recorded_at"
+        ],
+        "title": "EvidenceReceipt"
+      },
+      "EvidenceRecordInput": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "order",
+              "paypal_order",
+              "paypal_capture",
+              "paypal_refund",
+              "support_ticket"
+            ],
+            "title": "Kind"
+          },
+          "reference": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Reference"
+          },
+          "source": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Source",
+            "default": "merchant_app"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "reference"
+        ],
+        "title": "EvidenceRecordInput"
+      },
+      "EvidenceRefreshResult": {
+        "properties": {
+          "checked_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Checked At"
+          },
+          "verified": {
+            "items": {
+              "$ref": "#/components/schemas/PayPalEvidenceFact"
+            },
+            "type": "array",
+            "title": "Verified"
+          },
+          "issues": {
+            "items": {
+              "$ref": "#/components/schemas/EvidenceIssue"
+            },
+            "type": "array",
+            "title": "Issues"
+          },
+          "order_history_verified": {
+            "type": "boolean",
+            "title": "Order History Verified",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "checked_at",
+          "verified",
+          "issues"
+        ],
+        "title": "EvidenceRefreshResult"
+      },
+      "EvidenceSummary": {
+        "properties": {
+          "last_checked_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Checked At"
+          },
+          "last_verified_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Verified At"
+          },
+          "order_history_verified": {
+            "type": "boolean",
+            "title": "Order History Verified",
+            "default": false
+          },
+          "verified": {
+            "items": {
+              "$ref": "#/components/schemas/PayPalEvidenceFact"
+            },
+            "type": "array",
+            "title": "Verified"
+          },
+          "issues": {
+            "items": {
+              "$ref": "#/components/schemas/EvidenceIssue"
+            },
+            "type": "array",
+            "title": "Issues"
+          },
+          "last_merchant_approval": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidenceReceipt"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "captured_amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Captured Amount"
+          },
+          "provider_completed_amount": {
+            "type": "string",
+            "title": "Provider Completed Amount",
+            "default": "0.00"
+          },
+          "provider_pending_amount": {
+            "type": "string",
+            "title": "Provider Pending Amount",
+            "default": "0.00"
+          },
+          "refund_status": {
+            "type": "string",
+            "enum": [
+              "unconfirmed",
+              "pending",
+              "partially_refunded",
+              "refunded"
+            ],
+            "title": "Refund Status",
+            "default": "unconfirmed"
+          },
+          "currency": {
+            "type": "string",
+            "const": "USD",
+            "title": "Currency",
+            "default": "USD"
+          }
+        },
+        "type": "object",
+        "title": "EvidenceSummary"
+      },
       "ExecutionCaptureCheck": {
         "properties": {
           "capture_id": {
@@ -5042,6 +5924,54 @@
           "checked_at"
         ],
         "title": "ExecutionCaptureCheck"
+      },
+      "GoogleFinish": {
+        "properties": {
+          "state": {
+            "type": "string",
+            "format": "password",
+            "title": "State",
+            "writeOnly": true
+          },
+          "browser_token": {
+            "type": "string",
+            "format": "password",
+            "title": "Browser Token",
+            "writeOnly": true
+          },
+          "code": {
+            "type": "string",
+            "format": "password",
+            "title": "Code",
+            "writeOnly": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "state",
+          "browser_token",
+          "code"
+        ],
+        "title": "GoogleFinish"
+      },
+      "GoogleStart": {
+        "properties": {
+          "authorize_url": {
+            "type": "string",
+            "title": "Authorize Url"
+          },
+          "browser_token": {
+            "type": "string",
+            "title": "Browser Token"
+          }
+        },
+        "type": "object",
+        "required": [
+          "authorize_url",
+          "browser_token"
+        ],
+        "title": "GoogleStart"
       },
       "HTTPValidationError": {
         "properties": {
@@ -5255,6 +6185,11 @@
               }
             ],
             "title": "Customer Email"
+          },
+          "send_email": {
+            "type": "boolean",
+            "title": "Send Email",
+            "default": true
           }
         },
         "additionalProperties": false,
@@ -5457,6 +6392,59 @@
           "active"
         ],
         "title": "LinkStatus"
+      },
+      "LinkedEvidenceRecord": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "order",
+              "paypal_order",
+              "paypal_capture",
+              "paypal_refund",
+              "support_ticket"
+            ],
+            "title": "Kind"
+          },
+          "reference": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Reference"
+          },
+          "source": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Source",
+            "default": "merchant_app"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "linked_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Linked At"
+          },
+          "verification": {
+            "type": "string",
+            "const": "association_only",
+            "title": "Verification",
+            "default": "association_only"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "reference",
+          "id",
+          "linked_at"
+        ],
+        "title": "LinkedEvidenceRecord"
       },
       "LinkedTicket": {
         "properties": {
@@ -5930,6 +6918,92 @@
           "checked_at"
         ],
         "title": "PayPalCaptureVerification"
+      },
+      "PayPalEvidenceFact": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "paypal_order",
+              "paypal_capture",
+              "paypal_refund"
+            ],
+            "title": "Kind"
+          },
+          "reference": {
+            "type": "string",
+            "title": "Reference"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string",
+                "const": "USD"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "capture_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capture Id"
+          },
+          "provider": {
+            "type": "string",
+            "const": "paypal",
+            "title": "Provider",
+            "default": "paypal"
+          },
+          "environment": {
+            "type": "string",
+            "const": "sandbox",
+            "title": "Environment",
+            "default": "sandbox"
+          },
+          "verification": {
+            "type": "string",
+            "const": "provider_confirmed",
+            "title": "Verification",
+            "default": "provider_confirmed"
+          },
+          "checked_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Checked At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "reference",
+          "status",
+          "checked_at"
+        ],
+        "title": "PayPalEvidenceFact"
       },
       "PayPalFinish": {
         "properties": {
@@ -7970,30 +9044,6 @@
         ],
         "title": "ReplacementTarget"
       },
-      "ResolutionBundle": {
-        "properties": {
-          "case": {
-            "$ref": "#/components/schemas/ResolutionView"
-          },
-          "timeline": {
-            "$ref": "#/components/schemas/ResolutionTimeline"
-          },
-          "refund_attachments": {
-            "items": {
-              "$ref": "#/components/schemas/CaseAttachment"
-            },
-            "type": "array",
-            "title": "Refund Attachments"
-          }
-        },
-        "type": "object",
-        "required": [
-          "case",
-          "timeline",
-          "refund_attachments"
-        ],
-        "title": "ResolutionBundle"
-      },
       "ResolutionCreate": {
         "properties": {
           "title": {
@@ -8235,6 +9285,17 @@
           "offset": {
             "type": "integer",
             "title": "Offset"
+          },
+          "next_before_sequence": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Before Sequence"
           },
           "refund_items": {
             "items": {

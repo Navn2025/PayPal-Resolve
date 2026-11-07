@@ -6,6 +6,7 @@ from typing import Literal
 from pydantic import BaseModel
 
 from .case_operations import NextActor, _basis, derive
+from .evidence_workspace import buyer_evidence_milestones
 
 
 class CustomerMilestone(BaseModel):
@@ -92,6 +93,11 @@ def customer_progress(db, store, case, view):
                     source="provider_confirmed",
                 )
             )
+    if not any(p.refund_progress for p in view.promises):
+        milestones.extend(
+            CustomerMilestone(label=label, occurred_at=occurred, source=source)
+            for label, occurred, source in buyer_evidence_milestones(db, case)
+        )
     return sorted(milestones, key=lambda item: item.occurred_at), CustomerNextStep(
         actor=ops.next_actor,
         action=ops.next_action,

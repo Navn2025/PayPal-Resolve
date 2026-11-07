@@ -1,6 +1,7 @@
 """Transactional delivery queue for optional customer emails."""
 
 from base64 import urlsafe_b64encode
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from hashlib import sha256
 import hmac
@@ -9,7 +10,9 @@ from urllib.parse import urlsplit
 from uuid import uuid4
 
 import httpx
+from pydantic import SecretStr
 
+from .customer_smtp import send_smtp, smtp_runtime
 from .errors import StoreError
 
 EMAIL = re.compile(
@@ -38,7 +41,16 @@ def normalize_email(value):
     return value.strip().lower()
 
 
-def mail_config(settings):
+@dataclass(frozen=True)
+class MailConfig:
+    origin: str
+    key: bytes = field(repr=False)
+    sender: str
+    transport: str
+    resend_key: SecretStr | None
+
+
+def mail_config(settings) -> MailConfig:
     if not settings.customer_email_enabled:
         raise StoreError(503, "Customer email is not configured")
     origin = settings.customer_public_origin or ""
@@ -47,11 +59,9 @@ def mail_config(settings):
         port = url.port
     except ValueError:
         raise StoreError(503, "Customer email configuration is invalid") from None
-    key, sender, api = (
-        settings.customer_signing_key,
-        settings.resend_from,
-        settings.resend_api_key,
-    )
+    key = settings.customer_signing_key
+    transport = settings.customer_email_transport
+    sender = settings.smtp_from if transport == "smtp" else settings.resend_from
     if (
         url.scheme != "https"
         or not url.hostname
@@ -64,17 +74,36 @@ def mail_config(settings):
         or port not in (None, 443)
         or not key
         or len(key.get_secret_value()) < 32
-        or not api
         or not sender
         or not EMAIL.fullmatch(sender)
     ):
         raise StoreError(503, "Customer email configuration is invalid")
-    return (
+    if transport == "smtp":
+        if (
+            not settings.smtp_host
+            or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9.-]{0,252}", settings.smtp_host)
+            or not 1 <= settings.smtp_port <= 65535
+            or not settings.smtp_user
+            or not settings.smtp_password
+        ):
+            raise StoreError(503, "Customer SMTP configuration is incomplete")
+    elif not settings.resend_api_key:
+        raise StoreError(503, "Customer Resend configuration is incomplete")
+    return MailConfig(
         origin.rstrip("/"),
         key.get_secret_value().encode(),
         sender,
-        api.get_secret_value(),
+        transport,
+        settings.resend_api_key,
     )
+
+
+def email_available(settings):
+    try:
+        mail_config(settings)
+        return True
+    except StoreError:
+        return False
 
 
 def mail_token(key, kind, identifier):
@@ -115,7 +144,8 @@ def enqueue(
 def enqueue_reply(db, case, message):
     contact = db.execute(
         """SELECT c.email FROM customer_case_contacts c JOIN customer_portal_links l
-           ON l.resolution_id=c.resolution_id WHERE c.resolution_id=? AND l.revoked_at IS NULL""",
+           ON l.resolution_id=c.resolution_id WHERE c.resolution_id=? AND l.revoked_at IS NULL
+           AND c.email_notifications=1""",
         (case["id"],),
     ).fetchone()
     if contact:
@@ -137,7 +167,8 @@ def enqueue_verified_refunds(store, now, limit):
                JOIN customer_portal_links l ON l.resolution_id=r.id AND l.revoked_at IS NULL
                JOIN cases p ON p.id=r.refund_case_id AND p.merchant_id=r.merchant_id
                JOIN paypal_refund_verifications v ON v.merchant_id=p.merchant_id AND v.capture_id=p.capture_id
-               WHERE v.provider_status='COMPLETED' AND julianday(v.checked_at)>=julianday(c.created_at)
+               WHERE c.email_notifications=1 AND v.provider_status='COMPLETED'
+               AND julianday(v.checked_at)>=julianday(c.created_at)
                AND julianday(v.checked_at)>=julianday(?) AND NOT EXISTS (
                    SELECT 1 FROM paypal_refund_verifications n WHERE n.merchant_id=v.merchant_id
                    AND n.capture_id=v.capture_id AND n.refund_id=v.refund_id AND n.sequence>v.sequence)
@@ -190,22 +221,29 @@ def _mail(row, origin, key, sender):
     }
 
 
-def _claim(store, now):
+def _claim(store, now, transport):
     with store.transaction(write=True) as db:
         db.execute(
             "UPDATE customer_mail_outbox SET status='failed',lease_id=NULL WHERE status='queued' AND expires_at<=?",
             (stamp(now),),
         )
+        db.execute(
+            """UPDATE customer_mail_outbox SET status='failed',lease_id=NULL
+               WHERE status='queued' AND delivery_transport='smtp' AND lease_id IS NOT NULL AND next_attempt_at<=?""",
+            (stamp(now),),
+        )
         row = db.execute(
             """SELECT * FROM customer_mail_outbox WHERE status='queued' AND next_attempt_at<=?
+               AND (delivery_transport IS NULL OR delivery_transport=?)
                ORDER BY next_attempt_at,id LIMIT 1""",
-            (stamp(now),),
+            (stamp(now), transport),
         ).fetchone()
         if row:
             lease = str(uuid4())
             db.execute(
-                "UPDATE customer_mail_outbox SET lease_id=?,next_attempt_at=?,attempts=attempts+1 WHERE id=?",
-                (lease, stamp(now + timedelta(minutes=1)), row["id"]),
+                """UPDATE customer_mail_outbox SET lease_id=?,next_attempt_at=?,attempts=attempts+1,
+                   delivery_transport=? WHERE id=?""",
+                (lease, stamp(now + timedelta(minutes=1)), transport, row["id"]),
             )
             return row, lease
     return None
@@ -231,52 +269,56 @@ def _eligible(store, row, key, now):
         return bool(
             db.execute(
                 """SELECT 1 FROM customer_case_contacts c JOIN customer_portal_links l ON l.resolution_id=c.resolution_id
-               WHERE c.resolution_id=? AND c.email=? AND l.revoked_at IS NULL""",
+               WHERE c.resolution_id=? AND c.email=? AND l.revoked_at IS NULL AND c.email_notifications=1""",
                 (row["resolution_id"], row["recipient"]),
             ).fetchone()
         )
 
 
+def _send_resend(client, config, message, identifier):
+    try:
+        response = client.post(
+            RESEND_URL,
+            json=message,
+            headers={
+                "Authorization": "Bearer " + config.resend_key.get_secret_value(),
+                "Idempotency-Key": "resolve/" + identifier,
+            },
+        )
+        if response.is_success:
+            data = response.json()
+            provider_id = data.get("id") if isinstance(data, dict) else None
+            if isinstance(provider_id, str) and 0 < len(provider_id) <= 100:
+                return "accepted", provider_id
+            return "retry", None
+        if response.status_code in (408, 409, 429) or response.status_code >= 500:
+            return "retry", None
+        return "failed", None
+    except (httpx.HTTPError, ValueError):
+        return "retry", None
+
+
 def deliver(store, settings, client: httpx.Client, *, limit=20, now=None):
-    now = now or datetime.now(timezone.utc)
-    origin, key, sender, api = mail_config(settings)
+    config = mail_config(settings)
+    node = smtp_runtime() if config.transport == "smtp" else None
     counts = {"accepted": 0, "retry": 0, "failed": 0, "cancelled": 0}
     for _ in range(limit):
-        claim = _claim(store, now)
+        # Refresh wall time each iteration: a previous SMTP attempt may have blocked.
+        attempt_at = now or datetime.now(timezone.utc)
+        claim = _claim(store, attempt_at, config.transport)
         if not claim:
             break
         row, lease = claim
         status, provider_id = "cancelled", None
-        if _eligible(store, row, key, now):
-            try:
-                response = client.post(
-                    RESEND_URL,
-                    json=_mail(row, origin, key, sender),
-                    headers={
-                        "Authorization": "Bearer " + api,
-                        "Idempotency-Key": "resolve/" + row["id"],
-                    },
-                )
-                if response.is_success:
-                    data = response.json()
-                    provider_id = data.get("id") if isinstance(data, dict) else None
-                    status = (
-                        "accepted"
-                        if isinstance(provider_id, str) and 0 < len(provider_id) <= 100
-                        else "retry"
-                    )
-                    if status == "retry":
-                        provider_id = None
-                else:
-                    status = (
-                        "retry"
-                        if response.status_code in (408, 409, 429)
-                        or response.status_code >= 500
-                        else "failed"
-                    )
-            except (httpx.HTTPError, ValueError):
-                status = "retry"
-        retry_at = now + timedelta(seconds=min(3600, 30 * 2 ** min(row["attempts"], 7)))
+        if _eligible(store, row, config.key, attempt_at):
+            message = _mail(row, config.origin, config.key, config.sender)
+            if node:
+                status, provider_id = send_smtp(node, settings, message, row["id"])
+            else:
+                status, provider_id = _send_resend(client, config, message, row["id"])
+        retry_at = attempt_at + timedelta(
+            seconds=min(3600, 30 * 2 ** min(row["attempts"], 7))
+        )
         if status == "retry" and retry_at >= datetime.fromisoformat(row["expires_at"]):
             status = "failed"
         with store.transaction(write=True) as db:

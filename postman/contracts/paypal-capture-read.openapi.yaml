@@ -223,6 +223,14 @@ components:
       properties:
         id: {type: string}
         update_time: {type: string, format: date-time}
+        supplementary_data:
+          type: object
+          description: Optional related PayPal identifiers; use an explicit order link when absent.
+          properties:
+            related_ids:
+              type: object
+              properties:
+                order_id: {type: string}
         amount:
           type: object
           required: [value, currency_code]

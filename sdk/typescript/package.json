@@ -1,0 +1,28 @@
+{
+  "name": "@resolve-paypal/sdk",
+  "version": "0.2.0",
+  "description": "Server-side SDK for Resolve case evidence and private buyer links",
+  "license": "UNLICENSED",
+  "type": "module",
+  "engines": { "node": ">=22.12.0" },
+  "exports": {
+    ".": {
+      "node": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    }
+  },
+  "types": "./dist/index.d.ts",
+  "files": ["dist", "README.md", "examples"],
+  "scripts": {
+    "generate": "openapi-typescript ../../postman/contracts/resolve.openapi.json --default-non-nullable=false -o src/generated.ts",
+    "build": "npm run generate && tsc -p tsconfig.json",
+    "test": "npm run build && node --test test/client.test.mjs",
+    "prepack": "npm run build"
+  },
+  "devDependencies": {
+    "openapi-typescript": "7.13.0",
+    "typescript": "5.9.3"
+  }
+}

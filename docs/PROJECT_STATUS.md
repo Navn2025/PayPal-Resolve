@@ -13,12 +13,20 @@ Cases can cover non-refund remedies without a captured payment. Provider evidenc
 adapters use PayPal Sandbox, Shopify Admin GraphQL and EasyPost. Only the existing
 approved refund path submits money movement; the new routes read evidence.
 
+The [Resolve Evidence SDK](../sdk/typescript/README.md) lets Node.js developers
+open cases by external reference, link PayPal records, record merchant evidence,
+and read what was verified and what remains missing. The private buyer link
+shows status without merchant notes or provider identifiers. The SDK uses the
+same merchant API and key, has no runtime dependencies, and is available as a
+local npm archive.
+
 The [merchant UI](../frontend/README.md) presents the case inbox, evidence
 timeline, approvals, separate Sandbox submission, review queue, and buyer
 receipt. The public homepage offers a separate demo and buyer entry point.
 The live workspace requires [merchant sign-in](MERCHANT_SIGN_IN.md) with a
 Resolve key or an explicitly linked PayPal account. The latter needs provider
-configuration and has passed local simulation only.
+configuration. A real Sandbox account link has been recorded; a subsequent
+sign-in with the PayPal button has not yet been confirmed.
 
 The [customer portal](CUSTOMER_PORTAL.md) uses a private, revocable case link
 to show the customer-facing summary and conversation, without merchant login.
@@ -28,17 +36,22 @@ next actor, and overdue deadline. Merchants can assign cases, filter the whole
 inbox, and mark displayed messages read. Payment records can be linked to
 the same case when a refund is agreed.
 
-The optional [follow-up integrations](HOSTED_FOLLOWUP.md) add queued Resend
-notifications, email sign-in and My cases, scheduled provider refreshes, and
-a read-only Zendesk ticket link. They are configured separately from the local
+The optional [follow-up integrations](HOSTED_FOLLOWUP.md) add queued email
+notifications, scheduled provider refreshes, and a read-only Zendesk ticket
+link. [My cases](CUSTOMER_SIGN_IN.md) supports Google or a one-time email link.
+Email uses Resend by default, with Nodemailer SMTP available as an alternative.
+They are configured separately from the local
 demo. A genuine PayPal Sandbox delivery still needs a reachable registered HTTPS
 callback; simulated verification does not establish live delivery.
 
 The [PostgreSQL driver and importer](POSTGRES_MIGRATION.md) support the API,
 merchant CLI and workers. The existing SQLite records were copied and
 verified on an isolated local PostgreSQL instance. A later read-only check of the
-configured PostgreSQL database identified a migration 003 checksum mismatch.
-Migration 004 adds the missing PayPal callback claim column on the next restart.
+configured PostgreSQL database identified migration checksum mismatches caused
+by edits to already applied scripts. Forward migrations 004 and 006 restore
+compatibility. The backend reported healthy at PostgreSQL 006 after that
+repair. The Evidence SDK adds PostgreSQL 007 and SQLite 018; the new migrations
+and retry behavior were tested against disposable databases.
 
 ## Account-backed result
 

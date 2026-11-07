@@ -63,14 +63,21 @@ when running an always-on polling worker.
 
 Startup compares the applied migration history to the SQL shipped with Resolve.
 The original migration 003 is preserved, and migration 004 adds the PayPal
-callback claim column. Resolve also recognizes the exact earlier revision of
-003 that included the column. Upgrading either revision only requires restarting
-the backend with the updated code and the same database configuration.
+callback claim column. The original migration 005 is also preserved; 006 adds
+email notification flags to existing invites and contacts. Resolve recognizes
+the exact interim checksum for each migration if the new columns were already
+applied. Restart the backend with the updated code and the same database
+configuration to upgrade.
 
 If an unknown checksum or a newer schema still prevents startup, check that the
 running release has the original migrations for that database. Keep the history
 table and existing data intact; editing checksums or resetting the schema does
 not repair a migration mismatch.
+
+Treat numbered migrations as immutable even before committing: a backend
+running with `--reload` may already have applied them. The default backend
+test suite checks the known PostgreSQL migration checksums even without a
+PostgreSQL connection.
 
 ## Test PostgreSQL locally
 

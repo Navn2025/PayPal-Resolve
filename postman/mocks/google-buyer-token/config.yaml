@@ -1,0 +1,11 @@
+version: 1
+id: 2bbec634-4b98-49e3-b9ba-45a74575ff0e
+name: google-buyer-token
+slug: google-buyer-token
+protocol: http
+origin: oauth2.googleapis.com
+interceptRequests: true
+scenarios:
+  - name: default
+    path: ./default.js
+    default: true

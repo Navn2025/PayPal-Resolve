@@ -272,6 +272,7 @@ test("email sign-in opens only the invited case and uses a customer cookie", asy
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel("Order reference").fill("BROWSER-EMAIL-ORDER");
   await dialog.getByLabel("Buyer email (optional)").fill("browser-buyer@example.com");
+  await dialog.getByLabel("Email this invite from Resolve").check();
   await dialog.getByRole("button", { name: "Create intake link" }).click();
   await expect(dialog.getByText("Invite email queued for delivery.")).toBeVisible();
   const invite = await dialog.getByLabel("Private intake link").inputValue();

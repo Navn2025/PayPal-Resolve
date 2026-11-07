@@ -15,10 +15,19 @@ from .storage import ResolveStore
 
 
 MIGRATIONS = Path(__file__).resolve().parent.parent / "migrations" / "postgres"
-# A brief revision of 003 added claimed_at inline. Accept that exact recorded
-# checksum only against the restored 003; 004 handles both starting schemas.
-_LEGACY_003 = "eb6e217bdade284267610657924ef64e70198a21eefca840f0233edea2cc3e64"
-_INTERIM_003 = "930815d19dd63d32ca11991c9ced6409e6f0617e4cbe34a094896a0c5daf676a"
+# The only known interim scripts that were applied before their changes were
+# split into forward migrations. Key by original digest as well as version,
+# so an additional edit does not silently accept an old checksum.
+_INTERIM_CHECKSUMS = {
+    (
+        3,
+        "eb6e217bdade284267610657924ef64e70198a21eefca840f0233edea2cc3e64",
+    ): "930815d19dd63d32ca11991c9ced6409e6f0617e4cbe34a094896a0c5daf676a",
+    (
+        5,
+        "f35198f84e02a31e1a364d945b25507e685415c6c8401cfdc41e811f0829a1bc",
+    ): "a40a7fd1a6d29de6d8a5ce8e2a4ae6e8db7a664701b47850ebdba363f8cd4c54",
+}
 _SQL_TOKEN = re.compile(r"""'(?:[^']|'')*'|"(?:[^"]|"")*"|\?""")
 
 
@@ -154,12 +163,12 @@ class PostgresStore(ResolveStore):
             ]
             for index, (version, recorded) in enumerate(applied):
                 expected = digests[index] if index < len(digests) else None
-                interim_003 = (
-                    version == 3
-                    and expected == _LEGACY_003
-                    and recorded == _INTERIM_003
-                )
-                if version != index + 1 or (recorded != expected and not interim_003):
+                interim = _INTERIM_CHECKSUMS.get((version, expected))
+                if (
+                    version != index + 1
+                    or expected is None
+                    or recorded not in (expected, interim)
+                ):
                     raise RuntimeError(
                         "Unsupported or modified PostgreSQL migration history "
                         f"at version {index + 1:03d}; check the deployed release "

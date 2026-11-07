@@ -156,13 +156,17 @@ class PayPalSandboxClient:
         return settings
 
     def _configuration_for(self, case: CaseResponse):
-        settings = self.configuration()
-        if settings.paypal_resolve_merchant_id != case.merchant_id:
-            raise StoreError(403, "PayPal Sandbox is not configured for this merchant")
+        settings = self._merchant_configuration(case.merchant_id)
         if re.fullmatch(r"[A-Za-z0-9]{1,64}", case.payment.capture_id) is None:
             raise StoreError(
                 422, "Use an actual PayPal capture ID, not a sample or URL"
             )
+        return settings
+
+    def _merchant_configuration(self, merchant_id):
+        settings = self.configuration()
+        if settings.paypal_resolve_merchant_id != merchant_id:
+            raise StoreError(403, "PayPal Sandbox is not configured for this merchant")
         return settings
 
     def history_identity(self):
@@ -237,9 +241,24 @@ class PayPalSandboxClient:
         return self._read_capture(case, access_token)
 
     def _read_capture(self, case, access_token):
+        capture, _ = self._capture_resource(case.payment.capture_id, access_token)
+        if (
+            capture.amount.value != case.payment.captured_amount
+            or capture.amount.currency_code != case.payment.currency
+        ):
+            raise StoreError(
+                409, "PayPal capture amount or currency does not match this case"
+            )
+        return capture
+
+    def _capture_resource(self, capture_id, access_token):
+        if re.fullmatch(r"[A-Za-z0-9]{1,64}", capture_id) is None:
+            raise StoreError(
+                422, "Use an actual PayPal capture ID, not a sample or URL"
+            )
         data = self._json_request(
             "GET",
-            "/v2/payments/captures/" + case.payment.capture_id,
+            "/v2/payments/captures/" + capture_id,
             headers={
                 "Authorization": "Bearer " + access_token,
                 "Accept": "application/json",
@@ -251,20 +270,22 @@ class PayPalSandboxClient:
             raise StoreError(
                 502, "PayPal Sandbox returned incomplete or invalid capture details"
             ) from None
-        if capture.id != case.payment.capture_id:
+        if capture.id != capture_id:
             raise StoreError(502, "PayPal Sandbox returned a different capture ID")
-        if (
-            capture.amount.value != case.payment.captured_amount
-            or capture.amount.currency_code != case.payment.currency
-        ):
-            raise StoreError(
-                409, "PayPal capture amount or currency does not match this case"
-            )
         if capture.payee.merchant_id != self.settings.paypal_sandbox_merchant_id:
             raise StoreError(
                 409, "PayPal capture payee does not match the configured sandbox seller"
             )
-        return capture
+        supplementary = data.get("supplementary_data")
+        related = (
+            supplementary.get("related_ids")
+            if isinstance(supplementary, dict)
+            else None
+        )
+        order_id = related.get("order_id") if isinstance(related, dict) else None
+        return capture, order_id if isinstance(order_id, str) and re.fullmatch(
+            r"[A-Za-z0-9]{1,64}", order_id
+        ) else None
 
     @staticmethod
     def _validate_refund_parent(refund: PayPalRefundDetails, capture_id: str):
@@ -299,6 +320,14 @@ class PayPalSandboxClient:
         return self._read_refund(case, refund_id, self._access_token(settings))
 
     def _read_refund(self, case, refund_id, access_token):
+        return self._refund_resource(
+            case.payment.capture_id,
+            case.payment.captured_amount,
+            refund_id,
+            access_token,
+        )
+
+    def _refund_resource(self, capture_id, capture_amount, refund_id, access_token):
         if re.fullmatch(r"[A-Za-z0-9]{1,64}", refund_id) is None:
             raise StoreError(422, "Use an actual PayPal refund ID")
         data = self._json_request(
@@ -316,9 +345,9 @@ class PayPalSandboxClient:
             raise StoreError(
                 502, "PayPal Sandbox returned invalid refund details"
             ) from None
-        if refund.id != refund_id or refund.amount.value > case.payment.captured_amount:
+        if refund.id != refund_id or refund.amount.value > capture_amount:
             raise StoreError(502, "PayPal Sandbox returned mismatched refund details")
-        self._validate_refund_parent(refund, case.payment.capture_id)
+        self._validate_refund_parent(refund, capture_id)
         return refund
 
     def read_webhook_refund_links(self, refund_id):
@@ -341,9 +370,15 @@ class PayPalSandboxClient:
             raise StoreError(422, "Use an actual PayPal order ID")
         token = self._access_token(settings)
         capture = self._read_capture(case, token)
+        order = self._order_resource(case.order_id, token)
+        return capture, self._order_refunds(order, capture, token)
+
+    def _order_resource(self, order_id, token):
+        if not re.fullmatch(r"[A-Za-z0-9]{1,64}", order_id):
+            raise StoreError(422, "Use an actual PayPal order ID")
         raw = self._json_request(
             "GET",
-            "/v2/checkout/orders/" + case.order_id,
+            "/v2/checkout/orders/" + order_id,
             headers={"Authorization": "Bearer " + token, "Accept": "application/json"},
             not_found_detail="PayPal Sandbox order was not found",
         )
@@ -353,29 +388,36 @@ class PayPalSandboxClient:
             raise StoreError(
                 409, "PayPal history requires one purchase unit and capture"
             ) from None
+        if order.id != order_id or order.status != "COMPLETED":
+            raise StoreError(409, "PayPal order was not a matching completed order")
+        return order
+
+    def _order_refunds(self, order, capture, token, *, limit=100):
         unit = order.purchase_units[0]
         listed = unit.payments.captures[0]
         if (
-            order.id != case.order_id
-            or order.status != "COMPLETED"
-            or unit.payee != capture.payee
+            unit.payee != capture.payee
             or listed.id != capture.id
             or listed.amount != capture.amount
             or listed.status != capture.status
             or listed.update_time != capture.update_time
         ):
             raise StoreError(409, "PayPal order and capture do not agree")
+        if len(unit.payments.refunds) > limit:
+            raise StoreError(422, "PayPal order history is too large for this check")
         refunds = []
         seen = set()
         for item in unit.payments.refunds:
             if item.id in seen:
                 raise StoreError(409, "Duplicate refund in PayPal order history")
             seen.add(item.id)
-            refund = self._read_refund(case, item.id, token)
+            refund = self._refund_resource(
+                capture.id, capture.amount.value, item.id, token
+            )
             if refund.amount != item.amount or refund.status != item.status:
                 raise StoreError(409, "PayPal order and refund details do not agree")
             refunds.append(refund)
-        if self._read_capture(case, token) != capture:
+        if self._capture_resource(capture.id, token)[0] != capture:
             raise StoreError(409, "PayPal capture changed during history verification")
         completed = sum(
             (r.amount.value for r in refunds if r.status == "COMPLETED"), Decimal("0")
@@ -412,7 +454,7 @@ class PayPalSandboxClient:
             raise StoreError(
                 409, "PayPal refund totals do not reconcile with the capture"
             )
-        return capture, refunds
+        return refunds
 
     def verify_webhook(self, headers, raw: bytes):
         settings = self.configuration()

@@ -1,0 +1,11 @@
+simulation: customer-google
+routing: path
+mocks:
+  - name: google-buyer-token
+    routeKey: google-token
+    origin: oauth2.googleapis.com
+    path: postman/mocks/google-buyer-token
+  - name: google-buyer-keys
+    routeKey: google-keys
+    origin: www.googleapis.com
+    path: postman/mocks/google-buyer-keys

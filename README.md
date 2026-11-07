@@ -2,11 +2,11 @@
 
 ### From refund promise to verified resolution.
 
-Resolve is an AI-powered payment aftercare platform for PayPal merchants. It connects customer-support commitments with payment records, identifies incomplete refunds, and helps merchants coordinate authorized remedies.
+Resolve is a payment aftercare platform for PayPal merchants. It connects customer-support commitments with payment records, identifies incomplete refunds, and helps merchants coordinate authorized remedies.
 
 A successful payment does not always mean a successful purchase. Resolve helps buyers and merchants understand what was agreed, what has happened, and what still needs to be done.
 
-> **Status:** The public landing page links to a sample demo, private buyer portal, and authenticated merchant workspace. Merchant browser sessions and optional PayPal sign-in are implemented. Email notices, My cases, automatic provider checks, and Zendesk linking are optional. Hosted OAuth and payment webhook delivery still need account-backed verification. PayPal Sandbox refund writes default to disabled.
+> **Status:** The public landing page links to a sample demo, private buyer portal, and authenticated merchant workspace. PayPal sign-in for merchants and Google or email sign-in for buyers are optional. Email notices, automatic provider checks, and Zendesk linking are optional. Hosted OAuth and payment webhook delivery still need account-backed verification. PayPal Sandbox refund writes default to disabled.
 
 The [resolution workspace](docs/RESOLUTION_WORKSPACE.md) can track several
 promises in one case: refunds, returns, replacements, cancellation, subscriptions,
@@ -14,10 +14,21 @@ store credit/exchanges, billing corrections, and dispute handoff. PayPal, Shopif
 and EasyPost evidence reads are optional; refund execution remains the only
 provider write.
 
+## Integrate Resolve into your app
+
+The [Resolve Evidence SDK](sdk/typescript/README.md) lets a merchant's Node.js
+server open a case by its own reference, link PayPal records, and record events
+such as a refund approval. Read what PayPal Sandbox confirmed, what is still
+missing, and when Resolve last checked. The SDK also manages private buyer
+status links. The quickstart includes local package installation and a runnable
+example.
+Other languages can use the [OpenAPI contract](postman/contracts/resolve.openapi.json).
+
 ## Development Documentation
 
 - [Merchant UI: run the demo or connect your local backend](frontend/README.md)
 - [Customer portal: case links, access, and messaging](docs/CUSTOMER_PORTAL.md)
+- [Buyer sign-in with Google and optional email delivery](docs/CUSTOMER_SIGN_IN.md)
 - [Customer intake, evidence, and merchant triage](docs/CUSTOMER_WORKFLOW.md)
 - [Hosted follow-up: email, My cases, automatic checks, and Zendesk](docs/HOSTED_FOLLOWUP.md)
 - [PostgreSQL setup and SQLite import](docs/POSTGRES_MIGRATION.md)

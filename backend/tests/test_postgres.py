@@ -11,12 +11,39 @@ import pytest
 from app.errors import StoreError
 from app.main import create_app
 from app.migrate_sqlite import migrate
-from app.postgres import PostgresStore
+from app.postgres import MIGRATIONS, PostgresStore
 from app.settings import Settings
 from test_customer_portal import buyer_view
 from test_customer_workflow import NO_AUTH, PDF, invite, submit as issue
 from test_refund_executions import LocalProvider, ready, submit as refund
 from test_resolution_workspace import refund_case
+
+
+def test_applied_postgres_scripts_keep_their_canonical_checksums():
+    expected = {
+        1: "a4e55ff2c62d62cbfc39b33a59c049472f6e0e2c6db2b66e956a2fde986a1f9b",
+        2: "35d9a244575d7bfed8505a8d17d251a859148fb537b432a79615a6b0c1097d16",
+        3: "eb6e217bdade284267610657924ef64e70198a21eefca840f0233edea2cc3e64",
+        4: "4c958258bd1653264a3566b3669bcaa29fc19ede1b221366e4f584ab4e60617e",
+        5: "f35198f84e02a31e1a364d945b25507e685415c6c8401cfdc41e811f0829a1bc",
+        6: "6bd216c8fce4340b220ff04ec5b765bbfe62201c7f378d81f566a0110bea31f5",
+        7: "60d75405896d21b771ff8696f085f485acb458b1e89e4171213eaaba37aab91f",
+    }
+    found = {
+        int(path.name[:3]): sha256(
+            path.read_text(encoding="utf-8").encode()
+        ).hexdigest()
+        for path in MIGRATIONS.glob("[0-9][0-9][0-9]_*.sql")
+    }
+    for version, checksum in expected.items():
+        assert found.get(version) == checksum, (
+            f"Append a migration instead of editing {version:03d}"
+        )
+
+
+def _rewind_evidence_schema(db):
+    for suffix in ("events", "state", "links", "refs"):
+        db.execute("DROP TABLE resolution_evidence_" + suffix)
 
 
 @pytest.mark.parametrize(
@@ -31,7 +58,14 @@ def test_postgres_003_upgrades_both_paypal_flow_variants(
 ):
     key = postgres_store.create_merchant("Existing workspace")
     with postgres_store.transaction(write=True) as db:
-        db.execute("DELETE FROM schema_migrations WHERE version=4")
+        db.execute("DELETE FROM schema_migrations WHERE version>=4")
+        _rewind_evidence_schema(db)
+        db.execute("DROP TABLE customer_google_flows")
+        db.execute("ALTER TABLE customer_mail_outbox DROP COLUMN delivery_transport")
+        db.execute(
+            "ALTER TABLE customer_intake_invites DROP COLUMN email_notifications"
+        )
+        db.execute("ALTER TABLE customer_case_contacts DROP COLUMN email_notifications")
         db.execute(
             "UPDATE schema_migrations SET checksum=? WHERE version=3", (old_checksum,)
         )
@@ -54,7 +88,7 @@ def test_postgres_003_upgrades_both_paypal_flow_variants(
             )
     with postgres_store.transaction() as db:
         assert (
-            db.execute("SELECT max(version) FROM schema_migrations").fetchone()[0] == 4
+            db.execute("SELECT max(version) FROM schema_migrations").fetchone()[0] == 7
         )
         assert (
             db.execute(
@@ -69,14 +103,76 @@ def test_postgres_003_upgrades_both_paypal_flow_variants(
         ) == ("existing", "already claimed" if already_has_claim else None)
 
 
-def test_postgres_still_rejects_an_unknown_003_checksum(postgres_store):
+@pytest.mark.parametrize(
+    ("old_checksum", "already_has_flags"),
+    [
+        ("f35198f84e02a31e1a364d945b25507e685415c6c8401cfdc41e811f0829a1bc", False),
+        ("a40a7fd1a6d29de6d8a5ce8e2a4ae6e8db7a664701b47850ebdba363f8cd4c54", True),
+    ],
+)
+def test_postgres_005_upgrades_both_notification_variants(
+    postgres_store, old_checksum, already_has_flags
+):
+    merchant_id = str(postgres_store.create_merchant("Existing workspace").merchant.id)
     with postgres_store.transaction(write=True) as db:
-        db.execute("DELETE FROM schema_migrations WHERE version=4")
+        db.execute("DELETE FROM schema_migrations WHERE version>=6")
+        _rewind_evidence_schema(db)
         db.execute(
-            "UPDATE schema_migrations SET checksum=? WHERE version=3", ("0" * 64,)
+            "UPDATE schema_migrations SET checksum=? WHERE version=5", (old_checksum,)
+        )
+        if not already_has_flags:
+            db.execute(
+                "ALTER TABLE customer_intake_invites DROP COLUMN email_notifications"
+            )
+            db.execute(
+                "ALTER TABLE customer_case_contacts DROP COLUMN email_notifications"
+            )
+        db.execute(
+            """INSERT INTO customer_intake_invites
+               (token_hash,merchant_id,order_reference,created_at,expires_at)
+               VALUES ('prior',?,'ORDER-005','2026-01-01','2030-01-01')""",
+            (merchant_id,),
+        )
+        if already_has_flags:
+            db.execute("UPDATE customer_intake_invites SET email_notifications=0")
+    app = create_app(settings=Settings(_env_file=None), store=postgres_store)
+    for _ in range(2):
+        with TestClient(app) as client:
+            assert client.get("/health").status_code == 200
+    with postgres_store.transaction() as db:
+        assert (
+            db.execute("SELECT max(version) FROM schema_migrations").fetchone()[0] == 7
+        )
+        assert (
+            db.execute(
+                "SELECT checksum FROM schema_migrations WHERE version=5"
+            ).fetchone()[0]
+            == old_checksum
+        )
+        assert tuple(
+            db.execute(
+                "SELECT order_reference,email_notifications FROM customer_intake_invites"
+            ).fetchone()
+        ) == ("ORDER-005", int(not already_has_flags))
+        assert (
+            db.execute(
+                "SELECT email_notifications FROM customer_case_contacts"
+            ).fetchall()
+            == []
+        )
+
+
+@pytest.mark.parametrize("version", [3, 5])
+def test_postgres_still_rejects_an_unknown_migration_checksum(postgres_store, version):
+    with postgres_store.transaction(write=True) as db:
+        db.execute("DELETE FROM schema_migrations WHERE version>?", (version,))
+        db.execute(
+            "UPDATE schema_migrations SET checksum=? WHERE version=?",
+            ("0" * 64, version),
         )
     with pytest.raises(
-        RuntimeError, match="modified PostgreSQL migration history at version 003"
+        RuntimeError,
+        match=f"modified PostgreSQL migration history at version {version:03d}",
     ):
         postgres_store.initialize()
     with postgres_store.transaction() as db:
@@ -84,7 +180,7 @@ def test_postgres_still_rejects_an_unknown_003_checksum(postgres_store):
             db.execute(
                 "SELECT version,checksum FROM schema_migrations ORDER BY version DESC LIMIT 1"
             ).fetchone()
-        ) == (3, "0" * 64)
+        ) == (version, "0" * 64)
 
 
 def test_sqlite_import_keeps_capabilities_money_bytes_and_sequence(

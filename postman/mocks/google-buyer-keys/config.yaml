@@ -1,0 +1,11 @@
+version: 1
+id: 5fa203d6-27a0-42c0-a754-4088092e27ba
+name: google-buyer-keys
+slug: google-buyer-keys
+protocol: http
+origin: www.googleapis.com
+interceptRequests: true
+scenarios:
+  - name: default
+    path: ./default.js
+    default: true

@@ -22,7 +22,10 @@ export function InviteForm({ onClose, request, demo }: { onClose: () => void; re
     const email = String(form.get("email") ?? "").trim();
     setBusy(true); setError("");
     try {
-      const issued = await request<IntakeInvite>("/resolution-cases/intake-invites", "POST", { order_reference: order, ...(email && { customer_email: email }) });
+      const issued = await request<IntakeInvite>("/resolution-cases/intake-invites", "POST", {
+        order_reference: order,
+        ...(email && { customer_email: email, send_email: form.has("send_email") }),
+      });
       setUrl(issued.public_url ?? (window.location.origin + "/customer#" + issued.token));
       setInvite(issued);
     } catch (failure) { setError(explain(failure)); }
@@ -45,7 +48,8 @@ export function InviteForm({ onClose, request, demo }: { onClose: () => void; re
         {error && <Notice>{error}</Notice>}
         <label className="field"><span>Order reference</span><input name="order" required maxLength={160} placeholder="e.g. ORD-4821" disabled={busy} /></label>
         <label className="field"><span>Buyer email (optional)</span><input name="email" type="email" maxLength={254} placeholder="buyer@example.com" disabled={busy} />
-          <small>Use the buyer’s verified order email if your hosted delivery is configured. Leave blank to copy a private link.</small></label>
+          <small>Use the email already verified for the order so the buyer can find the case after signing in.</small></label>
+        <label className="customer-checkbox"><input type="checkbox" name="send_email" disabled={busy} /> Email this invite from Resolve</label>
         <Button type="submit" variant="primary" disabled={busy}><Link2 size={16} />{busy ? "Creating…" : "Create intake link"}</Button>
       </form>}
   </Modal>;

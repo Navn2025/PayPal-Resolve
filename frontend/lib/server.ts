@@ -48,10 +48,15 @@ export function sameOrigin(request: NextRequest) {
   return !!expected && request.headers.get("origin") === expected;
 }
 
-export function customerSameOrigin(request: NextRequest) {
-  if (sameOrigin(request)) return true;
+export function customerRequestOrigin(request: NextRequest) {
   const expected = configuredOrigin(process.env.RESOLVE_CUSTOMER_PUBLIC_ORIGIN);
-  return !!expected && request.headers.get("origin") === expected.origin && request.headers.get("host") === expected.host;
+  if (expected && request.headers.get("host") === expected.host) return expected.origin;
+  return merchantRequestOrigin(request);
+}
+
+export function customerSameOrigin(request: NextRequest) {
+  const origin = customerRequestOrigin(request);
+  return !!origin && request.headers.get("origin") === origin;
 }
 export async function readBody(request: NextRequest): Promise<string | null> {
   if (!request.body) return "";

@@ -40,6 +40,25 @@ from .resolution_state import refund_promise_gate
 
 
 LEGACY_MERCHANT_ID = UUID("00000000-0000-0000-0000-000000000000")
+_SQLITE_FORWARD_ADDITIONS = {
+    "015_merchant_paypal_flow_claim.sql": (("merchant_paypal_flows", "claimed_at"),),
+    "017_customer_email_notifications.sql": (
+        ("customer_intake_invites", "email_notifications"),
+        ("customer_case_contacts", "email_notifications"),
+    ),
+}
+
+
+def _already_added(connection, migration, statement):
+    # SQLite lacks ADD COLUMN IF NOT EXISTS. Skip only the exact forward
+    # additions that some databases already received from an interim script.
+    return any(
+        statement.lstrip().startswith(f"ALTER TABLE {table} ADD COLUMN {column} ")
+        and connection.execute(
+            "SELECT 1 FROM pragma_table_info(?) WHERE name=?", (table, column)
+        ).fetchone()
+        for table, column in _SQLITE_FORWARD_ADDITIONS.get(migration, ())
+    )
 
 
 @dataclass
@@ -103,6 +122,9 @@ class _SQLiteTransactions:
             directory / "013_case_order.sql",
             directory / "014_merchant_web_auth.sql",
             directory / "015_merchant_paypal_flow_claim.sql",
+            directory / "016_customer_google_and_smtp.sql",
+            directory / "017_customer_email_notifications.sql",
+            directory / "018_resolution_evidence_sdk.sql",
         ]
         with self.transaction(write=True) as connection:
             version = connection.execute("PRAGMA user_version").fetchone()[0]
@@ -110,20 +132,12 @@ class _SQLiteTransactions:
                 raise RuntimeError(f"Unsupported database schema version: {version}")
             for index in range(version, len(migrations)):
                 migration = migrations[index]
-                if migration.name == "015_merchant_paypal_flow_claim.sql" and any(
-                    column["name"] == "claimed_at"
-                    for column in connection.execute(
-                        "PRAGMA table_info(merchant_paypal_flows)"
-                    )
-                ):
-                    # Some version-14 databases received this column inline.
-                    connection.execute(f"PRAGMA user_version = {index + 1}")
-                    continue
                 statement = ""
                 for line in migration.read_text(encoding="utf-8").splitlines(True):
                     statement += line
                     if sqlite3.complete_statement(statement):
-                        connection.execute(statement)
+                        if not _already_added(connection, migration.name, statement):
+                            connection.execute(statement)
                         statement = ""
                 if statement.strip():
                     raise RuntimeError(

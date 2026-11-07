@@ -6,7 +6,7 @@ from fastapi import APIRouter, Header, Query, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute
-from pydantic import SecretStr
+from pydantic import BaseModel, SecretStr
 from starlette.concurrency import run_in_threadpool
 
 from .auth import CurrentMerchant, Store
@@ -16,6 +16,13 @@ from .customer_account import (
     CustomerAccounts,
     EmailSignIn,
     RedeemSignIn,
+)
+from .customer_email import email_available
+from .customer_google import (
+    GoogleCustomerSignIn,
+    GoogleFinish,
+    GoogleStart,
+    google_config,
 )
 from .customer_portal import (
     CustomerCase,
@@ -205,6 +212,35 @@ def create_intake_invite(
         payload.order_reference,
         payload.customer_email,
         request.app.state.settings,
+        send_email=payload.send_email,
+    )
+
+
+class CustomerAccountCapabilities(BaseModel):
+    email_enabled: bool
+    google_enabled: bool
+
+
+@router.get(
+    "/customer-account/capabilities", response_model=CustomerAccountCapabilities
+)
+def customer_account_capabilities(request: Request):
+    settings = request.app.state.settings
+    return CustomerAccountCapabilities(
+        email_enabled=email_available(settings),
+        google_enabled=google_config(settings) is not None,
+    )
+
+
+@router.post("/customer-account/google/start", response_model=GoogleStart)
+def start_google_sign_in(request: Request, store: Store):
+    return GoogleCustomerSignIn(store, request.app.state.settings).start()
+
+
+@router.post("/customer-account/google/finish", response_model=AccountToken)
+def finish_google_sign_in(payload: GoogleFinish, request: Request, store: Store):
+    return GoogleCustomerSignIn(store, request.app.state.settings).finish(
+        payload, request.app.state.followup_http
     )
 
 

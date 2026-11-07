@@ -7,7 +7,7 @@
 | `/login` | Merchant sign-in with a Resolve access key or linked PayPal account |
 | `/workspace` | Signed-in merchant inbox |
 | `/workspace/settings` | Link or unlink PayPal, review session details, and sign out |
-| `/customer`, `/customer/account` | Private buyer link and the separate My cases email sign-in |
+| `/customer`, `/customer/account` | Private buyer link and separate My cases sign-in |
 
 An administrator creates or issues a merchant access key through
 `app.manage`. Use that key at `/login` the first time. A successful sign-in
@@ -64,8 +64,8 @@ approved and tested.
   `RESOLVE_BACKEND_ALLOW_PRIVATE_HTTP=true` only on a trusted private network.
   Preserve the external `Host` header when proxying browser routes.
 - Use FastAPI `GET /health` as a deployment liveness check. The original
-  POST endpoint still works. Backend startup applies the new auth schema
-  (SQLite 15 or PostgreSQL migration 004).
+  POST endpoint still works. Backend startup applies pending migrations
+  (currently through SQLite 018 or PostgreSQL 007).
 - Restrict public backend ingress to the existing PayPal webhook and
   appropriate health routes if the frontend can reach FastAPI privately.
   Configure access logs to omit query strings on the PayPal callback.

@@ -50,6 +50,15 @@ The engineering log records development decisions. It does not replace runtime
 audit events, source evidence, database migrations, or Git history. Do not commit
 or push changes unless authorized by the user.
 
+## Keep database migrations immutable
+
+Once a numbered migration exists in the working tree, treat it as applied.
+The local backend can apply it immediately while running with `--reload`,
+even if the file has not been staged or committed. Put every follow-up schema
+change in a new migration; never replace the SQL or rewrite checksums in an
+existing database. Develop and verify schema changes against a disposable
+database, especially when the owner's backend is connected to hosted storage.
+
 ## Keep the API contract reusable
 
 After API/model changes, regenerate `postman/contracts/resolve.openapi.json` from

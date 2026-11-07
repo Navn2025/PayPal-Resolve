@@ -19,3 +19,4 @@ wheels/
 .env.*
 !.env.example
 .pytest_cache/
+/mailer/node_modules/

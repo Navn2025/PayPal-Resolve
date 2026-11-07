@@ -103,6 +103,7 @@ def refresh_due(store, paypal, settings, *, now, limit):
 def run_once(store, paypal, settings, mail_http, *, limit=20, now=None):
     if not 1 <= limit <= 100:
         raise ValueError("Use a limit of 1–100")
+    delivery_clock = now
     now = now or datetime.now(timezone.utc)
     paypal_result = None
     if (
@@ -127,7 +128,7 @@ def run_once(store, paypal, settings, mail_http, *, limit=20, now=None):
         queued = enqueue_verified_refunds(store, now, limit)
         mail = {
             "new_refund_notices": queued,
-            **deliver(store, settings, mail_http, limit=limit, now=now),
+            **deliver(store, settings, mail_http, limit=limit, now=delivery_clock),
         }
     return {
         "paypal": paypal_result,

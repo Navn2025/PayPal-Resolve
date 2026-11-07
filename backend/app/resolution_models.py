@@ -287,6 +287,7 @@ class ResolutionTimeline(BaseModel):
     total: int
     limit: int
     offset: int
+    next_before_sequence: int | None = None
     refund_items: list[CaseTimelineEntry] = Field(default_factory=list)
     refund_total: int = 0
 

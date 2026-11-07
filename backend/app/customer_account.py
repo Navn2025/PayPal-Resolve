@@ -74,7 +74,7 @@ class CustomerAccounts:
         self.store = store
 
     def request(self, email, settings):
-        _, key, _, _ = mail_config(settings)
+        key = mail_config(settings).key
         now = datetime.now(timezone.utc)
         with self.store.transaction(write=True) as db:
             if not db.execute(
@@ -114,8 +114,6 @@ class CustomerAccounts:
             raise error
         digest = token_hash(token)
         now = datetime.now(timezone.utc)
-        expiry = now + SESSION_LIFETIME
-        session = "racs_" + secrets.token_urlsafe(32)
         with self.store.transaction(write=True) as db:
             row = db.execute(
                 """SELECT email FROM customer_signins WHERE token_hash=? AND consumed_at IS NULL AND expires_at>?""",
@@ -127,11 +125,22 @@ class CustomerAccounts:
                 "UPDATE customer_signins SET consumed_at=? WHERE token_hash=?",
                 (stamp(now), digest),
             )
-            db.execute(
-                "INSERT INTO customer_sessions (token_hash,email,expires_at) VALUES (?,?,?)",
-                (token_hash(session), row["email"], stamp(expiry)),
-            )
+            return self._issue_session(db, row["email"], now)
+
+    @staticmethod
+    def _issue_session(db, verified_email, now):
+        expiry = now + SESSION_LIFETIME
+        session = "racs_" + secrets.token_urlsafe(32)
+        db.execute("DELETE FROM customer_sessions WHERE expires_at<=?", (stamp(now),))
+        db.execute(
+            "INSERT INTO customer_sessions (token_hash,email,expires_at) VALUES (?,?,?)",
+            (token_hash(session), verified_email, stamp(expiry)),
+        )
         return AccountToken(token=session, expires_at=expiry)
+
+    def from_verified_email(self, verified_email):
+        with self.store.transaction(write=True) as db:
+            return self._issue_session(db, verified_email, datetime.now(timezone.utc))
 
     @staticmethod
     def _email(db, session, now):

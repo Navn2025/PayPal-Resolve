@@ -39,6 +39,7 @@ class InviteCreate(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
     order_reference: str = Field(min_length=1, max_length=160)
     customer_email: str | None = None
+    send_email: bool = True
 
     @field_validator("customer_email")
     @classmethod
@@ -70,7 +71,15 @@ class Intake:
         self.store = store
         self.portal = CustomerPortal(store)
 
-    def invite(self, merchant_id, order_reference, customer_email=None, settings=None):
+    def invite(
+        self,
+        merchant_id,
+        order_reference,
+        customer_email=None,
+        settings=None,
+        *,
+        send_email=True,
+    ):
         now = datetime.now(timezone.utc)
         identifier = str(uuid4())
         origin = (
@@ -78,8 +87,10 @@ class Intake:
             if settings
             else None
         )
-        if customer_email:
-            origin, key, _, _ = mail_config(settings)
+        email_queued = bool(customer_email and send_email)
+        if email_queued:
+            config = mail_config(settings)
+            origin = config.origin
             if merchant_id != (
                 settings.customer_email_merchant_id
                 or settings.paypal_resolve_merchant_id
@@ -87,15 +98,15 @@ class Intake:
                 raise StoreError(
                     503, "Customer email is not configured for this merchant"
                 )
-            token = mail_token(key, "invite", identifier)
+            token = mail_token(config.key, "invite", identifier)
         else:
             token = "rint_" + secrets.token_urlsafe(32)
         with self.store.transaction(write=True) as db:
             self.store._require_merchant(db, merchant_id)
             db.execute(
                 """INSERT INTO customer_intake_invites
-                   (token_hash,merchant_id,order_reference,created_at,expires_at,customer_email)
-                   VALUES (?,?,?,?,?,?)""",
+                   (token_hash,merchant_id,order_reference,created_at,expires_at,customer_email,email_notifications)
+                   VALUES (?,?,?,?,?,?,?)""",
                 (
                     sha256(token.encode()).hexdigest(),
                     str(merchant_id),
@@ -103,9 +114,10 @@ class Intake:
                     _timestamp(now),
                     _timestamp(now + LINK_LIFETIME),
                     customer_email,
+                    int(email_queued),
                 ),
             )
-            if customer_email:
+            if email_queued:
                 enqueue(
                     db,
                     "invite",
@@ -118,7 +130,7 @@ class Intake:
             token=token,
             order_reference=order_reference,
             expires_at=now + LINK_LIFETIME,
-            email_queued=bool(customer_email),
+            email_queued=email_queued,
             public_url=origin + "/customer#" + token if origin else None,
         )
 
@@ -200,12 +212,14 @@ class Intake:
                 )
                 if invite["customer_email"]:
                     db.execute(
-                        "INSERT INTO customer_case_contacts VALUES (?,?,?,?)",
+                        """INSERT INTO customer_case_contacts
+                           (resolution_id,merchant_id,email,created_at,email_notifications) VALUES (?,?,?,?,?)""",
                         (
                             identifier,
                             invite["merchant_id"],
                             invite["customer_email"],
                             _timestamp(now),
+                            invite["email_notifications"],
                         ),
                     )
                 self.portal._record(

@@ -32,6 +32,7 @@ STALE_CAPTURE = "SIMHUISTALE"
 SIMULATED = os.environ.get("RESOLVE_UI_PAYPAL_SIMULATION") == "1"
 PAYPAL_LOGIN_FIXTURE = os.environ.get("RESOLVE_UI_PAYPAL_LOGIN") == "1"
 EMAIL_FIXTURE = os.environ.get("RESOLVE_UI_EMAIL_FIXTURE") == "1"
+GOOGLE_FIXTURE = os.environ.get("RESOLVE_UI_GOOGLE_FIXTURE") == "1"
 EMAIL_KEY = "synthetic-browser-signing-key-no-real-email"
 
 
@@ -68,10 +69,13 @@ def main():
             paypal_login_client_secret="simulation-login-secret",
             customer_email_enabled=EMAIL_FIXTURE,
             customer_email_merchant_id=MERCHANT_ID,
-            customer_public_origin="https://resolve.example.com",
+            customer_public_origin="http://127.0.0.1:3100" if GOOGLE_FIXTURE else "https://resolve.example.com",
             customer_signing_key=EMAIL_KEY,
             resend_api_key="fake-browser-resend-key",
             resend_from="updates@example.com",
+            customer_google_enabled=GOOGLE_FIXTURE,
+            google_client_id="simulation-google-client",
+            google_client_secret="simulation-google-secret",
         )
         app = create_app(settings=settings)
         store = app.state.store
@@ -160,6 +164,25 @@ def main():
                     yield
 
             app.router.lifespan_context = test_lifespan
+        if GOOGLE_FIXTURE:
+            sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "backend" / "tests"))
+            from google_simulation_support import register_google_code
+
+            @app.post("/__ui_fixture_google_consent", include_in_schema=False)
+            def google_fixture(parameters: dict[str, str]):
+                with sandbox_http() as http:
+                    return {"code": register_google_code(http, parameters)}
+
+            previous_lifespan = app.router.lifespan_context
+
+            @asynccontextmanager
+            async def google_lifespan(application):
+                async with previous_lifespan(application):
+                    with sandbox_http() as http:
+                        application.state.followup_http = http
+                        yield
+
+            app.router.lifespan_context = google_lifespan
         uvicorn.run(app, host="127.0.0.1", port=8011, access_log=False)
 
 

@@ -4,6 +4,7 @@ const TOKEN = 'simulation-access-token';
 const refundsByRequest = new Map();
 const refundsById = new Map();
 const captureStats = new Map();
+const evidenceOutages = new Set();
 function stats(id) {
   if (!captureStats.has(id)) captureStats.set(id, { refund_posts: 0, refund_creations: 0, request_ids: [], refund_ids: [] });
   return captureStats.get(id);
@@ -125,6 +126,12 @@ http.createServer((req, res) => {
     refundsById.set(id, { capture, refund });
     return json(res, 201, refund);
   }
+  const evidenceOutage = path.match(/^\/__resolve_test\/evidence-outage\/(SIMHSDK[A-Za-z0-9]+)$/);
+  if (req.method === 'POST' && evidenceOutage) {
+    if (req.body?.enabled === true) evidenceOutages.add(evidenceOutage[1]);
+    else evidenceOutages.delete(evidenceOutage[1]);
+    return json(res, 200, { enabled: evidenceOutages.has(evidenceOutage[1]) });
+  }
   const refundPost = path.match(/^\/v2\/payments\/captures\/([A-Za-z0-9]+)\/refund$/);
   if (req.method === 'POST' && refundPost) {
     const capture = refundPost[1];
@@ -189,6 +196,7 @@ http.createServer((req, res) => {
   const match = path.match(/^\/v2\/payments\/captures\/([A-Za-z0-9]+)$/);
   if (req.method !== 'GET' || !match) return json(res, 501, { error: 'Endpoint not modeled' });
   const id = match[1];
+  if (evidenceOutages.has(id)) return json(res, 503, { error: 'DO-NOT-LEAK-UPSTREAM-BODY' });
   if (id === 'SIMCAPTURE404') return json(res, 404, { error: 'RESOURCE_NOT_FOUND' });
   if (id === 'SIMCAPTURE403') return json(res, 403, { error: 'DO-NOT-LEAK-UPSTREAM-BODY' });
   if (id === 'SIMCAPTURE429') return json(res, 429, { error: 'Rate limited' });
@@ -202,6 +210,9 @@ http.createServer((req, res) => {
     return res.end();
   }
   const data = captureDetails(id);
+  if (id.startsWith('SIMHSDK') && !id.includes('NOPARENT')) {
+    data.supplementary_data = { related_ids: { order_id: 'SIMORDER' + id } };
+  }
   if (id === 'SIMCAPTUREAMOUNT') data.amount.value = '90.00';
   if (id === 'SIMCAPTUREPAYEE') data.payee.merchant_id = 'OTHERSELLER';
   if (id === 'SIMCAPTURENOPAYEE') delete data.payee;

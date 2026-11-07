@@ -65,6 +65,25 @@ member and **zero passed-through requests**. The timeout fixture deliberately
 waits longer than the client's timeout; its late mock response can appear after
 the assertion that Resolve returned `504`.
 
+## Resolve Evidence SDK acceptance test
+
+From the repository root, after installing the SDK's build dependencies:
+
+```powershell
+$env:RESOLVE_RUN_SDK_EVIDENCE_SIMULATION = '1'
+try {
+    postman simulation run postman/simulations/paypal-read/paypal-read.sim.yaml --proxy --lift 'npm --prefix sdk/typescript test' --output ndjson
+} finally {
+    Remove-Item Env:RESOLVE_RUN_SDK_EVIDENCE_SIMULATION -ErrorAction SilentlyContinue
+}
+```
+
+The SDK talks to a disposable FastAPI/SQLite instance. The fixture seeds a
+USD 25 external refund in the PayPal stand-in. The test checks approval and
+confirmation as separate records, retries, buyer privacy, tenant isolation, and
+the behavior when the provider goes down. The mock counters verify that this
+flow did not submit a refund. This does not establish account-backed visibility.
+
 ## Files and contract boundary
 
 - [Upstream contract subset](contracts/paypal-capture-read.openapi.yaml): OAuth,
@@ -110,6 +129,27 @@ Orbit identified the capture-read operation but supplied only partial support
 for the fields this caller needs: its saved example omitted payee. The official
 schema/example includes payee, without guaranteeing it for every response. The
 client requires `payee.merchant_id` and fails verification when absent.
+
+### Buyer Google sign-in simulation
+
+The [buyer Google simulation](simulations/customer-google/customer-google.sim.yaml)
+intercepts the Google token and public signing key endpoints. The tests register
+locally signed ID tokens with ephemeral keys, require PKCE at code exchange, and
+verify that invalid claims and replay cannot create a buyer session.
+
+```powershell
+$env:RESOLVE_RUN_GOOGLE_SIMULATION = '1'
+try {
+    postman simulation run postman/simulations/customer-google/customer-google.sim.yaml --proxy --lift 'uv --directory backend run --no-sync python -m pytest tests/test_customer_google.py -q' --output ndjson
+} finally {
+    Remove-Item Env:RESOLVE_RUN_GOOGLE_SIMULATION -ErrorAction SilentlyContinue
+}
+```
+
+The browser spec `customer-google.spec.ts` also uses this simulation with
+`RESOLVE_UI_GOOGLE_FIXTURE=1`. Its consent page is a browser fixture, so it does
+not establish that any Google Cloud app is registered. SMTP is tested by a
+separate loopback TLS fixture because it is not HTTP.
 
 ### Merchant sign-in simulation
 

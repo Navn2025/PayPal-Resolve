@@ -5,13 +5,24 @@ from uuid import UUID
 from fastapi import APIRouter, Query, Request
 
 from .auth import CurrentMerchant, Store
+from .evidence_models import (
+    EvidenceBundle,
+    EvidenceCaseUpsert,
+    EvidenceCaseView,
+    EvidenceInput,
+    EvidenceReceipt,
+    EvidenceRecordInput,
+    EvidenceRefreshResult,
+    LinkedEvidenceRecord,
+)
+from .evidence_workspace import EvidenceWorkspace
+from .errors import StoreError
 from .resolution_models import (
     MerchantEvidence,
     PromiseRevision,
     PromiseTerms,
     PromiseView,
     RefreshEvidence,
-    ResolutionBundle,
     ResolutionCreate,
     ResolutionPage,
     ResolutionPaymentLink,
@@ -42,9 +53,59 @@ def list_resolutions(
     return ResolutionWorkspace(store).list(merchant.id, limit, offset)
 
 
-@router.get("/{case_id}", response_model=ResolutionView)
+@router.post(
+    "/upsert",
+    response_model=EvidenceCaseView,
+    responses={409: {"description": "External reference has different case data"}},
+)
+def upsert_evidence_case(
+    payload: EvidenceCaseUpsert, store: Store, merchant: CurrentMerchant
+):
+    """Create or reuse a resolution case by an exact merchant-scoped external reference."""
+    return EvidenceWorkspace(store).upsert(merchant.id, payload)
+
+
+@router.get("/{case_id}", response_model=EvidenceCaseView)
 def get_resolution(case_id: UUID, store: Store, merchant: CurrentMerchant):
-    return ResolutionWorkspace(store).get(case_id, merchant.id)
+    return EvidenceWorkspace(store).get(case_id, merchant.id)
+
+
+@router.post(
+    "/{case_id}/evidence/records",
+    response_model=LinkedEvidenceRecord,
+    responses={409: {"description": "Conflicting record association"}},
+)
+def link_evidence_record(
+    case_id: UUID, payload: EvidenceRecordInput, store: Store, merchant: CurrentMerchant
+):
+    """Associate a record reference without contacting its provider."""
+    return EvidenceWorkspace(store).link(case_id, merchant.id, payload)
+
+
+@router.post(
+    "/{case_id}/evidence/events",
+    response_model=EvidenceReceipt,
+    responses={409: {"description": "Source event ID has different evidence"}},
+)
+def submit_merchant_evidence(
+    case_id: UUID, payload: EvidenceInput, store: Store, merchant: CurrentMerchant
+):
+    """Record merchant evidence once. This cannot approve or execute money movement."""
+    return EvidenceWorkspace(store).add(case_id, merchant.id, payload)
+
+
+@router.post(
+    "/{case_id}/evidence/refresh",
+    response_model=EvidenceRefreshResult,
+    responses={409: {"description": "Linked records changed during the check"}},
+)
+def refresh_case_evidence(
+    case_id: UUID, request: Request, store: Store, merchant: CurrentMerchant
+):
+    """Check linked PayPal Sandbox records; report incomplete checks without removing prior facts."""
+    return EvidenceWorkspace(store).refresh(
+        case_id, merchant.id, request.app.state.paypal_client
+    )
 
 
 @router.put("/{case_id}/payment-link", response_model=ResolutionView)
@@ -137,12 +198,17 @@ def resolution_timeline(
     merchant: CurrentMerchant,
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0, le=100000),
+    before_sequence: int | None = Query(None, ge=1, le=2**53 - 1),
 ):
-    """Read promise history and the associated refund audit events."""
-    return ResolutionWorkspace(store).timeline(case_id, merchant.id, limit, offset)
+    """Read case events newest first; use before_sequence for paging through new activity."""
+    if before_sequence is not None and offset:
+        raise StoreError(422, "Use either offset or before_sequence")
+    return ResolutionWorkspace(store).timeline(
+        case_id, merchant.id, limit, offset, before_sequence
+    )
 
 
-@router.get("/{case_id}/evidence-bundle", response_model=ResolutionBundle)
+@router.get("/{case_id}/evidence-bundle", response_model=EvidenceBundle)
 def evidence_bundle(
     case_id: UUID,
     store: Store,
@@ -151,4 +217,4 @@ def evidence_bundle(
     offset: int = Query(0, ge=0, le=100000),
 ):
     """Export evidence privately for review; does not submit a PayPal dispute."""
-    return ResolutionWorkspace(store).bundle(case_id, merchant.id, limit, offset)
+    return EvidenceWorkspace(store).bundle(case_id, merchant.id, limit, offset)

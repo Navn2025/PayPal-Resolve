@@ -65,20 +65,24 @@ real customer data.
 - Merchant triage with assignment labels, deadlines, unread message tracking,
   and workflow filters across the whole owned inbox. The merchant can link an
   existing payment to the original intake case if it needs a refund.
-- Optional hosted customer follow-up: a durable Resend outbox, mailbox sign-in
-  and My cases, automatic provider proof checks, and read-only Zendesk links.
-- SQLite migrations through version 15 and PostgreSQL migrations through 004;
-  transaction-protected writes
-  and consistent read snapshots replace the in-memory dictionaries and lock.
+- Optional hosted customer follow-up: a durable outbox with Resend or Nodemailer
+  SMTP, automatic provider proof checks, and read-only Zendesk links. My cases
+  supports Google or an email link for buyers with an assigned mailbox.
+- Resolve Evidence SDK for Node.js and TypeScript: open or reuse a case, link
+  records, add merchant evidence, read PayPal Sandbox facts and gaps, browse a
+  cursor-paginated timeline, and share a private buyer link. The SDK uses
+  generated OpenAPI types and has no runtime dependencies.
+- SQLite migrations through 018 and PostgreSQL migrations through 007.
+  Transactions protect retries and evidence snapshots on either database.
 - Default database: `backend/data/resolve.sqlite3`; `RESOLVE_DATABASE_PATH`
   overrides the file and `RESOLVE_DATABASE_URL` selects PostgreSQL. The
   importer verifies a read-only SQLite snapshot before committing to an
   empty PostgreSQL schema. Databases and local environment files are ignored by Git.
-- Latest migration validation: **242 default SQLite tests** and **8 targeted
-  PostgreSQL tests** passed. The merchant sign-in milestone separately passed
-  **3 merchant authentication tests with the PayPal simulation** and **14 browser
-  tests**. The PostgreSQL milestone passed 51 tests and 13 provider simulations
-  on that engine.
+- Evidence SDK validation: **252 default tests passed** (59 opt-in skipped),
+  **15 targeted PostgreSQL tests passed**, and **4 Node tests plus 40 PayPal
+  regression tests passed** with local provider simulation. The merchant sign-in
+  milestone separately passed 3 backend tests with the PayPal simulation and
+  14 browser tests.
 - Actual Sandbox OAuth/capture checks passed, the capture was saved through
   authenticated case routes, and one USD 1.00 full refund completed through the
   new executor, independently read as COMPLETED with capture REFUNDED and
@@ -91,8 +95,9 @@ real customer data.
 The owner reports a connected database; the hosted connection was not accessed
 or verified in CHG-022. In CHG-023, a read-only check of the configured database
 confirmed the applied 003 checksum and the missing OAuth claim column. The fix
-was exercised on isolated databases. Account-backed PayPal browser login, merchant team roles,
-AI extraction, merchant-wide PayPal reporting, and hosted webhook/worker
+was exercised on isolated databases. In CHG-024 a read-only check confirmed
+a real Sandbox link but no active PayPal-issued session. Repeat PayPal sign-in,
+merchant team roles, AI extraction, merchant-wide PayPal reporting, and hosted webhook/worker
 validation remain open. A stack
 recommendation in a planning document does not establish an installed integration.
 
@@ -1604,6 +1609,194 @@ unchanged.
 apply when the owner restarts or redeploys the updated backend. No checkout,
 PayPal sign-in, hosted database write, deployment, commit, or push was performed.
 
+### CHG-024 - Package the Resolve case and buyer link SDK for Node.js
+
+**Date:** 7 November 2026 (Asia/Calcutta).
+
+**Objective:** Let a developer integrate the first complete Resolve workflow
+without embedding the merchant UI or constructing HTTP requests by hand.
+
+**Changes:** `sdk/typescript` ships `@resolve-paypal/sdk` 0.1.0 with methods
+for workspace identity, case create/read/list, timeline, and private buyer
+link issue/status/revoke. The build generates TypeScript definitions from
+`postman/contracts/resolve.openapi.json`. It uses native fetch, holds the
+merchant key in a private field, refuses credentialed redirects, validates
+local versus HTTPS origins, and exposes bounded timeouts, caller cancellation,
+and errors without response payloads. The new quickstart uses an existing
+Resolve API and key. There were no API, database, or provider behavior changes.
+
+**Decision:** DEC-063 explains why the first release is a small server-side
+client with generated types instead of exporting every FastAPI endpoint.
+
+**Validation:** `npm test` passed three tests: a real local FastAPI flow on
+temporary SQLite with two synthetic merchants, redirect and error isolation,
+and timeout/cancellation/invalid response handling. The case test checks
+pagination, timeline, tenant isolation, buyer URL, link replacement and
+revocation. `npm pack` produced an archive that installed offline in a clean
+consumer and passed ESM, CommonJS, and TypeScript import checks. No PayPal
+or customer account was used in SDK tests. Separately,
+a read-only query confirmed the owner's Sandbox account link was recorded;
+no active PayPal-issued session was observed at the time of the check.
+
+**Limits:** A local archive is the first release; no npm publication, deployment,
+commit, or push. The SDK does not send buyer links, move money, or create
+merchant accounts. It does not retry non-idempotent requests after a timeout.
+Other languages can call the existing REST contract directly.
+
+### CHG-025 - Add Google buyer sign-in and an optional SMTP email transport
+
+**Date:** 7 November 2026 (Asia/Calcutta).
+
+**Objective:** Let a buyer return to assigned cases with an existing Google
+account, and support SMTP email without adding a network service to Resolve.
+
+**Changes:** `customer_google.py` and the customer account routes add an
+OIDC authorization code flow. An expiring database record binds state to
+an HttpOnly browser verifier; the backend claims it once before exchanging
+the code with PKCE. PyJWT checks the signed token against Google's fixed JWKS,
+issuer, audience, timestamps, and nonce. Only authoritative verified Gmail
+or a matching Workspace mailbox can open the same mailbox-scoped buyer
+sessions as email sign-in. No Google tokens or profile are persisted.
+The Next.js buyer portal shows available sign-in options and strips callback
+parameters before rendering. `InviteCreate.send_email` defaults to true for
+existing API callers; merchants can explicitly issue a copyable invite with
+a buyer email and no automated notifications.
+
+`customer_email.py` keeps the existing Python worker, PostgreSQL/SQLite outbox
+and Resend default. An opt-in `smtp` mode uses `customer_smtp.py` and the local
+`backend/mailer/send.mjs` Nodemailer helper with verified TLS. Credentials are
+passed by stdin and errors are reduced to status. SQLite 016 and PostgreSQL
+005 add the one-time Google flow table, notification choices, and outbox
+transport binding. An attempted job stays on its original transport. An
+interrupted SMTP transfer or abandoned SMTP lease is not automatically retried.
+
+**Decisions:** DEC-064 describes the Google mailbox trust boundary; DEC-065
+explains why Resend remains the default and how SMTP retries are bounded.
+
+**Validation:** The default backend suite passed 244 tests (56 opt-in
+skipped), including Nodemailer over loopback TLS with explicit 451 rejection,
+an interrupted transfer, and abandoned-lease recovery. An isolated PostgreSQL
+run passed 11 tests (one opt-in skipped). The Google Postman run passed two
+tests with 28 mocked requests and no pass-through, including rejected signatures,
+audience, nonce, unverified addresses and callback replay. The browser Google
+test passed with four mocked requests and no pass-through and opened a
+matching buyer case with SMTP disabled. The existing browser suite passed 14
+tests (Google fixture skipped); the existing Resend simulation passed three
+tests with 33 mocked requests and no pass-through. Frontend type check and
+production build passed. The exported Resolve contract was accepted by the
+local Postman mock generator and the SDK regenerated its types successfully.
+Orbit located Google's signing keys; the documented JWKS URL also returned
+public keys without authentication. Owner mock discovery was skipped because
+the Postman CLI was signed out.
+
+**Limits:** The Google consent and SMTP relay configurations still need
+account-backed verification. SMTP requires Node and its local dependency only
+if selected. The existing worker is a separate process in the same app, with
+the same database. No changes were made to the local secrets, refunds were
+not executed, and no real emails were sent.
+
+### CHG-026 - Restore PostgreSQL 005 and advance email notification flags separately
+
+**Date:** 7 November 2026 (Asia/Calcutta).
+
+**Objective:** Restore backend startup after the development reloader applied
+migration 005 before two notification columns were added to its SQL file.
+
+**Changes:** A read-only catalog query confirmed the configured database had the
+original 005 checksum and Google flow/outbox schema, without either notification
+column. Restore the exact original PostgreSQL 005 and SQLite 016. PostgreSQL
+006 and SQLite 017 add the flags to the invite and contact tables. Existing
+records default to their earlier email behavior, and an explicit copy-only
+setting from the interim schema stays intact. PostgreSQL accepts only the known
+interim checksum against the restored original. The SQLite runner skips only
+known column additions that are already installed.
+
+**Decision:** Apply DEC-062 again. `AGENTS.md` now treats even untracked
+numbered migrations as immutable because the reloader can apply them.
+The default test suite checks the canonical PostgreSQL file digests without
+needing a PostgreSQL instance. Schema work should run on disposable storage.
+
+**Validation:** The owner's existing backend reloaded with the fix. A read-only
+check found PostgreSQL version 006 and both notification columns; local
+`GET /health` and `GET /customer-account/capabilities` returned 200. The
+read-only query did not rewrite any migration history. The isolated PostgreSQL
+and follow-up suite passed 13 tests, covering both original and interim
+histories and confirming that an unknown checksum still fails. The default
+suite passed 247 tests, with 59 opt-in checks skipped. Ruff checks and
+`git diff --check` passed; the regenerated OpenAPI file was unchanged.
+
+**Limits:** This is a forward schema repair. No secrets, email settings,
+refunds, or provider credentials were changed. No API contract changed.
+
+### CHG-027 - Build the Resolve Evidence SDK
+
+**Date:** 7 November 2026 (Asia/Calcutta).
+
+**Objective:** Give a merchant's server a stable case reference and a private
+support record that shows what happened, who reported it, what PayPal verified,
+and what evidence is missing.
+
+**Files and behavior:**
+
+- `backend/app/evidence_models.py`, `evidence_workspace.py` and
+  `resolution_routes.py` add case upsert, linked references, merchant evidence,
+  provider refresh, and summary fields to the existing case and bundle responses.
+  The SDK keeps the original case and buyer-link methods; `resolution_models.py`
+  and `resolution_workspace.py` extend the existing timeline with a sequence
+  cursor while preserving offset pagination.
+- `backend/app/evidence_paypal.py` reuses the read helpers factored out of
+  `paypal.py` to validate the seller, order/capture relationship, and refund
+  parent and amounts. Supported facts carry status, amount, and check time.
+  Incomplete checks return issues and keep prior verified facts. An unchanged
+  fact updates its last check without adding another timeline entry.
+- `backend/migrations/018_resolution_evidence_sdk.sql` and
+  `backend/migrations/postgres/007_resolution_evidence_sdk.sql` add tenant-scoped
+  reference, link, event-key, and check-state tables. `storage.py` and
+  `postgres.py` apply the new migrations. No previous migration changed.
+- `backend/app/customer_progress.py` projects fixed buyer milestones through the
+  existing private link. Merchant notes, provider IDs, and SDK approval amounts
+  remain private. The existing buyer order-reference opt-in still applies.
+- `sdk/typescript/` adds the evidence methods, generates types from
+  `postman/contracts/resolve.openapi.json`, and packages the 0.2.0 quickstart and
+  runnable ORDER-1042 example. The upstream capture contract, PayPal fixture,
+  simulation context, and Postman README document the discovery hint and outage.
+  Root/backend READMEs and status and sign-in docs describe the current release.
+
+**Decisions and compatibility:** DEC-066 reuses case ownership, timeline, and
+buyer links while keeping SDK evidence out of the approval and refund execution
+ledger. DEC-067 uses existing bounded seller-scoped PayPal reads. Identical
+merchant requests reuse existing rows across concurrent requests; changed data
+under the same key returns 409. Refund writes and existing approval routes
+are unaffected. This change introduces no new runtime dependency.
+
+**Validation:**
+
+- `uv --directory backend run --no-sync python -m pytest -q`: 252 passed,
+  59 opt-in skipped. `tests/test_evidence_sdk.py` and `tests/test_postgres.py`
+  against isolated local PostgreSQL 18: 15 passed. These check concurrent
+  retries, conflicts, amount validation, migration history, and tenant scope.
+- With `RESOLVE_RUN_SDK_EVIDENCE_SIMULATION=1`, the checked-in PayPal read
+  simulation lifted `npm --prefix sdk/typescript test`: 4 passed, 25 mocked
+  requests, zero pass-through. The first run hit a missing fixture-control
+  credential; the corrected run verifies the runnable example, a USD 25 partial
+  refund, distinct approval and confirmation, buyer privacy, no duplicate
+  evidence, no financial POST, and retained proof after a provider outage.
+- With `RESOLVE_RUN_PAYPAL_SIMULATION=1`, the capture, history, and execution
+  simulation tests passed: 40 tests, 277 mocked requests, zero pass-through.
+  These cover the older reconciliation and execution paths after factoring
+  the PayPal read helpers.
+- Exported OpenAPI from FastAPI. Both contracts generated local Postman mocks.
+  `npm pack` built the local archive, which installed offline in a fresh
+  Node project; all evidence methods imported, the public declarations
+  type-checked, and the example was included. Ruff and Git whitespace checks passed.
+
+**Limits:** SDK verification is for one USD PayPal Sandbox capture per case.
+Non-PayPal records are associations only. Verify capture-to-order discovery,
+refund visibility, and cumulative totals on an actual Sandbox account with an
+externally issued partial refund. The simulation does not establish complete
+merchant-wide history. No PayPal account was used for this change, and the
+package was not published.
+
 ## Decision register
 
 ### DEC-001 - Keep FastAPI/Pydantic and the existing uv project
@@ -2177,6 +2370,54 @@ and leave both variants' recorded histories intact. Use the same forward approac
 on SQLite, which records a version rather than a checksum. Unrecognized history
 still fails closed to avoid silently running against an incompatible schema.
 
+### DEC-063 - Ship a focused server-side SDK with generated contract types
+
+Use Node's native fetch so an integrating server adds no runtime package
+dependencies. Generate types from the checked-in OpenAPI contract during the
+build and write a small, stable client around merchant cases and buyer links.
+A full generated SDK would also expose browser auth, worker, and financial
+operations before they are needed by integrators. Keep authentication in the
+consumer's server and don't retry case creation or link rotation automatically.
+
+### DEC-064 - Grant buyer access only from an authoritative mailbox
+
+Google login grants the same mailbox-scoped session as a one-time email link.
+Require signed claims, short-lived state, a browser-bound PKCE verifier, and
+an independently checked nonce. A verified third-party address on a Google
+account does not prove current ownership; require a mailbox challenge in that
+case. Existing order-invite assignments determine which cases appear. Permit
+a merchant to share an invite manually while recording the buyer email, with
+automatic notifications disabled for that invite.
+
+### DEC-065 - Use Resend by default and keep SMTP inside the existing worker
+
+Use the existing outbox and its Resend API path for the smallest FastAPI
+deployment. Nodemailer is a selectable local helper for a team that already
+has an SMTP relay; no extra HTTP service is required. SMTP lacks a general
+provider idempotency guarantee, so retry only explicit temporary rejections and
+keep transport identity fixed after the first attempt. Preserve old Resend
+jobs on their existing transport when enabling SMTP.
+
+### DEC-066 - Keep evidence separate from approval to move money
+
+Reuse the existing merchant-owned case, timeline sequence, and private buyer
+link. A support tool can report an approval without acquiring permission to
+issue a refund. Store retry keys in dedicated tables scoped to the case and
+merchant; pair uniqueness with the repository's serialized write transactions
+so concurrent identical requests get the same record. Keep provider identities
+in a separate event namespace so merchant-supplied events cannot replace them.
+
+### DEC-067 - Verify a bounded PayPal snapshot and retain earlier observations
+
+Reuse the seller-scoped read client and the existing order reconciliation rules
+rather than adding an independent adapter for each ID. Link and verify are
+separate operations. Read PayPal outside the write transaction; write a result
+only for the same links, and do not replace a newer check with an older one.
+Store the latest check separately from retained verified facts so an outage does
+not erase proof or suggest that a new verification succeeded. Scope history to
+one USD capture and the supported order shape; unsupported or missing data
+remains visible to support staff.
+
 ## Open work and boundaries
 
 1. Verify import (if needed), SSL connection, migration startup, and worker
@@ -2196,7 +2437,7 @@ still fails closed to avoid silently running against an incompatible schema.
 ## Template for the next entry
 
 ```text
-### CHG-024 - Concrete change title
+### CHG-028 - Concrete change title
 Date:
 Objective:
 Files and resulting behavior:

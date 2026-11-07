@@ -8,6 +8,7 @@ from datetime import datetime, timedelta, timezone
 from .errors import StoreError
 from .executions import RECOVERY_WINDOW, SUBMISSION_LEASE, RefundExecutionService
 from .paypal import PayPalSandboxClient
+from .paypal_history import PayPalHistoryService
 from .settings import Settings
 from .storage import SQLiteStore
 
@@ -57,6 +58,9 @@ def run_once(store: SQLiteStore, paypal: PayPalSandboxClient, *, limit=20, now=N
         "errors": 0,
         "needs_reconciliation": needs_review,
         "results": [],
+        "webhooks": PayPalHistoryService(store, paypal).process(
+            merchant_id, limit, now=now
+        ),
     }
     service = RefundExecutionService(store, paypal)
     for row in rows:

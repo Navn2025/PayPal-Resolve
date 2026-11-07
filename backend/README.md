@@ -4,9 +4,9 @@ FastAPI backend for recording customer cases, payment references, and refund
 commitments. Cases, refunds, and condition checks persist in a local SQLite file.
 Payment and refund details are submitted development data. An optional,
 disabled-by-default client can read PayPal Sandbox capture details and retain a
-scoped verification observation. A separate opt-in enables approved first full-
-capture sandbox refunds through durable execution records. No live payment host
-is supported. See the [execution contract](../docs/REFUND_EXECUTION.md).
+scoped verification observation. Separate opt-ins enable approved Sandbox refunds
+and repeated partial execution after order-scoped reconciliation. See the
+[execution contract](../docs/REFUND_EXECUTION.md) and [workflow guide](../docs/PAYPAL_RECONCILIATION.md).
 
 ## Run locally
 
@@ -195,9 +195,10 @@ app instances using the same file cannot independently reserve the same balance.
 Reconciliation reads one consistent transaction snapshot. Lock contention exceeding
 the wait timeout returns `503`.
 
-Schema version 7 is recorded in SQLite's `user_version`. Startup applies the
+Schema version 8 is recorded in SQLite's `user_version`. Startup applies the
 initial, merchant-ownership, refund-approval, capture-verification, durable
-execution/refund-evidence, provider-identity, and case-event/condition-epoch migrations
+execution/refund-evidence, provider-identity, case-event/condition-epoch, and
+refund-history/case-lifecycle migrations
 atomically as needed. Version-1
 records are preserved as described above. An unknown newer version fails startup
 instead of resetting it. Future schema changes need new migrations.
@@ -316,8 +317,8 @@ New case requests require a `payment` object. A `commitment` may be omitted or
 
 These checks validate submitted data. Merchant authentication protects local
 records; explicit approval records and scoped sandbox capture verification are
-supported. Complete provider refund reconciliation and approved financial
-execution beyond the first full-capture sandbox workflow remain subsequent steps.
+supported. Verified order history is scoped to one supported PayPal Sandbox capture;
+the application does not claim merchant-wide reporting coverage.
 
 ## Sandbox refund execution and provider observations
 
@@ -326,11 +327,11 @@ state transitions and recovery. Set `RESOLVE_PAYPAL_SANDBOX_REFUNDS_ENABLED=true
 locally only to opt into sandbox writes; capture reads must also be enabled.
 The default is false, and production hosts are not configurable.
 
-The first version accepts exact approval of the original full capture amount,
-requires an empty recorded refund ledger and saved capture evidence, and makes a
-fresh COMPLETED capture read before reserving execution. Partial or previously
-recorded-refund workflows return `409`; complete external refund discovery is
-not implemented. PayPal's response remains the authority on actual acceptance.
+By default execution supports the first full refund only. With
+`RESOLVE_PAYPAL_SANDBOX_PARTIAL_REFUNDS_ENABLED=true`, refresh order history
+before approval, then approve an exact amount up to the current recommendation.
+Resolve re-reads history before executing and rejects stale approvals or gaps.
+PayPal's response remains the authority on actual acceptance.
 
 Execution states are `reserved`, `submitting`, `unknown`, `pending`, `completed`,
 and `failed`. Inspect the returned status: creating an execution record is not
@@ -359,6 +360,9 @@ were cleaned up, and the write flag was enabled only inside that test process.
 The test commitment was explicitly synthetic; no customer conversation was invented.
 
 ## Case workspace and recovery worker
+
+Use the [workflow guide](../docs/PAYPAL_RECONCILIATION.md) for attachment uploads,
+close/reopen, the review queue, and webhook registration and processing.
 
 See [backend operations](../docs/BACKEND_OPERATIONS.md). A case can start without
 a commitment, then receive a proposed/accepted revision using the current

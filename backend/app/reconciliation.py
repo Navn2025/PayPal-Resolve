@@ -55,6 +55,12 @@ def reconcile_case(
     active_refund_execution_id: UUID | None = None,
     refund_verifications: list[PayPalRefundVerification] | None = None,
     failed_refund_execution_id: UUID | None = None,
+    *,
+    paypal_history=None,
+    history_current=False,
+    provider_review=False,
+    lifecycle_revision=0,
+    ignore_active=False,
 ) -> ReconciliationResponse:
     records = [
         refund
@@ -74,8 +80,12 @@ def reconcile_case(
     uncovered = max(outstanding - pending, ZERO) if outstanding is not None else None
     recommendation = ZERO
 
-    if active_refund_execution_id is not None:
+    if case.status == "closed":
+        status, action = "closed", "none"
+    elif active_refund_execution_id is not None and not ignore_active:
         status, action = "execution_pending", "monitor_refund_execution"
+    elif provider_review:
+        status, action = "provider_review", "review_provider_evidence"
     elif commitment is None:
         status, action = "no_commitment", "review_complaint"
     elif commitment.status != "accepted":
@@ -108,7 +118,7 @@ def reconcile_case(
         fingerprint_data["capture_verification"] = capture_verification.model_dump(
             mode="json"
         )
-    if active_refund_execution_id is not None:
+    if active_refund_execution_id is not None and not ignore_active:
         fingerprint_data["active_refund_execution_id"] = str(active_refund_execution_id)
     if refund_verifications:
         fingerprint_data["refund_verifications"] = [
@@ -117,12 +127,20 @@ def reconcile_case(
         ]
     if failed_refund_execution_id is not None:
         fingerprint_data["failed_refund_execution_id"] = str(failed_refund_execution_id)
+    if paypal_history is not None:
+        fingerprint_data["paypal_history"] = paypal_history.digest
+    if provider_review:
+        fingerprint_data["provider_review"] = True
+    if lifecycle_revision:
+        fingerprint_data["lifecycle_revision"] = lifecycle_revision
     return ReconciliationResponse(
         case_id=case.id,
         capture_verification=capture_verification,
         active_refund_execution_id=active_refund_execution_id,
         failed_refund_execution_id=failed_refund_execution_id,
         refund_verifications=refund_verifications or [],
+        paypal_refund_history=paypal_history,
+        paypal_history_current=history_current,
         state_fingerprint=hashlib.sha256(
             json.dumps(fingerprint_data, sort_keys=True, separators=(",", ":")).encode()
         ).hexdigest(),

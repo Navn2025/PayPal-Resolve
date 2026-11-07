@@ -10,13 +10,17 @@ BACKEND_DIR = Path(__file__).resolve().parent.parent
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_prefix="RESOLVE_", env_file=BACKEND_DIR / ".env",
-        env_file_encoding="utf-8", extra="ignore",
+        env_prefix="RESOLVE_",
+        env_file=BACKEND_DIR / ".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
     )
 
     database_path: Path = BACKEND_DIR / "data" / "resolve.sqlite3"
     paypal_sandbox_enabled: bool = False
     paypal_sandbox_refunds_enabled: bool = False
+    paypal_sandbox_partial_refunds_enabled: bool = False
+    paypal_sandbox_webhook_id: str | None = None
     paypal_resolve_merchant_id: UUID | None = None
     paypal_sandbox_client_id: SecretStr | None = None
     paypal_sandbox_client_secret: SecretStr | None = None

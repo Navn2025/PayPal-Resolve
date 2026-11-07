@@ -34,6 +34,8 @@ from .paypal import PayPalCaptureDetails, PayPalRefundDetails
 from .reconciliation import reconcile_case, validate_refund_record
 from .approvals import invalidate_approvals
 from .errors import StoreError
+from .case_workspace import provider_hold, require_open
+from .paypal_history import history_state
 
 
 LEGACY_MERCHANT_ID = UUID("00000000-0000-0000-0000-000000000000")
@@ -92,6 +94,7 @@ class SQLiteStore:
             directory / "005_refund_executions.sql",
             directory / "006_execution_identity.sql",
             directory / "007_case_events.sql",
+            directory / "008_refund_history_and_case_lifecycle.sql",
         ]
         with self.transaction(write=True) as connection:
             version = connection.execute("PRAGMA user_version").fetchone()[0]
@@ -234,7 +237,7 @@ class SQLiteStore:
             merchant_id=row["merchant_id"],
             order_id=row["order_id"],
             complaint=row["complaint"],
-            status=row["status"],
+            status="closed" if row["closed_at"] else row["status"],
             payment={
                 "capture_id": row["capture_id"],
                 "captured_amount": from_cents(row["captured_cents"]),
@@ -399,20 +402,29 @@ class SQLiteStore:
             ]
         return history[-1] if history else None
 
-    def _reconcile(self, connection, case):
+    def _reconcile(self, connection, case, *, ignore_active=False):
         failed = connection.execute(
-            "SELECT id FROM refund_executions WHERE merchant_id=? AND capture_id=? AND status='failed'",
+            """SELECT e.id FROM refund_executions e WHERE merchant_id=? AND capture_id=? AND status='failed'
+               AND NOT EXISTS (SELECT 1 FROM review_exceptions r WHERE r.merchant_id=e.merchant_id
+                   AND r.source_key='execution:'||e.id AND r.status='resolved')
+               ORDER BY e.updated_at DESC LIMIT 1""",
             (str(case.merchant_id), case.payment.capture_id),
         ).fetchone()
+        refunds = self._payment_refunds(
+            connection, case.payment.capture_id, case.merchant_id
+        )
+        capture = self._latest_capture_verification(
+            connection, case.payment.capture_id, case.merchant_id
+        )
+        history, current = history_state(connection, case, refunds, capture)
+        revision = connection.execute(
+            "SELECT lifecycle_revision FROM cases WHERE id=?", (str(case.id),)
+        ).fetchone()[0]
         return reconcile_case(
             case,
-            self._payment_refunds(
-                connection, case.payment.capture_id, case.merchant_id
-            ),
+            refunds,
             self._applicable_condition(connection, case),
-            self._latest_capture_verification(
-                connection, case.payment.capture_id, case.merchant_id
-            ),
+            capture,
             self._active_execution_id(
                 connection, case.payment.capture_id, case.merchant_id
             ),
@@ -420,11 +432,19 @@ class SQLiteStore:
                 connection, case.payment.capture_id, case.merchant_id, latest=True
             ),
             UUID(failed["id"]) if failed else None,
+            paypal_history=history,
+            history_current=current,
+            provider_review=provider_hold(
+                connection, case.merchant_id, case.payment.capture_id
+            ),
+            lifecycle_revision=revision,
+            ignore_active=ignore_active,
         )
 
     def update_commitment(self, case_id, payload: CommitmentUpdate, merchant_id):
         with self.transaction(write=True) as connection:
             case = self._require_case(connection, case_id, merchant_id)
+            require_open(case)
             if case.commitment == payload.commitment:
                 return case
             if self._active_execution_id(
@@ -509,6 +529,13 @@ class SQLiteStore:
                 "SELECT * FROM case_events WHERE merchant_id=? AND capture_id=?",
                 parameters,
             ):
+                if row["event_type"] in (
+                    "case_closed",
+                    "case_reopened",
+                    "evidence_attached",
+                    "review_resolved",
+                ) and row["case_id"] != str(case.id):
+                    continue
                 add(
                     f"case:{row['sequence']:020d}",
                     "case",
@@ -735,6 +762,7 @@ class SQLiteStore:
     ) -> ConditionCheck:
         with self.transaction(write=True) as connection:
             case = self._require_case(connection, case_id, merchant_id)
+            require_open(case)
             if case.commitment is None or case.commitment.condition is None:
                 raise StoreError(409, "Case has no condition to check")
             check = ConditionCheck(
@@ -858,6 +886,14 @@ class SQLiteStore:
         return UUID(row["id"]) if row else None
 
     def _guard_manual_refund_write(self, connection, case, refund_id):
+        require_open(case)
+        if connection.execute(
+            "SELECT 1 FROM paypal_refund_history WHERE merchant_id=? AND capture_id=?",
+            (str(case.merchant_id), case.payment.capture_id),
+        ).fetchone():
+            raise StoreError(
+                409, "This PayPal-managed ledger must be refreshed from PayPal"
+            )
         if self._active_execution_id(
             connection, case.payment.capture_id, case.merchant_id
         ):

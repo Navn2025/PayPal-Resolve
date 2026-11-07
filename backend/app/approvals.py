@@ -142,7 +142,11 @@ class RefundApprovalService:
             if (
                 payload.capture_id != case.payment.capture_id
                 or payload.currency != case.payment.currency
-                or payload.amount != basis.recommended_refund_amount
+                or payload.amount > basis.recommended_refund_amount
+                or (
+                    not basis.paypal_history_current
+                    and payload.amount != basis.recommended_refund_amount
+                )
                 or payload.state_fingerprint != basis.state_fingerprint
             ):
                 raise StoreError(

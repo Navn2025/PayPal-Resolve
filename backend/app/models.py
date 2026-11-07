@@ -69,7 +69,56 @@ class CaseCreate(BaseModel):
 class CaseResponse(CaseCreate):
     id: UUID
     merchant_id: UUID
-    status: Literal["open"] = "open"
+    status: Literal["open", "closed"] = "open"
+
+
+class CaseAction(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    reason: str = Field(min_length=1, max_length=1000)
+
+
+class CaseAttachment(BaseModel):
+    id: UUID
+    case_id: UUID
+    filename: str
+    content_type: str
+    size_bytes: int
+    sha256: str
+    created_at: datetime
+
+
+class ReviewException(BaseModel):
+    id: UUID
+    case_id: UUID | None
+    capture_id: str | None
+    source_key: str
+    reason: str
+    status: Literal["open", "resolved"]
+    blocking: bool
+    created_at: datetime
+    updated_at: datetime
+    resolution_note: str | None
+
+
+class ReviewPage(BaseModel):
+    items: list[ReviewException]
+    total: int
+    limit: int
+    offset: int
+
+
+class PayPalRefundHistory(BaseModel):
+    order_id: str
+    capture_id: str
+    capture_status: "PayPalCaptureStatus"
+    checked_at: datetime
+    digest: str
+    scope: Literal["sandbox_order_capture"] = "sandbox_order_capture"
+    refund_ids: list[str]
+    completed_amount: NonNegativeMoney
+    pending_amount: NonNegativeMoney
+    remaining_amount: NonNegativeMoney
 
 
 class CasePage(BaseModel):
@@ -175,6 +224,8 @@ class ReconciliationResponse(BaseModel):
     case_id: UUID
     capture_verification: PayPalCaptureVerification | None = None
     refund_verifications: list["PayPalRefundVerification"] = Field(default_factory=list)
+    paypal_refund_history: PayPalRefundHistory | None = None
+    paypal_history_current: bool = False
     active_refund_execution_id: UUID | None = None
     failed_refund_execution_id: UUID | None = None
     state_fingerprint: str = Field(pattern=r"^[a-f0-9]{64}$")
@@ -198,6 +249,8 @@ class ReconciliationResponse(BaseModel):
         "refund_required",
         "execution_pending",
         "execution_failed",
+        "closed",
+        "provider_review",
     ]
     next_action: Literal[
         "review_complaint",
@@ -208,6 +261,7 @@ class ReconciliationResponse(BaseModel):
         "request_merchant_approval",
         "monitor_refund_execution",
         "review_failed_execution",
+        "review_provider_evidence",
     ]
     verified_with_paypal: Literal[False] = False
 
@@ -322,7 +376,7 @@ class RefundExecution(BaseModel):
     final_capture_check: ExecutionCaptureCheck
     provider_refund: PayPalRefundVerification | None = None
     environment: Literal["sandbox"] = "sandbox"
-    full_refund_only: Literal[True] = True
+    full_refund_only: bool = True
 
 
 class RefundExecutionEvent(BaseModel):

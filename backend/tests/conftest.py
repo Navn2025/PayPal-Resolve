@@ -68,7 +68,7 @@ def sandbox_client_factory():
             httpx.Client(
                 proxy=proxy,
                 verify=context,
-                timeout=httpx.Timeout(3.0, connect=2.0),
+                timeout=httpx.Timeout(5.0, connect=10.0),
                 follow_redirects=False,
                 trust_env=False,
             ),

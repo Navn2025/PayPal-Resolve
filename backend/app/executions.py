@@ -5,10 +5,11 @@ from __future__ import annotations
 import json
 import hashlib
 import sqlite3
+from decimal import Decimal
 from datetime import datetime, timedelta, timezone
 from uuid import UUID, uuid4
 
-from .approvals import RefundApprovalService
+from .approvals import RefundApprovalService, invalidate_approvals
 from .errors import StoreError
 from .models import (
     ExecutionCaptureCheck,
@@ -18,6 +19,8 @@ from .models import (
 )
 from .paypal import PayPalSandboxClient, PayPalWriteError
 from .storage import SQLiteStore, from_cents, to_cents
+from .case_workspace import add_exception, auto_resolve, require_open
+from .paypal_history import PayPalHistoryService
 
 
 SUBMISSION_LEASE = timedelta(seconds=60)
@@ -60,6 +63,8 @@ class RefundExecutionService:
             provider_refund=json.loads(row["provider_refund_json"])
             if row["provider_refund_json"]
             else None,
+            full_refund_only="custom_id"
+            not in json.loads(row["provider_request_json"]),
         )
 
     def _require_row(self, connection, case_id, execution_id, merchant_id):
@@ -106,6 +111,32 @@ class RefundExecutionService:
             [*fields.values(), row["id"]],
         )
         self._event(connection, row["id"], status, note, now, snapshot)
+        source = "execution:" + row["id"]
+        if status in ("unknown", "failed"):
+            case = self.store._require_case(
+                connection, row["case_id"], row["merchant_id"]
+            )
+            add_exception(
+                connection,
+                case.merchant_id,
+                source,
+                "refund_execution_" + status,
+                case=case,
+            )
+            if status == "failed":
+                invalidate_approvals(
+                    connection,
+                    case.merchant_id,
+                    case.payment.capture_id,
+                    "Refund execution failed",
+                )
+        elif status in ("pending", "completed"):
+            auto_resolve(
+                connection,
+                row["merchant_id"],
+                source,
+                "Provider identified the execution outcome",
+            )
 
     def _writes_enabled(self):
         if (
@@ -141,12 +172,40 @@ class RefundExecutionService:
         return row
 
     def _eligible(self, connection, case, payload):
+        require_open(case)
         row = RefundApprovalService._require_row(
             connection, case.id, payload.approval_id, case.merchant_id
         )
         approval = RefundApprovalService._response(row)
         if approval.status != "approved" or approval.expires_at <= utc_now():
             raise StoreError(409, "A current active merchant approval is required")
+        if connection.execute(
+            "SELECT 1 FROM refund_executions WHERE approval_id=?", (str(approval.id),)
+        ).fetchone():
+            raise StoreError(
+                409, "This approval has already been used for an execution"
+            )
+        basis = self.store._reconcile(connection, case)
+        partial = self.paypal.settings.paypal_sandbox_partial_refunds_enabled
+        if partial:
+            if self.store._active_execution_id(
+                connection, case.payment.capture_id, case.merchant_id
+            ):
+                raise StoreError(409, "An execution already holds this capture")
+            if not basis.paypal_history_current or basis.paypal_refund_history is None:
+                raise StoreError(409, "Refresh PayPal refund history before execution")
+            if (
+                basis.status != "refund_required"
+                or basis.state_fingerprint != approval.state_fingerprint
+                or approval.amount > basis.recommended_refund_amount
+                or approval.amount > basis.paypal_refund_history.remaining_amount
+                or approval.capture_id != case.payment.capture_id
+                or approval.currency != case.payment.currency
+            ):
+                raise StoreError(
+                    409, "Approval no longer matches the verified refund balance"
+                )
+            return approval
         other = connection.execute(
             "SELECT 1 FROM refund_executions WHERE merchant_id=? AND capture_id=?",
             (str(case.merchant_id), case.payment.capture_id),
@@ -168,7 +227,6 @@ class RefundExecutionService:
             raise StoreError(
                 409, "Save completed PayPal capture verification before execution"
             )
-        basis = self.store._reconcile(connection, case)
         if (
             basis.status != "refund_required"
             or basis.state_fingerprint != approval.state_fingerprint
@@ -191,8 +249,14 @@ class RefundExecutionService:
                 return self._response(existing), False
             self._eligible(connection, case, payload)
         self._writes_enabled()
-        capture = self.paypal.read_capture(case)
-        if capture.status != "COMPLETED":
+        partial = self.paypal.settings.paypal_sandbox_partial_refunds_enabled
+        if partial:
+            history, capture = PayPalHistoryService(self.store, self.paypal).refresh(
+                case_id, merchant_id
+            )
+        else:
+            capture = self.paypal.read_capture(case)
+        if not partial and capture.status != "COMPLETED":
             raise StoreError(
                 409, "PayPal capture is not a completed, unrefunded capture"
             )
@@ -202,6 +266,11 @@ class RefundExecutionService:
             if existing is not None:
                 return self._response(existing), False
             approval = self._eligible(connection, case, payload)
+            if (
+                partial
+                and approval.basis.paypal_refund_history.digest != history.digest
+            ):
+                raise StoreError(409, "PayPal refund history changed after approval")
             if (
                 capture.id != case.payment.capture_id
                 or capture.amount.value != case.payment.captured_amount
@@ -226,6 +295,8 @@ class RefundExecutionService:
                     "currency_code": approval.currency,
                 }
             }
+            if partial:
+                body["custom_id"] = "resolve-" + str(provider_request_id)
             connection.execute(
                 """INSERT INTO refund_executions
                    (id,merchant_id,case_id,capture_id,approval_id,request_id,provider_request_id,
@@ -304,18 +375,61 @@ class RefundExecutionService:
                     409, "Another worker holds the execution submission lease"
                 )
             case = self.store._require_case(connection, case_id, merchant_id)
+            require_open(case)
+            amount = from_cents(row["amount_cents"])
+            body = json.loads(row["provider_request_json"])
             expected = {
                 "amount": {
-                    "value": format(case.payment.captured_amount, ".2f"),
+                    "value": format(amount, ".2f"),
                     "currency_code": case.payment.currency,
                 }
             }
-            if json.loads(row["provider_request_json"]) != expected or row[
-                "amount_cents"
-            ] != to_cents(case.payment.captured_amount):
+            if "custom_id" in body:
+                if not self.paypal.settings.paypal_sandbox_partial_refunds_enabled:
+                    raise StoreError(503, "History-gated Sandbox execution is disabled")
+                expected["custom_id"] = "resolve-" + row["provider_request_id"]
+            if (
+                body != expected
+                or amount > case.payment.captured_amount
+                or ("custom_id" not in body and amount != case.payment.captured_amount)
+            ):
                 raise StoreError(
                     409, "Saved execution request no longer matches the case payment"
                 )
+            if row["attempt_count"] == 0:
+                approval_row = RefundApprovalService._require_row(
+                    connection, case_id, row["approval_id"], merchant_id
+                )
+                approval = RefundApprovalService._response(approval_row)
+                basis = self.store._reconcile(connection, case, ignore_active=True)
+                if (
+                    approval.status != "approved"
+                    or approval.expires_at <= now
+                    or basis.state_fingerprint != approval.state_fingerprint
+                    or ("custom_id" in body and not basis.paypal_history_current)
+                ):
+                    self._transition(
+                        connection,
+                        row,
+                        "failed",
+                        "Evidence or approval changed before submission",
+                        now,
+                        error_code="approval_changed_before_submission",
+                    )
+                    return None
+            elif "custom_id" in body:
+                basis = self.store._reconcile(connection, case, ignore_active=True)
+                original = json.loads(row["approval_json"])["basis"][
+                    "paypal_refund_history"
+                ]
+                if (
+                    not basis.paypal_history_current
+                    or basis.paypal_refund_history.digest != original["digest"]
+                ):
+                    raise StoreError(
+                        409,
+                        "PayPal history changed; recover the original refund by its provider ID",
+                    )
             self._transition(
                 connection,
                 row,
@@ -331,6 +445,7 @@ class RefundExecutionService:
                 UUID(row["provider_request_id"]),
                 row["attempt_count"] + 1,
                 row["attempt_count"] > 0,
+                body,
             )
 
     def _failure(self, case_id, execution_id, merchant_id, *, unknown, code, attempt):
@@ -356,11 +471,21 @@ class RefundExecutionService:
         return self.get(case_id, execution_id, merchant_id)
 
     def _submit(self, case_id, execution_id, merchant_id):
-        case, provider_request_id, attempt, previous_outcome_uncertain = self._claim(
-            case_id, execution_id, merchant_id
-        )
+        claim = self._claim(case_id, execution_id, merchant_id)
+        if claim is None:
+            return self.get(case_id, execution_id, merchant_id)
+        case, provider_request_id, attempt, previous_outcome_uncertain, body = claim
         try:
-            refund = self.paypal.refund_capture(case, provider_request_id)
+            refund = (
+                self.paypal.refund_capture(
+                    case,
+                    provider_request_id,
+                    Decimal(body["amount"]["value"]),
+                    custom_id=body["custom_id"],
+                )
+                if "custom_id" in body
+                else self.paypal.refund_capture(case, provider_request_id)
+            )
         except PayPalWriteError as error:
             return self._failure(
                 case_id,
@@ -406,12 +531,49 @@ class RefundExecutionService:
 
     def retry(self, case_id, execution_id, merchant_id):
         # Ownership is checked before settings or provider calls.
-        self.get(case_id, execution_id, merchant_id)
+        execution = self.get(case_id, execution_id, merchant_id)
+        if not execution.full_refund_only and execution.attempt_count:
+            service = PayPalHistoryService(self.store, self.paypal)
+            history, _ = service.refresh(case_id, merchant_id)
+            case = self.store.get_case(case_id, merchant_id)
+            custom_id = "resolve-" + str(execution.provider_request_id)
+            matches = []
+            for refund_id in history.refund_ids:
+                refund = self.paypal.read_refund(case, refund_id)
+                if refund.custom_id == custom_id:
+                    matches.append(refund)
+            if len(matches) > 1:
+                raise StoreError(
+                    409, "More than one PayPal refund identifies this execution"
+                )
+            if matches:
+                return self._finalize(case_id, execution_id, merchant_id, matches[0])
+            with self.store.transaction() as connection:
+                basis = self.store._reconcile(connection, case, ignore_active=True)
+                original = execution.approval_snapshot.basis.paypal_refund_history
+                if (
+                    history.digest != original.digest
+                    or not basis.paypal_history_current
+                ):
+                    raise StoreError(
+                        409,
+                        "PayPal history changed; recover the original refund by its provider ID",
+                    )
         return self._submit(case_id, execution_id, merchant_id)
 
     def _finalize(self, case_id, execution_id, merchant_id, refund):
         with self.store.transaction(write=True) as connection:
             row = self._require_row(connection, case_id, execution_id, merchant_id)
+            custom_id = json.loads(row["provider_request_json"]).get("custom_id")
+            if custom_id and custom_id != refund.custom_id:
+                raise StoreError(409, "PayPal refund does not identify this execution")
+            if connection.execute(
+                "SELECT 1 FROM refund_executions WHERE merchant_id=? AND provider_refund_id=? AND id!=?",
+                (str(merchant_id), refund.id, str(execution_id)),
+            ).fetchone():
+                raise StoreError(
+                    409, "PayPal refund already belongs to another execution"
+                )
             expected = from_cents(row["amount_cents"])
             if (
                 refund.amount.value != expected

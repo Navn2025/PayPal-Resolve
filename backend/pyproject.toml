@@ -1,12 +1,18 @@
 [project]
 name = "backend"
 version = "0.1.0"
-description = "Add your description here"
+description = "PayPal Sandbox payment aftercare API with case reconciliation, explicit approvals, and durable full-refund execution."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.162.0",
+    "httpx>=0.28.1",
     "pydantic>=2.14.3",
     "pydantic-settings>=2.16.2",
     "uvicorn>=0.54.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2.0",
 ]

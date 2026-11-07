@@ -2,13 +2,17 @@ import sqlite3
 import os
 import ssl
 from contextlib import contextmanager
+from uuid import uuid4
 
 import pytest
 import httpx
 from fastapi.testclient import TestClient
+from psycopg import sql
+from pydantic import SecretStr
 
 from app.main import create_app
 from app.paypal import PayPalSandboxClient
+from app.postgres import PostgresStore
 from app.settings import Settings
 
 
@@ -28,8 +32,30 @@ def merchant_client():
 
 
 @pytest.fixture
-def client(tmp_path, merchant_client):
-    with merchant_client(create_app(tmp_path / "test.sqlite3")) as test_client:
+def postgres_store():
+    url = os.environ.get("RESOLVE_TEST_DATABASE_URL")
+    if not url:
+        pytest.skip("Set RESOLVE_TEST_DATABASE_URL to a disposable PostgreSQL database")
+    schema = "resolve_test_" + uuid4().hex
+    store = PostgresStore(SecretStr(url), schema=schema)
+    store.initialize()
+    try:
+        yield store
+    finally:
+        with store.transaction(write=True) as db:
+            db.execute(sql.SQL("DROP SCHEMA {} CASCADE").format(sql.Identifier(schema)))
+
+
+@pytest.fixture
+def client(tmp_path, merchant_client, request):
+    if os.environ.get("RESOLVE_TEST_STORAGE") == "postgres":
+        application = create_app(
+            settings=Settings(_env_file=None),
+            store=request.getfixturevalue("postgres_store"),
+        )
+    else:
+        application = create_app(tmp_path / "test.sqlite3")
+    with merchant_client(application) as test_client:
         yield test_client
 
 

@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import hashlib
 import sqlite3
+from psycopg import Error as PostgresDriverError
 from decimal import Decimal
 from datetime import datetime, timedelta, timezone
 from uuid import UUID, uuid4
@@ -18,7 +19,7 @@ from .models import (
     RefundExecutionEvent,
 )
 from .paypal import PayPalSandboxClient, PayPalWriteError
-from .storage import SQLiteStore, from_cents, to_cents
+from .storage import ResolveStore, from_cents, to_cents
 from .case_workspace import add_exception, auto_resolve, require_open
 from .paypal_history import PayPalHistoryService
 from .resolution_state import refund_promise_gate
@@ -37,7 +38,7 @@ def timestamp(value):
 
 
 class RefundExecutionService:
-    def __init__(self, store: SQLiteStore, paypal: PayPalSandboxClient):
+    def __init__(self, store: ResolveStore, paypal: PayPalSandboxClient):
         self.store = store
         self.paypal = paypal
 
@@ -478,7 +479,7 @@ class RefundExecutionService:
                         lease_expires_at=None,
                         error_code=code,
                     )
-        except sqlite3.Error:
+        except (sqlite3.Error, PostgresDriverError):
             # A still-submitting record retains the hold and durable request ID.
             pass
         return self.get(case_id, execution_id, merchant_id)

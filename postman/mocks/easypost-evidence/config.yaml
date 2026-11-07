@@ -1,0 +1,11 @@
+version: 1
+id: 915e90e9-8b8e-4b02-9f50-64621b360343
+name: easypost-evidence
+slug: easypost-evidence
+protocol: http
+origin: api.easypost.com
+interceptRequests: true
+scenarios:
+  - name: default
+    path: ./default.js
+    default: true

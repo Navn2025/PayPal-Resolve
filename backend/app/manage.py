@@ -9,7 +9,7 @@ from uuid import UUID
 from pydantic import ValidationError
 
 from .settings import Settings
-from .storage import SQLiteStore, StoreError
+from .storage import StoreError, configured_store
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -26,8 +26,8 @@ def main(argv: list[str] | None = None) -> int:
     claim.add_argument("--merchant-id", type=UUID, required=True)
     args = parser.parse_args(argv)
     try:
-        settings = Settings(database_path=args.database) if args.database else Settings()
-        store = SQLiteStore(settings.database_path)
+        settings = Settings(database_url=None) if args.database is not None else Settings()
+        store = configured_store(settings, sqlite_path=args.database)
         store.initialize()
         if args.command in ("create-merchant", "issue-key"):
             issued = (

@@ -1,0 +1,11 @@
+version: 1
+id: cd57c454-2a59-49e5-9bbd-04a333531f65
+name: zendesk-followup
+slug: zendesk-followup
+protocol: http
+origin: resolve-helpdesk.zendesk.com
+interceptRequests: true
+scenarios:
+  - name: default
+    path: ./default.js
+    default: true

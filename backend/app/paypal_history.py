@@ -385,7 +385,7 @@ class PayPalHistoryService:
                 )
                 case_row = connection.execute(
                     """SELECT id FROM cases WHERE merchant_id=? AND capture_id=?
-                       ORDER BY closed_at IS NOT NULL,rowid LIMIT 1""",
+                       ORDER BY closed_at IS NOT NULL,case_sequence LIMIT 1""",
                     (str(merchant_id), event["capture_id"]),
                 ).fetchone()
             capture_id = event["capture_id"]
@@ -417,7 +417,7 @@ class PayPalHistoryService:
                             )
                             case_row = connection.execute(
                                 """SELECT id FROM cases WHERE merchant_id=? AND capture_id=?
-                                   ORDER BY closed_at IS NOT NULL,rowid LIMIT 1""",
+                                   ORDER BY closed_at IS NOT NULL,case_sequence LIMIT 1""",
                                 (str(merchant_id), capture_id),
                             ).fetchone()
                 if event["event_type"] == REVERSAL:

@@ -1,0 +1,2208 @@
+# Resolve engineering log
+
+## Purpose and maintenance
+
+This is the project's durable record of changes and engineering decisions: what
+we built, why we built it, why an approach was chosen, what was tested, and what
+remains unfinished. `AGENTS.md` requires updating it with every code change.
+
+Entries CHG-001 through CHG-003 were reconstructed on **7 November 2026** from
+the existing repository and observed implementation/test results in this chat.
+They are retrospective, not contemporaneous timestamps or Git commits. Future
+entries must be added as the corresponding work is completed.
+
+Dates use the owner's Asia/Calcutta context. Exact historical implementation
+times are not known and are not inferred.
+
+This file is an engineering record, not a runtime transaction audit log. It
+contains development examples and validation metadata, with no credentials or
+real customer data.
+
+## Current implementation
+
+- Python/FastAPI backend with Pydantic validation and an existing uv environment.
+- Case creation/retrieval, payment references, and optional refund commitments.
+- Manual refund observations, idempotent identical replays, and status updates.
+- Refund history shared by the same merchant's cases referencing one capture.
+- Merchant bearer-token authentication with hashed, revocable access keys and
+  ownership checks on every case/refund/condition/reconciliation operation.
+- Manual condition-check history with evidence notes, UTC timestamps, and
+  authenticated merchant actor IDs; legacy actors remain unknown.
+- Deterministic reconciliation using decimal arithmetic.
+- Reconciliation state fingerprints, explicit merchant refund approvals, 15-minute
+  expiry, revocation, invalidation on changed records, and approval event history.
+- Optional sandbox-only OAuth/capture reads, bound to one configured local merchant
+  and expected PayPal seller, with persisted capture observations and approval
+  invalidation when provider evidence is refreshed. Disabled by default.
+- File-backed SQLite by default, with optional PostgreSQL for the same API,
+  merchant CLI, workers, and records.
+- Durable first full-capture sandbox refund execution, exact approval snapshots,
+  provider request identity, submission leases, uncertain-outcome holds/recovery,
+  independently read refund observations and atomic ledger projection.
+- Paginated owned case browsing, fingerprint-bound commitment revisions, condition
+  evidence epochs, shared timestamped timeline and a local recovery worker.
+- PayPal Sandbox webhook postback verification, durable deduplication and worker
+  processing. Order-scoped refund discovery combines authenticated order, capture
+  and refund reads and blocks inconsistent evidence.
+- Optional history-gated partial and multiple Sandbox refunds with exact amounts,
+  separately approved actions, and recovery by provider correlation.
+- Case-scoped attachments, close/reopen with history, and a merchant review queue.
+- A shared resolution workspace with versioned refund, return, replacement,
+  order cancellation, subscription, store credit/exchange, billing correction and
+  dispute handoff promises. Merchant findings and provider observations remain
+  separate, and a dependent refund cannot be approved without its required proof.
+- Optional read-only PayPal Sandbox, Shopify Admin GraphQL and EasyPost evidence,
+  with a merchant-scoped timeline and evidence export.
+- Local Next.js merchant UI with a searchable inbox, promise/evidence editing,
+  approval and separate Sandbox submission, review queue, and printable buyer
+  receipt. Demo mode is synthetic and can be used without an account.
+- Public landing and demo, a separate buyer entry point, and a protected merchant
+  workspace with database-backed sessions, key sign-in, and optional PayPal
+  sign-in for previously linked accounts.
+- Separate customer portal with expiring case links, order-specific issue
+  intake, scoped evidence uploads, a curated milestone timeline, and a two-way
+  conversation with the merchant.
+- Merchant triage with assignment labels, deadlines, unread message tracking,
+  and workflow filters across the whole owned inbox. The merchant can link an
+  existing payment to the original intake case if it needs a refund.
+- Optional hosted customer follow-up: a durable Resend outbox, mailbox sign-in
+  and My cases, automatic provider proof checks, and read-only Zendesk links.
+- SQLite migrations through version 15 and PostgreSQL migrations through 004;
+  transaction-protected writes
+  and consistent read snapshots replace the in-memory dictionaries and lock.
+- Default database: `backend/data/resolve.sqlite3`; `RESOLVE_DATABASE_PATH`
+  overrides the file and `RESOLVE_DATABASE_URL` selects PostgreSQL. The
+  importer verifies a read-only SQLite snapshot before committing to an
+  empty PostgreSQL schema. Databases and local environment files are ignored by Git.
+- Latest migration validation: **242 default SQLite tests** and **8 targeted
+  PostgreSQL tests** passed. The merchant sign-in milestone separately passed
+  **3 merchant authentication tests with the PayPal simulation** and **14 browser
+  tests**. The PostgreSQL milestone passed 51 tests and 13 provider simulations
+  on that engine.
+- Actual Sandbox OAuth/capture checks passed, the capture was saved through
+  authenticated case routes, and one USD 1.00 full refund completed through the
+  new executor, independently read as COMPLETED with capture REFUNDED and
+  reconciliation fulfilled. Refund writes default to disabled. No production
+  financial request, order/capture creation, AI call, or account-backed PayPal
+  browser login was performed. Complete history/general eligibility remain
+  unverified; overall verification stays false.
+- No commits or pushes were made by the assistant for the changes recorded here.
+
+The owner reports a connected database; the hosted connection was not accessed
+or verified in CHG-022. In CHG-023, a read-only check of the configured database
+confirmed the applied 003 checksum and the missing OAuth claim column. The fix
+was exercised on isolated databases. Account-backed PayPal browser login, merchant team roles,
+AI extraction, merchant-wide PayPal reporting, and hosted webhook/worker
+validation remain open. A stack
+recommendation in a planning document does not establish an installed integration.
+
+## Change history
+
+### CHG-001 - Backend baseline and existing project setup
+
+**Recorded:** 2026-11-07, retrospective.
+
+**Objective:** Understand and extend the backend the owner had already created.
+
+**Observed files:** `backend/app/main.py`, `backend/app/models.py`,
+`backend/pyproject.toml`, `backend/uv.lock`, and the root `README.md`.
+
+**Existing behavior:**
+
+- `POST /health` returned development service status. Its method was POST, even
+  though an earlier chat example used GET. The actual route was preserved.
+- `POST /cases` created an in-memory case with order ID and complaint.
+- `GET /cases/{case_id}` returned the case or `404`.
+- The case models already rejected extra input fields and empty required text.
+- uv managed a Python 3.12 environment with FastAPI, Pydantic,
+  pydantic-settings, and Uvicorn already present.
+
+**Why this approach:** Reuse the owner's running server and package manager.
+Replacing the project scaffold or changing the health route would add unrelated
+work and potentially break the existing development flow.
+
+**Validation:** Inspected files and the working tree; imported the installed
+FastAPI and Pydantic packages from this backend's virtual environment. This was
+inspection of the owner's existing work, not an assistant-created baseline.
+
+**Limitations:** In-memory storage and no integrations. Existing uncommitted
+changes were preserved rather than reset or committed.
+
+### CHG-002 - Payment references and refund commitment validation
+
+**Recorded:** 2026-11-07, retrospective.
+
+**Objective:** Connect a complaint to a payment reference and an optional refund
+agreement before adding refund calculations or payment-provider calls.
+
+**Files changed:**
+
+- `backend/app/models.py`: introduced `Money`, `PaymentReference`, and
+  `RefundCommitment`; expanded `CaseCreate`; retained `CaseResponse`.
+- `backend/tests/test_cases.py`: added local request/response regression tests.
+- `backend/README.md`: documented the API contract, example input, and validation.
+- `backend/pyproject.toml`, `backend/uv.lock`: added pytest and HTTPX as
+  development dependencies and locked their dependency versions through uv.
+
+**Resulting behavior:**
+
+- Creating a case requires payment capture ID, captured amount, and currency.
+- The commitment can be omitted or null. If supplied, it records the total refund
+  amount, source message, optional condition, and proposed/accepted status.
+- Amounts must be finite and positive, fit the configured 12-digit/two-decimal
+  constraints, and use USD. A commitment cannot exceed the submitted capture.
+- Text is trimmed; blank required text and unknown nested fields are rejected.
+- Validation errors return `422`. Decimal amounts serialize as JSON strings.
+
+**Compatibility change:** Earlier case payloads containing only order ID and
+complaint now require the `payment` object. Existing routes were retained.
+
+**Decisions:** DEC-001 through DEC-005 and DEC-012 below.
+
+**Validation performed:** `uv run python -m pytest -q` from `backend` completed
+with **31 tests passed**, exit code 0. Checks covered round trips, optional
+commitments, exact cent amounts, invalid values, extra fields, unknown IDs, and
+the existing health endpoint. `git diff --check` also passed.
+
+**Limitations:** All amounts and commitments were submitted development data.
+The validation did not establish that a PayPal payment existed, that an agreement
+was authentic, or that a condition had been met.
+
+### CHG-003 - Refund ledger, condition history, and reconciliation
+
+**Recorded:** 2026-11-07, retrospective.
+
+**Objective:** Calculate outstanding commitments correctly from completed,
+pending, and failed refund records, without executing financial operations.
+
+**Files changed:**
+
+- `backend/app/models.py`: refund records/status updates, condition checks, and
+  a typed reconciliation response.
+- `backend/app/reconciliation.py`: pure decimal calculations and refund-balance
+  validation, separate from HTTP routing and storage.
+- `backend/app/main.py`: refund/condition/reconciliation routes; shared capture
+  history; process-local locking; conflicting capture-detail checks.
+- `backend/tests/conftest.py`: shared test client and isolated in-memory state.
+- `backend/tests/test_cases.py`: reused the shared fixture.
+- `backend/tests/test_reconciliation.py`: added workflow and boundary coverage.
+- `backend/README.md`: documented endpoints, state transitions, and calculations.
+
+**New API behavior:**
+
+| Endpoint | Purpose |
+| --- | --- |
+| `POST /cases/{case_id}/refunds` | Record a manual refund observation, not execute a refund. |
+| `GET /cases/{case_id}/refunds` | List the capture's shared refund history. |
+| `PATCH /cases/{case_id}/refunds/{refund_id}` | Change a pending record to completed or failed. |
+| `POST /cases/{case_id}/condition-checks` | Add an evidence-backed manual condition check. |
+| `GET /cases/{case_id}/condition-checks` | Retrieve that case's condition history. |
+| `GET /cases/{case_id}/reconciliation` | Calculate recorded totals and the next suggested step. |
+
+Identical refund replays return `200`; new records return `201`. Conflicting
+identities, excessive active totals, and forbidden state transitions return
+`409`. Invalid fields return `422`; missing cases/refunds return `404`.
+
+**Calculation rules:**
+
+- Completed amounts reduce the outstanding commitment.
+- Pending amounts reserve balance but do not fulfill the commitment.
+- Failed amounts consume no balance and do not fulfill the commitment.
+- Outstanding = max(committed - completed, 0).
+- Uncovered = max(outstanding - pending, 0).
+- Remaining recorded capture balance = captured - completed - pending.
+- A suggested refund is zero unless the agreement is accepted, an applicable
+  condition is recorded as met, and no refund is pending.
+- With no commitment, outstanding/uncovered are null, not a false zero.
+- Reconciliation is read-only. It neither closes a case nor changes an agreement.
+
+**Status priority:** No commitment, proposed agreement, accepted agreement with
+pending funds, accepted agreement fully paid, unmet/unchecked condition, then
+refund required. An accepted agreement already paid can be fulfilled even if its
+earlier condition was not checked; this describes the submitted financial history.
+
+**Decisions:** DEC-006 through DEC-011 and DEC-013 below.
+
+**Validation performed:** `uv run python -m pytest -q` completed with **65 tests
+passed**, exit code 0, including the previous case tests. Added checks covered
+partial/pending/failed/completed workflows, idempotent replay, immutable terminal
+states, capture caps, exact cents, condition history, proposed agreements,
+cross-case sharing, capture isolation, rejected mutations, and concurrent balance
+reservation. `git diff --check` passed.
+
+**Known test warning:** The installed Starlette TestClient emitted a deprecation
+warning for HTTPX and suggested HTTPX2. The tests passed; the test transport was
+not migrated as part of this feature. Revisit when updating test dependencies.
+uv also reported an unrelated active virtual environment and correctly used this
+backend's own `.venv` instead.
+
+**Limits of this evidence:** These are local FastAPI application tests. They
+establish neither PayPal sandbox behavior nor live payment safety, merchant
+authorization, or AI extraction quality. In-memory replay protection lasts only
+for the process lifetime. The lock does not coordinate multiple worker processes.
+
+### CHG-004 - Establish the ongoing engineering record
+
+**Date:** 2026-11-07.
+
+**Objective:** Fulfill the owner's request to record every change, its purpose,
+decision rationale, alternatives, validation, and necessary follow-up details.
+
+**Files changed:**
+
+- `docs/ENGINEERING_LOG.md`: this record, including retrospective history,
+  current implementation, decision register, limitations, and an entry template.
+- `AGENTS.md`: repository-wide instruction to read and update this log with each
+  code, test, dependency, configuration, schema, or API change.
+- `README.md`: linked the engineering log/backend guide and corrected the status
+  and roadmap to distinguish implemented local behavior from future integrations.
+
+**Why this approach:** A version-controlled Markdown file stays with the code,
+is reviewable in Git, and can be read without this chat. Repository instructions
+make the maintenance requirement visible to future coding sessions. Existing
+README files remain the entry point rather than duplicating the whole contract.
+
+**Alternative/tradeoff:** Runtime logs and Git messages alone do not explain the
+full rationale or test limits. This manual record adds maintenance work, so small
+changes may use short entries while substantial decisions need fuller detail.
+An instruction file is a workflow rule, not a mechanically enforced CI gate.
+
+**Validation:** Checked documentation targets and `git diff --check` successfully.
+No application code changed in this entry; tests were not rerun for documentation
+alone. The last code run remains the 65 passing local API tests in CHG-003.
+
+**Follow-up:** Append CHG-005 for the next implementation change. Database
+persistence remains the next proposed backend milestone.
+
+### CHG-005 - Durable local storage and transactional refund updates
+
+**Date:** 2026-11-07.
+
+**Objective:** Preserve cases, payment/refund records, duplicate protection, and
+condition history across backend reloads and restarts while retaining the current
+API and deterministic reconciliation behavior.
+
+**Files changed:**
+
+- `backend/app/storage.py`: SQLite repository, transactional CRUD, decimal/cents
+  conversion, parameterized SQL, and domain errors independent of HTTP routing.
+- `backend/app/settings.py`: database file setting using the existing
+  pydantic-settings dependency; stable backend-relative path resolution.
+- `backend/migrations/001_initial.sql`: normalized captures, cases, refund records,
+  and condition checks, with unique IDs, references, constraints, and indexes.
+- `backend/app/main.py`: application factory, lifespan initialization, injected
+  repository, and HTTP error translation; removed global dictionaries and RLock.
+- `backend/tests/conftest.py`, `backend/tests/test_cases.py`: isolated temporary
+  databases and durable-state assertions replace clearing global process memory.
+- `backend/tests/test_persistence.py`: restart/process recovery, replay,
+  cross-instance concurrency, rollback, exact storage, schema, and setting tests.
+- `backend/.gitignore`, `backend/.env.example`: protect local databases/settings
+  and document the optional path without storing credentials.
+- `README.md`, `backend/README.md`, this log: setup, status, contract implications,
+  persistence decision, evidence, and limitations.
+
+**Why this approach:** Local SQLite makes the next backend milestone usable with
+no external database account, service installation, or new dependency. Separating
+storage from routes keeps the calculation service unchanged and creates a clear
+place for a future PostgreSQL adapter. Database transactions replace the previous
+single-process lock for balance checks and writes sharing one local file.
+
+**Alternatives/tradeoffs:** Continuing with memory would lose cases and replay
+protection on restart. A JSON file would require implementing locking, atomic
+writes, references, and queries ourselves. Supabase/PostgreSQL remains the intended
+deployment direction, but provisioning, credentials, tenant access, schema migration,
+and integration testing are separate work. An ORM/Alembic would add dependencies
+and concepts at this stage; the standard-library repository and an initial SQL
+migration keep the current schema inspectable. This does not provide an automatic
+PostgreSQL migration or a general-purpose migration framework.
+
+**Implementation details:**
+
+- Every mutation opens its own connection with foreign keys enabled and starts
+  `BEGIN IMMEDIATE` before checking existing capture/refund data. Commit occurs
+  only after the whole operation succeeds; exceptions roll back.
+- Read operations use a transaction so case, condition, and refund queries in a
+  reconciliation share a consistent snapshot.
+- IDs and values are passed as SQL parameters. Unique capture/refund keys persist
+  identity across app instances; condition checks have an ordered sequence.
+- Capture/refund amounts are stored in integer cents and reconstructed as Decimal.
+  Commitments retain their validated JSON representation with decimal strings.
+- Startup applies the initial schema atomically at version zero and records
+  `user_version=1`. Version one is preserved. Unknown newer versions fail startup
+  without resetting existing data. The initial statement loader must not be used
+  as a general parser for future trigger/procedure migration scripts.
+- App construction/import does not initialize storage. The FastAPI lifespan does,
+  allowing tests to select temporary files before startup.
+- Lock waits time out after five seconds by default and surface as retryable
+  `503` responses without exposing raw database errors.
+
+**Decisions:** DEC-014 through DEC-017. DEC-015 supersedes DEC-011 for the current
+storage implementation; the earlier explanation is retained as historical context.
+
+**Compatibility/data changes:** Public routes and request/response shapes are
+retained. Persisted capture/refund amounts return normalized two-decimal strings.
+The internal `app.main` dictionaries no longer exist; tests now use isolated app
+instances. Previously memory-only records cannot be recovered automatically.
+After starting the updated server, new records persist in the selected file.
+No production/customer database was imported, cleared, or migrated.
+
+**Validation performed:** `uv run python -m pytest -q` from `backend` completed
+with **78 tests passed**, exit code 0. The previous 65 local cases remain covered
+and 13 storage checks were added. A fresh Python process read the saved case,
+refunds, evidence history, status updates, and reconciliation and replayed a refund
+without duplication. Independent app instances competing for the same balance
+produced one successful reservation and one conflict; identical concurrent records
+produced one creation and one replay. Failure injection after capture insertion
+proved case/capture rollback. Tests also checked integer-cent storage, safe repeated
+startup, rejection of unknown schema versions without data loss, setting validation,
+and a busy-database retry. Existing HTTPX/Starlette deprecation warning remains.
+
+**Additional validation:** `git diff --check` and local documentation-link checks
+passed. Test databases were temporary and did not clear the development file.
+
+**Evidence limits:** These are local SQLite/FastAPI tests, including separate
+process recovery. They do not establish Supabase/PostgreSQL behavior, PayPal
+sandbox/live execution, deployment behavior, or merchant authorization. SQLite
+has one writer at a time and requires a local shared file; this is not a multi-host
+production architecture. Refund observations still store only their latest status,
+so a complete event/actor audit trail remains separate work.
+
+**Follow-up:** Merchant authentication and case ownership are the next proposed
+backend milestone before connecting real merchant data. Add persistent authorized
+action records before any PayPal refund execution. PostgreSQL adaptation and
+subsequent versioned migrations remain explicit future work.
+
+### CHG-006 - Local merchant authentication and ownership isolation
+
+**Date:** 2026-11-07.
+
+**Objective:** Authenticate merchant access, derive ownership from credentials,
+and prevent another merchant from reading or mutating cases, refund history,
+conditions, or reconciliation results before adding payment-provider integrations.
+
+**Files changed:**
+
+- `backend/app/auth.py`: FastAPI HTTP bearer dependency, database-backed key
+  lookup, uniform `401` responses, and server-derived current merchant identity.
+- `backend/app/storage.py`: merchant/key provisioning, hashing, revocation,
+  tenant-scoped queries, explicit legacy assignment, and migration sequencing.
+- `backend/app/main.py`: all case routes require the current merchant; added
+  `GET /auth/me`; retained the public `POST /health` endpoint.
+- `backend/app/models.py`: merchant identity models, case owner, and condition actor.
+- `backend/app/manage.py`: trusted local create-merchant, issue-key, revoke-key,
+  and claim-legacy commands. These operations have no HTTP registration/admin API.
+- `backend/migrations/002_merchants.sql`: merchant/key tables, composite capture
+  and refund ownership, preserved version-1 data, and actor attribution support.
+- `backend/tests/conftest.py`, `backend/tests/test_persistence.py`: authenticated
+  fixtures and credentials passed through stdin for the separate-process test.
+- `backend/tests/test_auth.py`: authentication, tenant boundaries, key lifecycle,
+  CLI behavior, version-1 migration, assignment conflicts, and ownership constraints.
+- Root/backend READMEs and this log: current status, credential setup, compatibility
+  changes, decision rationale, test results, and remaining boundaries.
+
+**Why this approach:** The current backend needs an enforceable merchant identity
+without external accounts or a browser. Random local access keys let the owner
+exercise isolated merchants immediately while keeping the future Supabase/browser
+identity integration separate. Using one authentication dependency and passing its
+merchant ID into repository operations avoids trusting ownership in client input.
+
+**Material alternatives/tradeoffs:** Supabase Auth remains a planned browser-login
+provider, but is not configured here. A custom password/login/JWT system would add
+password recovery, signing-key, and session responsibilities unrelated to this local
+milestone. The chosen tokens are revocable but currently do not expire automatically.
+The local admin CLI requires trusted database-file access and is not a customer-facing
+onboarding mechanism. There are no per-user roles within a merchant yet.
+
+**Resulting behavior and implementation details:**
+
+- Each new access token contains 32 random bytes from `secrets.token_urlsafe`,
+  with a non-secret `rslv_` prefix. Only its SHA-256 hash, key ID, merchant ID,
+  timestamps, and revocation state are stored. The raw token is printed once by
+  the local admin command and is excluded from the credential object's repr.
+- All case routes and `/auth/me` return `401` with a Bearer challenge when the
+  token is absent, invalid, or revoked. `/health` remains public.
+- Case ownership and condition actor IDs are assigned by the server. A body field
+  attempting to override them fails input validation. Another merchant's case is
+  indistinguishable from a missing case (`404`).
+- Captures use `(merchant_id, capture_id)` identity; refunds use a merchant-scoped
+  unique refund ID. Composite foreign keys tie cases and refunds to the correct
+  merchant/capture. Identical sample provider IDs in different merchants are isolated.
+- Version-1 rows are copied into the new schema with their IDs, money, status,
+  notes, ordering, and timestamps preserved. They belong to a reserved unassigned
+  merchant that cannot receive an access key. Creating the first real merchant
+  never implicitly assigns anonymous records to it.
+- `claim-legacy` is an explicit trusted operator action. It assigns all remaining
+  unassigned sample captures and their cases/refunds to one merchant in one
+  transaction. Conflicting capture or refund IDs cause a rollback. Legacy condition
+  actors stay null; new checks record the authenticated merchant.
+- The migration loader now executes complete SQLite statements with
+  `sqlite3.complete_statement`, applying migrations 1 and 2 in order inside the
+  existing transaction. Migration 001 was retained unchanged.
+- Revocation is checked from the database for each subsequent request. Already
+  authorized in-flight requests may finish. Issuing a replacement key does not
+  automatically revoke previous keys.
+
+**Decisions:** DEC-018 through DEC-022. Merchant scoping extends DEC-006, and
+recorded actor IDs extend the manual condition-history design in DEC-009.
+
+**Compatibility/data changes:** Clients must now authorize protected API calls.
+Case responses add `merchant_id`; condition responses add a nullable
+`recorded_by_merchant_id`. Version-1 records are preserved but remain inaccessible
+through normal merchant requests until explicitly assigned. Schema version is now
+2. The public health method and existing case request shapes are retained.
+No real access token was generated for the owner's database by the assistant;
+tests provisioned only temporary test credentials/databases.
+
+**Validation performed:** `uv run python -m pytest -q` completed with **109 tests
+passed**, exit code 0: the existing 78 tests adapted to authenticated requests plus
+31 authentication/ownership checks. Negative cases cover every protected route,
+cross-merchant reads and mutations, forged merchant/actor fields, invalid schemes
+and tokens, token revocation, hash-only storage, shared raw IDs across merchants,
+and database rejection of mixed ownership. Tests also verify CLI provisioning,
+additional keys, revocation, errors, legacy isolation, conflict rollback, preserved
+condition evidence, and explicit assignment. The existing persistence/concurrency
+and financial-validation suite still passes. The prior HTTPX deprecation warning
+remains; no new dependencies were added for authentication.
+
+**Additional validation:** Checked the management module's help entry point,
+documentation links, unique log/decision IDs, and `git diff --check` successfully.
+
+**Limits:** Local token identity does not prove ownership of a PayPal account or
+authorize a refund. Browser login, roles, token expiry, remote deployment controls,
+provider consent, verified payment reads, and financial execution remain separate
+work. This is tested application-level merchant isolation, not an independent
+security assessment. Records and tokens rely on trusted local database access.
+
+**Follow-up:** Add persistent, explicit merchant action approval before wiring
+PayPal refund execution. PayPal sandbox account verification/reads can then be
+integrated without treating these manually submitted development records as truth.
+
+### CHG-007 - Persistent exact-state merchant refund approvals
+
+**Date:** 2026-11-07.
+
+**Objective:** Separate a calculated refund recommendation from an explicit,
+persistent merchant decision tied to an exact capture, amount, currency, and case
+state before adding any financial executor.
+
+**Files changed:**
+
+- `backend/app/models.py`: approval request/response, revocation, event models,
+  and a reconciliation state fingerprint.
+- `backend/app/reconciliation.py`: deterministic SHA-256 fingerprint over the
+  case, sorted relevant refund records, and latest condition check.
+- `backend/app/approvals.py`: approval service, immutable state snapshots,
+  request replay handling, expiry, revocation, invalidation, and audit events.
+- `backend/app/errors.py`: shared domain exception; storage continues to expose
+  the same StoreError import for compatibility.
+- `backend/app/storage.py`: migration 3 and transactional invalidation hooks on
+  new refund observations, changed refund status, and new condition checks.
+- `backend/app/main.py`: five authenticated approval endpoints.
+- `backend/migrations/003_refund_approvals.sql`: approvals/events, owner/case/capture
+  constraints, unique merchant request IDs, and one-active-approval-per-capture index.
+- `backend/tests/test_refund_approvals.py`: lifecycle, state, isolation, persistence,
+  concurrent decisions, migration, and failure-injection tests.
+- `backend/tests/test_auth.py`, `backend/tests/test_persistence.py`: expected latest
+  schema version updated while preserving earlier coverage.
+- Root/backend READMEs and this log: workflow, API examples, status, decisions,
+  test results, migration behavior, and remaining execution requirements.
+
+**Why this approach:** Authentication identifies a merchant but does not by itself
+record consent to a particular financial action. The existing read-only
+reconciliation endpoint serves as the review/preview step. A separate POST records
+an explicit decision only when the supplied amount and state still match. This
+avoids building another preview subsystem or pretending a recommendation executed
+a refund.
+
+**API behavior:**
+
+- `GET /cases/{case_id}/reconciliation` now includes `state_fingerprint`.
+- `POST /cases/{case_id}/refund-approvals` requires a client request UUID, capture
+  ID, exact recommended amount, currency, fingerprint, and decision note. New
+  records return `201`; an identical request replay returns `200` with the same
+  record and its current state. A replay never reactivates a terminal approval.
+- `GET /cases/{case_id}/refund-approvals` lists records.
+- `GET /cases/{case_id}/refund-approvals/{approval_id}` retrieves one record and
+  the reconciliation basis stored at approval time.
+- `POST /cases/{case_id}/refund-approvals/{approval_id}/revoke` withdraws an active
+  approval with a reason; identical retries add no duplicate event.
+- `GET /cases/{case_id}/refund-approvals/{approval_id}/events` returns ordered
+  approval, revocation, expiry, and invalidation events with merchant/system actors.
+- All new routes require ownership. Foreign cases or approval IDs return `404`,
+  absent/invalid credentials return `401`, invalid fields return `422`, and stale
+  or conflicting decisions return `409`.
+
+**Decision rules and transaction boundaries:**
+
+- The agreement must be accepted, any condition recorded as met, no refund
+  pending, and a positive refund still required. The submitted amount must equal
+  the current recommendation, not merely fit within the original capture.
+- The server rechecks these rules and the fingerprint inside the same immediate
+  write transaction that saves the decision and initial audit event.
+- Approvals have a server-assigned ID and 15-minute lifetime. Only one can be
+  active for a merchant/capture, even across cases or application instances.
+- The approval stores its original request, complete local case/refund/condition
+  snapshot, and reconciliation basis. Amount/capture/currency/snapshot are not
+  editable through the API. These are application-level immutability rules, not
+  tamper-proof storage against a privileged database operator.
+- New refund observations (including failed observations), real refund status
+  changes, or new condition checks invalidate active approvals for that capture
+  in the same transaction as the underlying change. This conservative rule applies
+  even if the numeric recommendation stays unchanged. Identical refund replays
+  and no-op status updates preserve the existing approval.
+- Approval reads may materialize an expiry event; they therefore use a write
+  transaction. No background expiry worker is needed. Eligibility checks compare
+  the timestamp rather than assuming an old approved status is still usable.
+- Approvals do not count as completed/pending refunds. Reconciliation totals and
+  case status stay unchanged. Future execution must claim a unique durable action
+  and recheck provider state; there is no consumption or financial execution API yet.
+
+**Material alternatives/tradeoffs:** A generic approved boolean would not preserve
+the amount or evidence it referred to. Reusing only an accepted commitment would
+conflate a remedy agreement with permission to execute it. Open-ended partial
+approval amounts and automatic approval policies were deferred; this version
+authorizes the exact current recommendation. One active approval per capture
+trades parallel decisions for simpler duplicate authorization prevention. A fixed
+15-minute lifetime bounds stale intent but may require a fresh decision after an
+interruption. Approval reads have a documented expiry-maintenance side effect.
+
+**Decisions:** DEC-023 through DEC-026.
+
+**Compatibility/migration:** Schema version is now 3; existing cases, keys,
+refunds, conditions, and ownership are retained. Reconciliation gains one field;
+previous request shapes are unchanged. Snapshot and approval fields cannot be
+injected into case/refund payloads. Existing local merchant authentication remains
+the access method. No PayPal account or credentials were configured.
+
+**Validation performed:** Initial collection caught a class method named `list`
+shadowing the builtin in a later type annotation. Deferred annotations corrected
+the import failure before the suite was rerun. The final command
+`uv run python -m pytest -q` completed with **144 tests passed**, exit code 0:
+109 prior tests plus 35 approval checks. Tests cover exact amounts, wrong captures,
+stale/forged fingerprints, blocked agreement/condition/pending states, replay and
+terminal-state behavior, expiry without sleeps, revocation, state invalidation,
+immutable original basis, no-op record updates, tenant isolation, restart recovery,
+version-2 upgrade preserving keys/cases, and concurrent app instances competing
+for approval. Injected event failures prove both initial approval rollback and
+atomic rollback of a refund observation with its approval invalidation. The
+existing HTTPX/Starlette deprecation warning remains; no dependencies were added.
+
+**Additional validation:** `git diff --check`, local documentation links, and unique
+change/decision IDs passed. Temporary databases were used; no real access token or
+customer financial operation was created by the assistant.
+
+**Evidence limits and follow-up:** Explicit approval is recorded for the authenticated
+merchant; this is not proof of a human click, verified return, or PayPal ownership.
+The fingerprint is a state-change detector, not a secret, signature, or authorization
+token. Exactly-once financial execution is not established by these tests. Next
+implement provider-verified sandbox payment reads and durable execution records,
+then connect a sandbox-only refund path with final approval/state/expiry validation,
+idempotency, and recovery for ambiguous provider outcomes.
+
+### CHG-008 - Sandbox capture reads, scoped provider evidence, and local HTTP simulation
+
+**Date:** 2026-11-07.
+
+**Objective:** Read a PayPal Sandbox capture before attempting financial execution,
+check its identity against the case and configured seller, and retain precisely
+what was verified. The owner has not created a sandbox business account/REST app
+yet and asked for first-time setup steps; no real credentials were requested in chat.
+
+**Files and resulting behavior:**
+
+- `backend/app/paypal.py`: a sandbox-only HTTPX client exchanges HTTP Basic app
+  credentials with `/v1/oauth2/token`, then uses the returned bearer token for
+  `GET /v2/payments/captures/{capture_id}`. Decimal strings, finite positive
+  USD amounts, supported status, capture identity, and expected seller are checked.
+  Missing/invalid fields cannot create successful verification. The API exposes
+  sanitized errors rather than upstream bodies or authentication values.
+- `backend/app/settings.py`, `backend/.env.example`: optional enabled flag,
+  Resolve merchant UUID, sandbox client ID/secret, and expected PayPal seller ID.
+  Defaults keep reads disabled. SecretStr hides app credentials in model repr;
+  `.env` remains ignored. Sandbox seller ID and Resolve UUID are distinct.
+- `backend/app/main.py`, `models.py`: protected POST/GET
+  `/cases/{case_id}/paypal-capture-verifications`; POST returns `201` after an
+  observed read, GET returns saved history for the owning merchant/capture.
+  The client is created/closed in app lifespan, and no startup network call occurs.
+  Capture status and server timestamp are retained with explicit sandbox provenance.
+- `backend/migrations/004_capture_verifications.sql`, `app/storage.py`: append
+  observations with UUID, source case, owner, capture, payee, integer cents,
+  currency, status, and timestamp. A composite foreign key prevents mixed ownership.
+  History/latest evidence is shared across that owner's cases for the same capture.
+  The database write rechecks the case payment after the external HTTP call and
+  atomically saves evidence plus invalidates old approvals. A failed refresh
+  preserves previous evidence and approvals; no payment amount is overwritten.
+- `backend/app/reconciliation.py`, `approvals.py`: optional capture evidence in
+  reconciliation and saved approval basis. Evidence contributes to the state hash;
+  when absent, the original hash input remains unchanged for compatibility.
+  A successful refresh changes the fingerprint and invalidates active approvals
+  across the owner's capture, including when the recommended amount is unchanged.
+- `backend/pyproject.toml`, `uv.lock`: HTTPX moved from the development group to
+  runtime dependencies because the application now uses it. No additional HTTP
+  stack or payment SDK was added.
+- `backend/tests/test_paypal_config.py`, `test_paypal_storage.py`,
+  `test_paypal_simulation.py`: no-network configuration/auth gates; local tenant,
+  transaction, and version-3 snapshot compatibility checks; separately gated actual
+  HTTP tests through a local TLS proxy. Existing persistence/auth/approval tests
+  now expect schema version 4.
+- `postman/contracts/paypal-capture-read.openapi.yaml`,
+  `postman/mocks/paypal-sandbox/{config.yaml,default.js}`,
+  `postman/simulations/paypal-read/{paypal-read.sim.yaml,paypal-read.context.yaml}`,
+  and `postman/README.md`: reusable upstream subset, synthetic dependency,
+  interception wiring, assumptions/evidence, and Windows rerun instructions.
+  Unknown dependency paths return `501`; no provider financial-write route exists.
+- Root/backend READMEs: implemented/planned boundary, schema version, account/app
+  setup, seller ID lookup, ignored local configuration fields, sample checkout to
+  obtain a capture, authenticated endpoint usage, and evidence limitations.
+
+**Reason and decisions:** DEC-027 through DEC-030. This stage proves the caller
+can authenticate, read, validate and retain capture evidence independently of
+unfinished refund execution. A capture response is not a complete refund ledger
+or an eligibility decision. Its successful record therefore sets
+`capture_details_verified=true`, `refund_history_verified=false`, and
+`refund_eligibility_verified=false`; overall reconciliation and approval
+`verified_with_paypal` remain false. Pending/refunded statuses may be observed
+without authorizing a refund or altering the manually maintained ledger.
+
+**Contract discovery and alternatives:** Postman Orbit identified the GET capture
+operation. Its integration brief was partial because the saved example omitted
+payee. The official capture reference and primary Payments v2 specification were
+also inspected; they include optional `payee.merchant_id`, not a guarantee of
+its availability for this app. The client refuses incomplete payee evidence;
+an additional order-read fallback was deferred rather than weakening the match.
+The CLI was signed out and the repo unbound, so owner-workspace mock lookup was
+skipped and a local contract-derived stand-in was built. Local simulations need
+no sign-in; unrelated workspace setup/publication was unnecessary. No Postman
+artifact was deployed or pushed.
+
+**Operational tradeoffs:** The host is fixed to `api-m.sandbox.paypal.com`;
+capture IDs are restricted to 1-64 ASCII alphanumeric characters rather than
+accepting arbitrary path text. The app has one first-party seller binding, not
+partner onboarding or per-merchant secret storage. Redirects are refused;
+normal clients ignore environment proxies, and have bounded connect/read timeouts.
+Each verification obtains a fresh OAuth token; caching/retries were deferred for
+this low-volume milestone. Tokens live in memory only and are not database/log
+fields. Simulated clients explicitly inject a loopback proxy and its temporary
+CA while retaining sandbox URLs and TLS validation. This seam avoids adding an
+operator-configurable arbitrary destination to normal application settings.
+
+**Compatibility/data changes:** Startup applies migration 4 without rewriting
+existing cases, keys, refunds, conditions, approvals, or event history. Previous
+approval JSON without capture evidence still deserializes with a null field.
+New reconciliation responses add `capture_verification` (null until observed).
+Existing local API request bodies are unchanged. Existing sample capture IDs
+still work in the local ledger but may fail the provider-read syntax check.
+
+**Validation actually performed:**
+
+- From `backend`: `uv run python -m pytest -q --maxfail=1 --tb=short`:
+  **156 passed, 22 skipped**, exit 0. Twelve new default tests augment the 144
+  previous checks. The skipped tests require the separately started simulation.
+  Storage tests use explicitly synthetic DTOs; they are not provider verification.
+  Checks include evidence sharing only within a tenant, rechecking amount/ID after
+  HTTP, atomic rollback when invalidation audit insertion fails, and a reconstructed
+  version-3 database retaining its existing approval and older JSON snapshot.
+- From the repo root, with only `RESOLVE_RUN_PAYPAL_SIMULATION=1` set for this
+  process: `postman simulation run postman/simulations/paypal-read/paypal-read.sim.yaml
+  --proxy --lift "uv --directory backend run python -m pytest
+  tests/test_paypal_simulation.py -q --maxfail=1 --tb=short" --output ndjson`:
+  **22 passed**, exit 0. Session `56bcce1a-f96e-41c9-85a9-cb681ca7c0be`
+  logged **44 mocked requests, zero passed through** and stopped its own server.
+  Observed both OAuth POSTs and capture GETs, not just a running proxy. Assertions
+  cover persistence/restart, no saved secrets/tokens, ID/amount/payee/currency
+  mismatch, missing payee, numeric/nonfinite amount, unknown status, bad JSON,
+  capture denial/not-found, OAuth errors, 429/503, redirect refusal, a real HTTP
+  timeout, pending/refunded provenance, state/approval invalidation, and preservation
+  of previous evidence after a failed refresh. The delayed mock response after
+  client timeout is expected; the caller returns `504` and saves no observation.
+- The earlier run passed 151 default tests and 21 simulation tests. The final
+  counts above include added storage/failed-refresh checks. Both final runs retain
+  the known Starlette TestClient/HTTPX deprecation warning. uv also reports an
+  unrelated inherited VIRTUAL_ENV and explicitly uses this project's `.venv`.
+
+**Additional validation:** `git diff --check` completed without whitespace errors
+(Git emitted existing LF/CRLF conversion notices). Local Markdown file-link checks
+passed, along with 8 unique change IDs and 30 unique decision IDs outside the
+template. `git check-ignore` confirms `.env` and QA scratch artifacts stay ignored.
+The completed OpenAPI subset, including Basic/Bearer security definitions and
+response schemas, was parsed successfully by
+`postman mock generate postman/contracts/paypal-capture-read.openapi.yaml
+--output backend/.pytest_cache/paypal-contract-qa --name paypal-contract-qa`.
+That generated QA copy is ignored and was not run or published; this is parser
+acceptance, not a full independent provider-contract lint. Final `postman status`
+reports CLI 1.82.0, signed out and no workspace binding. Those are documented
+limits for owner-resource discovery, not blockers for the local simulation.
+
+**Primary references inspected:**
+
+- [PayPal authentication](https://developer.paypal.com/api/rest/authentication/)
+  and [capture-read reference](https://developer.paypal.com/api/payments/v2/captures-get).
+- [Primary Payments v2 schema](https://github.com/paypal/paypal-rest-api-specifications/blob/main/openapi/payments_payment_v2.json).
+- [REST getting started](https://developer.paypal.com/api/get-started/),
+  [sandbox accounts](https://developer.paypal.com/sandbox-testing/accounts/),
+  [merchant ID location](https://developer.paypal.com/docs/multiparty/seller-onboarding/build-onboarding/),
+  and [checkout sample](https://developer.paypal.com/checkout/integrate).
+
+**Limits/follow-up:** No request was made to real PayPal Sandbox, and no app,
+scope, account or real capture was verified. Payee availability remains an explicit
+unknown in the simulation context. Observations are historical server-saved reads,
+not a freshness guarantee. Full refund-history ingestion, verified webhooks,
+provider eligibility, durable execution/idempotency, ambiguous-outcome recovery,
+partner onboarding and production credential management remain unimplemented.
+The next account-backed step is the owner's sandbox setup and one read with an
+actual capture, followed by complete provider reconciliation before execution.
+Development data and credentials were not modified by tests; no commit/push was made.
+
+### CHG-009 - Sandbox OAuth smoke check and manual purchase guide
+
+**Date:** 2026-11-07.
+
+**Objective:** Distinguish local merchant authentication from PayPal authentication
+after the owner completed local environment setup. The owner supplied a successful
+`GET /auth/me` response, then confirmed there is no test purchase and requested
+guidance through one. No credentials or raw access tokens are recorded here.
+
+**Files/result:** Added `docs/SANDBOX_TEST_PURCHASE.md`, a manual Windows walkthrough
+for a USD 1.00 sandbox order, separate buyer approval, explicit capture, and a Resolve
+case/capture-read check. Root/backend READMEs link it and distinguish successful
+OAuth from unverified capture access. `postman/README.md` and the simulation context
+record the new account-backed OAuth evidence separately from simulated tests.
+This log's current summary is updated. No application code, schema, dependencies,
+runtime settings, or test implementation changed.
+
+**Validation performed:** A temporary PowerShell here-string was piped to
+`.venv\Scripts\python.exe -` from `backend`. It loaded `Settings()` from the
+ignored local environment file, used `PayPalSandboxClient._json_request` for one
+`POST https://api-m.sandbox.paypal.com/v1/oauth2/token` with HTTP Basic and
+`grant_type=client_credentials`, then validated `_OAuthToken`. **Four contract
+checks passed**, exit 0: HTTP 200, nonempty access token, Bearer token type, and
+positive expiry. Observed expiry was 32400 seconds. Output contained only result
+metadata. The token and credentials were never printed, written to a report,
+passed as literal shell arguments, or included in discovery requests. The client
+was closed afterwards. No capture read or provider financial-write call occurred.
+
+**Reason/choices:** DEC-027 and DEC-028 still apply. Reuse the real application
+client to exercise its authentication transport while keeping the credentials
+inside that process. A successful `/auth/me` proves local token ownership; OAuth
+adds provider credential-acceptance evidence, not payment ownership or capture
+verification. A manual API/browser walkthrough supports the owner's backend-first
+learning preference without adding a checkout frontend or a new financial API to
+Resolve. The browser redirect goes to existing `/docs`; it is not treated as
+capture success. Capture commands read order state first and retain separate
+request UUIDs for create/capture retries within the same terminal.
+
+**Purchase guidance:** The earlier account screenshot showed both default accounts
+as IN. The guide recommends a US Personal sandbox buyer with the existing IN
+Business seller to make the walkthrough cross-border. PayPal's primary help states
+that India cannot receive domestic payments; the original IN-to-IN sandbox pair
+was not exercised and no claim of an observed failure is made. Buyer credentials
+are entered in a private browser session, separately from the seller session.
+The guide's masked PowerShell prompt uses the already configured sandbox REST app
+credentials; it does not print a token or ask for secrets in chat.
+
+**Discovery:** An Orbit search for the Orders v2 create/approve/capture workflow
+returned HTTP 403. No resource IDs were obtained or guessed, and no integrate
+call was made. Official PayPal create/capture/order-flow references supplied the
+contract instead. Signed-out Postman workspace discovery was not needed. The
+primary references are linked in the guide, including
+[Orders flow](https://developer.paypal.com/whats-an-order/),
+[create](https://developer.paypal.com/api/orders/v2/orders-create),
+[capture](https://developer.paypal.com/api/orders/v2/orders-capture),
+[sandbox accounts](https://developer.paypal.com/sandbox-testing/accounts/), and
+[India payment guidance](https://www.paypal.com/in/cshelp/article/can-i-use-paypal-to-receive-payments-from-indian-customers-help1049).
+
+**Documentation checks:** All 4 PowerShell blocks were parsed using
+`System.Management.Automation.Language.Parser.ParseInput` without executing them;
+no syntax errors were found. A Python check parsed the embedded order JSON and
+confirmed CAPTURE intent, USD 1.00, the local return destination, and absence of an
+automatic-capture processing instruction. Documentation file links, 9 unique
+change IDs, 30 unique decision IDs, and whitespace checks passed.
+`git diff --check` exited 0 with existing LF/CRLF notices. The observed Git HEAD
+remains `e87c933af341888b9973be99aa79978d5c7a1085`, with an uncommitted tree.
+
+**Compatibility/limits:** No application behavior or database migration changed.
+The last complete automated suite remains CHG-008's 156 local checks and 22
+simulation checks; those were not rerun for documentation-only changes. The
+manual order/create/capture commands were not executed against real PayPal and
+no sandbox purchase was created by the assistant. Capture/payee availability,
+full refund history and eligibility remain unknown. The owner's next interaction
+is preparing the Personal buyer, then running and approving the manual test.
+No files containing credentials were changed; no commit/push was made.
+
+### CHG-010 - Account-backed capture read and dotenv syntax cleanup
+
+**Date:** 2026-11-07.
+
+**Objective:** Check the owner's completed USD 1.00 sandbox purchase with the
+application's real capture-read client, then guide the authenticated Resolve case
+flow. The owner supplied order/capture IDs, COMPLETED status and original amount.
+The assistant did not create, approve or capture the purchase.
+
+**Validation performed:** From `backend`, a temporary PowerShell here-string
+piped to `.venv\Scripts\python.exe -` loaded private `Settings()`, constructed a
+temporary `CaseResponse` validation input, and called `PayPalSandboxClient.read_capture`.
+That produced a fresh real Sandbox OAuth request and GET capture request. The
+client passed **four checks**: exact capture ID, original USD 1.00 amount, USD
+currency and configured seller payee. It observed status **COMPLETED**; exit 0.
+Only boolean result metadata/status were emitted. No credentials, OAuth tokens,
+raw provider response or payee/account details were displayed or saved in this log.
+
+**Scope:** The temporary input was never inserted into SQLite and is not a real
+Resolve case. This check did not exercise local bearer authentication, create a
+case, save a verification observation, or invalidate an approval. The supplied
+order ID was a user-provided reference; its linkage was not independently checked
+by this capture client. Refund history and eligibility remain unverified. The
+next step is the owner's authenticated `POST /cases`, then the capture-verification
+POST using the returned local case ID.
+
+**Configuration correction:** Loading settings emitted three python-dotenv parse
+warnings. The ignored `backend/.env` contained three malformed bindings. Using
+the installed `dotenv.parser.parse_stream`, the original file was read internally
+without displaying its contents. Only malformed bindings were prefixed with a
+comment; valid assignments, secret values, and other text were retained. No new
+credential file was created. Reparse found **zero errors**, and a before/after
+comparison of the complete `Settings().model_dump()` was equal, including the
+existing credentials and database path. Exit 0. A guard would restore the original
+bytes on validation failure; restoration was not needed. Existing server settings
+therefore retain the same meaning. No secret, token or environment line was
+copied into source files, command arguments, or the engineering log.
+
+**Files/result:** Updated root/backend READMEs, `docs/SANDBOX_TEST_PURCHASE.md`,
+`postman/README.md`, the simulation context, and this log to separate real capture
+client evidence from the still-pending authenticated route/storage check. The
+context retains unknown universal payee availability and adds a narrower supported
+claim for the one observed capture. The ignored local `.env` syntax was corrected
+as described above. No application code, schema, dependency or test changed.
+
+**Reason/tradeoffs:** DEC-027 through DEC-030 remain in force. Reusing the actual
+client establishes account-backed validation without asking for the owner's
+Resolve token in chat or provisioning an extra key. The authenticated HTTP path
+will be exercised by the owner in `/docs`. Commenting malformed config rather
+than reconstructing the file preserves existing entries; semantic equality and
+rollback protect working values. One successful provider example supports this
+sample only, so it does not remove missing-payee rejection or claim global refund
+verification.
+
+**Compatibility/follow-up:** The local configuration cleanup changes no loaded
+setting or database data. Previous suite evidence remains 156 local tests and
+22 simulated HTTP tests; no code changed, so those suites were not rerun. No
+production/live payment request, refund or assistant financial write occurred.
+An observed COMPLETED capture is not evidence of complete refund history or
+refund eligibility. Persist the authenticated case verification next; complete
+provider reconciliation remains necessary before future financial execution.
+No commit or push was made.
+
+**Additional validation:** Reparsed `.env` without warnings/errors and confirmed
+it remains ignored with `git check-ignore backend/.env`. Local Markdown file links,
+10 unique change IDs, 30 unique decision IDs, and whitespace in changed/untracked
+text files passed. `git diff --check` exited 0 with existing LF/CRLF notices. Git
+HEAD remains `e87c933af341888b9973be99aa79978d5c7a1085` with uncommitted work.
+
+### CHG-011 - Finish persisted sandbox verification under autonomous authorization
+
+**Date:** 2026-11-07.
+
+**Objective:** The owner explicitly delegated continued backend work without
+questions or repeated next-step prompts. Finish the pending authenticated
+case/capture route and define the next implementation phase.
+
+**Result:** The running local backend passed `POST /health`. A temporary key for
+the configured merchant was issued through the trusted local store, kept only in
+process memory, and used for actual HTTP calls to `127.0.0.1:8000`. The script
+looked up an existing matching owner/capture/order before creating a case, avoiding
+duplicate setup if rerun. The actual sandbox capture is saved under Resolve case
+`df7f9710-e3ee-4850-8362-d974424409ae`. Its capture-verification POST returned 201,
+history contains the saved COMPLETED observation, and reconciliation includes it
+with overall verification false. Authentication, owner ID, case amount, saved
+history and reconciliation assertions passed; exit 0. The temporary key was
+revoked in a finally block, and an HTTP request with it then returned 401. The
+owner's existing keys were not changed, and no secret was printed.
+
+**Validation:** Baseline `uv run python -m pytest -q --maxfail=1 --tb=short`
+passed **156 tests**, with 22 simulation tests skipped, exit 0. The known
+HTTPX/Starlette deprecation warning remains. No code changed in this phase;
+the actual API/database operation and provider read supplied the new evidence.
+
+**Next contract:** `docs/REFUND_EXECUTION.md` defines the bounded full-capture-only
+sandbox execution milestone before implementation. PayPal Orbit now succeeded
+using HTTPX and returned refund POST and refund GET resources; integration FIT
+was Fully. Chosen resource suffixes: `paypal:refund-captured-payment` and
+`paypal:show-refund-details`; exact IDs and usage are retained in the subsequent
+simulation context. Primary PayPal refund/read/idempotency references were checked.
+The 24-hour recovery window will be conservative relative to the documented
+45-day refund request-ID retention. Full refund-history discovery is still absent,
+so this first executor will reject partial/previously recorded-refund workflows.
+
+**Files/limits:** Added the execution design document and this log entry. No
+financial provider write occurred in this phase. Refund execution implementation,
+failure simulations and the explicitly labelled USD 1.00 sandbox exercise follow.
+No commits or pushes were made.
+
+### CHG-012 - Durable first full-capture sandbox refund execution
+
+**Date:** 2026-11-07. **Objective:** Implement the contract defined in CHG-011,
+including provider uncertainty and recovery rather than a direct fire-and-forget
+refund call. The owner's unattended authorization remains in effect.
+
+**Files/behavior:** `app/executions.py` adds owned execution create/get/list/retry/
+refresh/events and known provider-refund verification. `app/paypal.py` adds
+fixed-sandbox refund POST and refund GET, typed decimal/status validation, parent
+capture identification and sanitized errors. `models.py` adds execution, final
+capture check, provider refund observation and reconciliation hold/evidence fields.
+`main.py` exposes the authenticated routes documented in `docs/REFUND_EXECUTION.md`.
+`settings.py` and `.env.example` add the separate disabled-by-default refund flag.
+`storage.py` projects provider refunds and rejects manual writes to held/provider-
+managed data. `reconciliation.py`/`approvals.py` include execution holds and latest
+provider evidence, block stale/new decisions and reject revocation of claimed
+consent. Migrations 005/006 add execution/events/refund evidence and an app/seller
+identity fingerprint; schema is now 6. Existing records and snapshot JSON remain
+readable, and absent evidence/holds do not alter legacy fingerprint inputs.
+
+**Rules/decisions:** DEC-031 through DEC-034. Require an empty recorded ledger,
+saved capture evidence, live exact full-amount approval and a fresh completed
+provider capture before reservation. Network calls remain outside DB locks.
+One execution owns an approval and a merchant/capture. Reservation/claim precede
+submission and persist UUID, exact amount/body, consent snapshot and final capture
+check. A 60-second lease prevents concurrent local submission; a 24-hour recovery
+window is conservative relative to documented refund request-ID retention.
+Changing the client ID or expected seller prevents another financial attempt;
+secret rotation for the same app does not change that identity. A prior unknown
+attempt stays unknown if a later attempt is rejected, and old workers cannot
+clear a newer attempt's lease. Read-only refresh accepts a known refund ID to
+resolve an old/unknown operation without sending another financial request.
+
+Provider financial statuses map to local pending/completed/failed records only
+after validation. Observations, ledger writes, approval invalidation and execution
+events are atomic. Unknown outcomes retain a hold but create no fictitious refund
+record. Terminal verified refund statuses cannot silently reverse. Capture and
+refund evidence are scoped records; complete history/general eligibility remain
+false. Canonical PayPal parent links are identifiers only, never followed as URLs.
+
+**Tests/artifacts:** Added `tests/test_refund_executions.py` (33 local checks) and
+`test_refund_execution_simulation.py` (12 HTTP checks); shared loopback/CA fixture
+moved to `conftest.py`. Existing migration expectations and the reconstructed
+version-3 fixture now remove later schema objects accurately before upgrading.
+The upstream OpenAPI subset and stateful mock cover refund POST/GET. The mock
+keeps request IDs, result state and harness-only counters. No public mock was
+deployed; owner-workspace lookup remains skipped while CLI is signed out.
+Root/backend/simulation/execution docs and context distinguish each evidence type.
+
+**Validation:** `uv run python -m pytest -q --maxfail=1 --tb=short` passed
+**189 tests, 34 skipped**, exit 0. The simulation command in `postman/README.md`
+ran both HTTP modules: **34 passed**, exit 0, **156 mocked requests, zero passed
+through**. It exercised actual TLS/proxy/form/JSON/timeout/redirect paths. Request
+IDs and mock creation counters prove one simulated refund after lost responses,
+replays and restart. Local checks cover tenant gates, full-only/expiry/state
+rejection, atomic audit rollback, concurrent app instances, active/stale leases,
+worker fencing, identity changes and old unknown-outcome read reconciliation.
+Known Starlette/HTTPX and inherited VIRTUAL_ENV notices remain. Initial regression
+testing caught the historical version-3 test retaining a later-schema index;
+the test's reconstruction was corrected before final successful runs.
+
+**Compatibility/limits:** No new dependency. One full-refund action per capture
+is deliberately narrower than a production partial-refund ledger. Complete
+external history, partner credentials and verified webhooks are not implemented.
+Execution status must be inspected even when a record is created with HTTP 201.
+The completed account-backed exercise is recorded separately in CHG-013.
+
+### CHG-013 - Complete the one-dollar sandbox resolution
+
+**Date:** 2026-11-07. **Objective:** Exercise the implemented authenticated
+backend against the existing sandbox purchase under the owner's explicit
+unattended-development instruction.
+
+**Preparation:** Created an SQLite backup using the backup API at ignored
+`backend/data/backups/before-autonomous-sandbox-refund.sqlite3`. Used a temporary
+loopback Uvicorn server with refund writes enabled only in its in-memory Settings
+object. A temporary merchant key was issued/revoked through trusted local access;
+the owner's keys/configuration were preserved. All provider requests used the
+fixed sandbox host. No production host or actual customer support message was used.
+
+**Result:** Created explicitly synthetic full-refund test case
+`bb41ba9c-9a29-44a2-b961-76fc41ef5e7c`, saved fresh capture evidence and an exact
+USD 1.00 approval, then executed action `71a96df7-3102-4ad3-8b86-9646b3756bdd`.
+Request hooks observed **one refund POST**. Replaying the execution returned the
+same action without another financial POST. An **independent refund GET** confirmed
+COMPLETED. A final capture read reported REFUNDED. Reconciliation reported fulfilled,
+USD 1.00 completed, zero remaining/recommended, with overall verification false.
+Assertions passed; exit 0. The temporary key was revoked and server stopped.
+
+**Evidence/artifacts:** The ignored `backend/data/autonomous-sandbox-result.json`
+contains only case/execution/refund IDs, amount/status/counters and cleanup flags.
+No credential, Authorization header or token was printed/saved. Provider observation,
+approval snapshot and execution event history are durable in the application DB.
+The initial capture-only case remains intact and shares the same refunded balance.
+Context and READMEs record the outcome. No application code changed for this run.
+
+**Limits:** This confirms one first full-capture sandbox flow, not partial refunds,
+complete external history, production access, independently verified buyer
+agreements, or general eligibility. The source/decision text explicitly identifies
+an automated sandbox demonstration. No real-money financial operation occurred.
+No commit or push was made.
+
+### CHG-014 - Case workspace, revision safety, audit timeline and recovery worker
+
+**Date:** 2026-11-07. **Objective:** Make the tested financial backend usable as
+a case workspace and recover already-approved actions without repeated operator
+prompts. Contract was written in `docs/BACKEND_OPERATIONS.md` before implementation.
+
+**Files/behavior:** `app/main.py`, `models.py`, `storage.py` add owned paginated
+`GET /cases`, exact-state `PUT /cases/{id}/commitment` and paginated shared-capture
+`GET /cases/{id}/timeline`. Migration 007 adds case/manual-refund/commitment events
+and a nullable private condition-evidence epoch. Create, revision and manual refund
+events commit with their underlying changes. Approvals/executions now use one
+storage reconciliation helper, including only evidence applicable to the current
+condition epoch. Old condition checks remain readable but cannot satisfy a changed
+condition; no replacement physical evidence or historical timestamps are invented.
+Identical commitment updates are no-ops; changed stale/held updates fail atomically.
+
+Timeline combines real timestamps from case events, approval/execution events,
+condition history and provider observations, retaining source case IDs within one
+merchant/capture. It labels account/system/unknown provenance and never mixes
+another merchant's same-named capture. Legacy creation/manual changes without
+timestamps remain gaps. Current timeline pagination bounds response size but
+assembles the capture history in memory; production-scale SQL pagination remains
+future work. Case pages use row insertion order rather than invented legacy dates.
+
+`app/worker.py` adds trusted local `--once`/`--loop` recovery. It scans only the
+configured merchant's reserved/unknown/stale-submitting/pending records; it creates
+no consent. Fresh reservations get a grace period to avoid racing the request
+handler. Backoff, leases, original request/body/identity, enabled write flag and
+24-hour window remain enforced. Known pending refunds can be read with writes
+disabled. Old unidentified actions are counted for reconciliation, not blindly
+resubmitted. Output is opaque IDs/status/count metadata only. No system service
+or external scheduler was installed.
+
+`reconciliation.py`/`models.py` now expose failed execution review state when a
+commitment remains outstanding, rather than recommending an action blocked by
+the already-claimed capture. A later validated external refund may still fulfill
+the agreement; a prior failed action does not erase returned money. This extends
+DEC-026's separation of actions and observed financial outcomes.
+
+`scripts/export_openapi.py` generates `postman/contracts/resolve.openapi.json`
+without starting the server/initializing storage. Public contract definitions
+contain no environment values or case data. `AGENTS.md` now requires regeneration
+after API/model changes. Root/backend/operations/simulation/status docs describe
+actual capability, commands and limits. The engineering log/context are current.
+
+**Decisions:** DEC-035 through DEC-037. No new runtime dependency. The package
+placeholder description and
+generic API title were replaced with implemented Resolve scope; public paths,
+API version and request/response behavior were unchanged by that metadata polish.
+Ruff 0.17.4 was run via uvx as an ephemeral development tool to format 17 touched
+Python files and
+check focused F rules. It caught an unused test import/variable; both were cleaned
+up, and the formerly unused result became an explicit uncertainty assertion.
+
+**Tests/migrations:** Added `test_case_workspace.py`, `test_recovery_worker.py`,
+extended execution tests for held revisions and later external fulfillment, and
+added an actual-HTTP worker refresh scenario. Historical schema tests now create
+real versions 3/4/5/6 from the corresponding SQL migrations and copy only the
+historical columns, rather than resetting a newer database version marker.
+Version-2 setup inserts historical case rows directly instead of calling new
+audit-aware code against an old schema. Upgrades preserve identity, approval JSON,
+case/capture evidence and foreign-key integrity. Schema version assertions are 7.
+
+**Validation performed:** Final `uv run python -m pytest -q --maxfail=1 --tb=short`
+passed **219 tests, 35 skipped**, exit 0. Both HTTP modules through the existing
+Postman TLS proxy passed **35 tests**, exit 0: **165 mocked requests, zero passed
+through**. They include worker pending-to-completed refresh with writes disabled
+and only one financial POST. Domain tests cover case pagination/tenant gates,
+commitment addition/revision/replay/stale amounts, condition epoch reset, unchanged
+condition evidence, approval rejection after reset, audit rollback, worker due/
+backoff/window/owner/flag rules and metadata-only CLI output. Existing precision,
+pending/failed/refund balance, expiry, restart, concurrency and recovery checks
+remain green. The known HTTPX/Starlette and inherited environment notices remain.
+
+`uvx ruff format --check` and `uvx ruff check --select F` passed on the 17 touched
+files. The exported application contract was accepted by `postman mock generate
+postman/contracts/resolve.openapi.json --output backend/.pytest_cache/resolve-contract-qa
+--name resolve-contract-qa`; this is parser acceptance, not a claim of a running
+application mock. QA output is ignored and was not published.
+
+**Account-backed operational checks:** A temporary loopback server and key tested
+the real persisted database after schema-7 startup. Case browsing returned the two
+related sandbox cases; timeline returned 9 timestamped events including completed
+execution and provider refund verification. Fulfilled reconciliation survived.
+Replaying the completed action with financial writes disabled returned the original
+completed execution with attempt count 1 and **zero additional refund POSTs**.
+The key was revoked and rejected with HTTP 401, and the temporary server stopped.
+`uv run python -m app.worker --once` returned an empty queue with zero errors/
+unresolved reconciliation work. Metadata is in ignored
+`backend/data/autonomous-backend-checks.json`. The owner's normal server remains
+reachable and advertises the workspace/execution routes.
+
+**Privacy/configuration:** A local source scan compared configured PayPal app
+credentials against tracked/changed/untracked nonignored text and checked for
+literal long Resolve tokens: no matches. Current database bytes contain no raw
+configured app credentials. Normal Settings report refund writes disabled; no
+environment credential was printed or changed. Schema/runtime data and backups
+remain ignored, while the public generated contract is reusable in Git.
+
+**Limits/follow-up:** The backend milestone is complete for the documented first
+full-capture sandbox workflow and local operations. Partial refunds, complete
+external history, verified webhooks, AI extraction/evaluation, frontend, browser
+roles and PostgreSQL/production deployment remain separate work. No production
+financial request, commit, push, public mock or deployment was made.
+
+**Final artifact checks:** Regenerated the contract after metadata polish and
+compared it with the current FastAPI schema, including security declarations on
+all protected operations. Postman's generator accepted the final export in ignored
+`backend/.pytest_cache/resolve-contract-final-qa`. Local documentation links,
+14 unique change IDs, 37 unique decision IDs, source credential scans and changed-
+file whitespace passed. `uv lock --check` resolved the existing 26 packages without
+a dependency change. The final HTTP rerun again passed 35 tests with 165 mocked
+requests and zero passed through, and its mock server stopped normally. All
+temporary test access keys and servers have been cleaned up; the user's original
+development server remains reachable with the new routes.
+
+### CHG-015 - Verified PayPal history, partial refunds and case workflow
+
+**Recorded:** 2026-11-07. **Objective:** Discover and verify external refunds,
+allow separately approved refunds within the remaining balance, and give
+merchants evidence and exception workflows for a case.
+
+**Implementation:** `app/paypal.py` and `app/paypal_history.py` add a Sandbox
+Orders v2 reader, cumulative and parent checks, a raw-body signature postback
+and a durable verified inbox. `app/worker.py` retries and reconciles inbox
+records; reversal and unresolved deliveries enter review. `app/storage.py`,
+`app/reconciliation.py`, `app/approvals.py` and `app/executions.py` bind
+execution to fresh consistent evidence, preserve exact request identities,
+prevent concurrent payment actions and recover partial refunds by custom ID.
+`app/case_workspace.py` and `app/workspace_routes.py` add attachment storage,
+case lifecycle, review, webhook and read-only history routes. Migration 008
+preserves existing audit rows, adds the one-active-execution index and persists
+the new case/provider state. Configuration examples leave writes and partials
+disabled and show where to put the app's webhook ID.
+
+**Decisions:** DEC-038 through DEC-041 explain order-scoped verification,
+durable receipt, exact request and approval handling, and the separation
+between workflow state and money. A reporting feed may lag; the PayPal
+refund POST and capture balance remain authoritative after the last read.
+Attachment type/signature and size are checked locally; this stage has no
+malware scanning or object-storage retention service.
+
+**Validation:** The real Sandbox order, capture, and independent refund GET
+reconciled one existing USD 1.00 refund and zero remaining in an isolated
+database. No new financial POST was made against PayPal. New default tests
+check tenant isolation, closure, attachment round-trip and rejection, exception
+dedupe and resolution, and exact webhook-byte preservation. The local Postman
+simulation models the provider's order history, refund operations and signature
+postback. `uv run python -m pytest -q --maxfail=1 --tb=short` passed 222 tests
+with 40 simulation cases skipped by default. The combined HTTP run passed
+40 tests with 276 mocked requests and
+zero passed through. Cases include two partial refunds after a simulated external
+refund, stale approval without a provider POST, inconsistent cumulative history,
+signature rejection/unavailability, event dedupe, reversal hold, and a lost
+response recovered by custom ID without another financial POST. A copied version-7
+schema populated from the development database migrated to version 8 and
+preserved the real Sandbox execution, its three events, refund evidence and
+all sampled rows; SQLite integrity and foreign-key checks passed. The first
+proxy attempt timed out before reaching the mock; the fixture now allows a
+longer TLS startup without changing the deliberate timeout tests. A simulated
+pending refund also exposed a valid zero cumulative total; cumulative amounts
+now accept zero while individual refund amounts must stay positive.
+
+**API tooling:** Orbit returned refund-submit candidates but
+no suitable history or verification endpoint in the combined query, so the
+contract was checked against the official PayPal references and the configured
+order was read independently. Hosted Postman webhook listing requires a signed-in
+session; no hosted receiver was registered or published. Both generated/maintained
+OpenAPI contracts were checked with Postman's local generator.
+
+**Limits and follow-up:** Validate a genuine Sandbox signature delivery through
+the app's HTTPS registration and use a separate Sandbox purchase for a real
+partial/refund-repeat check. The verified snapshot is specific to the supported
+order, capture and app, not a guarantee of complete merchant-wide reporting or
+an atomic lock on other PayPal activity. No commit or push.
+
+### CHG-016 - Build the shared resolution promise workspace
+
+**Recorded:** 2026-11-07. **Objective:** Track eight requested remedy families
+and their evidence in a merchant case, including remedies with no captured payment.
+
+**Implementation:** Migration 009 adds resolution cases, promises and append-only
+events, with an optional unique link to an existing refund case. The
+`resolution_models`, `resolution_routes`, `resolution_workspace`, and
+`resolution_state` modules add merchant-owned routes, typed targets, exact
+revision checks, prerequisites, deadlines, and a paginated timeline/export.
+The export includes a linked refund's approvals, execution evidence and
+attachment metadata; it never submits evidence to PayPal. The refund
+reconciler and execution checks bind consent to the current linked promise
+and prerequisite state without moving refund records into a second ledger.
+Case revisions and new contradictory findings retain prior evidence while
+making stale consent unusable.
+
+`resolution_providers` adds authenticated, read-only verification of PayPal
+authorizations, subscriptions, invoices, captures and disputes; EasyPost
+tracking; and Shopify order cancellation, credit transactions and exchange
+fulfillment. It validates IDs, identity and relevant amounts, saves only
+needed proof fields, and records a review state when a check fails. New
+connectors are optional and configured by merchant. The existing refund
+history and execution routes retain their financial policy. See DEC-042
+through DEC-044 and [the API guide](RESOLUTION_WORKSPACE.md).
+
+**Validation:** `uv run python -m pytest -q --maxfail=1 --tb=short` passed 226
+local tests, with 45 simulation tests skipped by default. Tests cover the
+return condition gate, invalidated approvals, old revision evidence,
+captureless cases, cross-tenant reads, and merchant notes that cannot fake
+provider proof. The final combined Postman TLS simulation passed 45 tests
+with 336 mocked requests and zero passed-through requests. The main scenario records a warehouse-gated refund,
+finds $10 issued externally, approves and executes the remaining $20, then
+confirms a replacement shipment in the same case. Other scenarios cover
+split order/authorization status, subscriptions, exact credits, shipment
+status, invoice corrections, disputes, provider outage and account binding.
+Shopify fulfillment uses the documented GraphQL `displayStatus` field and
+distinguishes a label from movement. Ruff, lock verification and focused
+OpenAPI/mock checks were run. Orbit identified EasyPost tracker retrieval and
+PayPal authorization/dispute lookups; its PayPal and Shopify guidance was
+partial, so official provider contracts supplied the missing details. The
+signed-out Postman CLI could not search owner workspaces; local simulations
+required no sign-in. Migration 8 to 9 was checked on a copy of the development
+database with prior case, refund, execution, and audit rows unchanged; SQLite
+integrity and foreign-key checks passed. No external account mutation was made.
+
+**Limits:** New provider paths are validated against official references and
+the simulation; merchant-account permissions and real resource responses
+have not been tested. Non-refund evidence is refreshed on demand, and
+external links are merchant-entered associations verified separately in the
+configured provider. No browser UI, connector webhooks, new provider writes,
+or external dispute submission. No commit or push.
+
+### CHG-017 - Plan and build the local merchant UI
+
+**Recorded:** 2026-11-07. **Objective:** Make the existing resolution
+workflow usable and demonstrable in the browser. The implementation followed
+the written [frontend plan](FRONTEND_PLAN.md).
+
+**Implementation:** Added `frontend/` with Next.js, React, TypeScript, local
+variable fonts, responsive CSS, and a dependency lockfile. The interface
+provides the case inbox, search/filter controls, case creation, editable remedy
+promises, merchant evidence, provider rechecks, a paginated audit timeline,
+review queue, a private evidence export, and a printable buyer receipt.
+The refund UI displays the agreed, confirmed and outstanding amounts, allows an
+exact partial approval, and separates approval from submission. It re-reads
+the current reconciliation before approval and lets the backend decide whether
+an execution is eligible. Known provider outcomes can be refreshed by read.
+Request IDs are reused for repeated attempts with the same input within the
+current browser session.
+
+The default demo is an in-memory scenario with no provider side effects.
+The connected path uses the same UI, validates the merchant key through FastAPI
+and uses a same-origin frontend proxy limited to known routes and a local
+backend. The key stays in a server-memory session; the client receives an
+opaque HttpOnly cookie. FastAPI models, routes, SQLite schema, and default
+Sandbox write flags are unchanged. See DEC-045 and DEC-046.
+
+**Validation:** `npm run check` and `npm run build` passed. Seven Playwright
+tests passed with Chrome on the local app, including desktop and mobile
+layout, sample success, outside-refund invalidation, smaller partial approval,
+print view, connected case creation and evidence, and both connected payment
+paths. The isolated FastAPI fixture used Postman's local TLS proxy for
+27 mocked provider requests and zero pass-through. The normal connected case
+submitted one simulated $20 refund; the stale approval case submitted zero
+provider refund requests. The checks also verified the opaque HttpOnly cookie
+and blocked cross-origin writes. An earlier test run routed only two localhost
+readiness checks through the proxy; the final harness bypasses the proxy for
+loopback readiness. Build, screenshot inspection, and tests did not use the
+user's database or live PayPal credentials.
+
+**Limits:** Local merchant-key connection rather than production login;
+search and counts cover loaded cases. The buyer receipt is a private print
+view without a public link. Production deployment and account-backed partial
+refund/webhook checks remain future work. No commit or push.
+
+### CHG-018 - Add the customer portal and private case links
+
+**Recorded:** 2026-11-07. **Objective:** Give customers their own view of a
+resolution and a way to communicate, without merchant access.
+
+**Implementation:** Migration 010 adds hashed customer-link records and a
+case conversation. `customer_portal.py` builds a dedicated customer response
+from allowlisted fields and keeps messages independent of payment state.
+`customer_routes.py` adds merchant link and reply routes and two token-scoped
+customer routes. Tokens are issued once, expire in seven days, and are
+invalidated by replacement or revocation. Customer messages have bounded
+length and rate limits; a request ID avoids duplicate entries on retry.
+
+The Next.js merchant case has a **Customer portal** tab to create or revoke
+a link, choose a public heading and optional order reference, and reply.
+The separate `/customer` screen presents progress, the agreed remedy,
+confirmed refund amounts, and the conversation. It has a credential-free
+sample mode. The customer proxy never forwards a merchant credential. The
+token is kept out of page requests and carried in a JSON body for API calls;
+customer responses use private, non-cacheable headers. See DEC-047 and
+DEC-048 and [the customer guide](CUSTOMER_PORTAL.md).
+
+**Validation:** The default backend suite passed 229 tests. Focused API tests cover response redaction, hashed token
+storage, link ownership, rotation, revocation, expiry, rate limits, and
+idempotent messages. They also verify that a conversation does not change the
+refund reconciliation fingerprint. The FastAPI OpenAPI export was regenerated
+and checked by Postman's local generator. Migration 9 to 10 preserved prior
+case, promise and refund records on a database copy with valid foreign keys.
+The browser harness uses a separate Next build directory so it can coexist
+with a developer's local server. The first browser run with the new flow
+caught an initial link settings race; editing is now disabled while those
+settings load so the merchant's public heading and visibility choice persist.
+TypeScript and the production build passed. The mobile sample and a separate
+two-session browser test passed: the merchant issued a link, a browser without
+merchant credentials viewed the case and sent a message, the merchant replied,
+and the customer's next request after revocation was denied. The browser
+refund regressions still handled 27 mock provider requests and zero pass-through.
+
+**Limits:** Local links only, with no public issue intake, customer login,
+notifications, or new payment action. Link rotation keeps the case
+conversation, so only share with the intended customer. No commit or push.
+
+### CHG-019 - Build customer intake, evidence, timeline, and merchant triage
+
+**Date:** 7 November 2026 (Asia/Calcutta).
+
+**Objective:** Let a buyer start a case for an invited order, add supporting
+documents, and see who acts next. Give the merchant one queue to pick up the
+request and carry it through an agreed remedy.
+
+**Changes:** Migration `011_customer_intake_and_triage.sql` adds invite,
+customer evidence, and case operations tables. `customer_intake.py` converts
+the invite into one case plus a portal link in the same SQLite transaction.
+`customer_evidence.py` validates and serves bounded attachments with ownership
+checks on every download. `customer_progress.py` projects a safe timeline from
+intake, current promise evidence, approval, and verified refund records.
+`case_operations.py` stores editable assignment/deadline/waiting settings and
+derives the workflow, overdue state, and unread count. The inbox applies
+merchant-scoped filters before pagination and reads local evidence without
+calling providers. `resolution_workspace.py` lets the merchant attach one
+existing, owned payment to the original case; linking is idempotent, rejects
+conflicting ownership or links, and records an internal event.
+
+The Next.js merchant workspace exposes **Invite customer**, **Manage case**,
+inbox filters, payment linking, and the customer conversation and uploads.
+The buyer UI offers intake, evidence, status, and conversation on one link.
+Its proxy adds specific JSON and binary routes without passing the merchant
+session to the public customer endpoints. The FastAPI OpenAPI contract and
+[workflow guide](CUSTOMER_WORKFLOW.md) describe the new routes.
+
+**Decisions:** DEC-049 through DEC-051 cover why the workflow uses one-use
+capabilities, separate attachment provenance, and one derived source of
+truth for merchant and buyer status. Linking an existing payment retains
+the buyer's original case and context rather than creating a second case.
+
+**Validation:** `uv --directory backend run python -m pytest -q` passed
+235 tests (45 provider HTTP simulation tests skipped by default). Six new
+API tests cover one-use intake, expiration/revocation, evidence byte and case
+boundaries, filtered pagination, payment linking, and the pending-to-confirmed
+timeline with an in-process provider fixture. A separate synthetic populated
+schema-10 database upgraded to 11 with its existing link, customer message,
+and foreign keys intact. All 10 browser tests passed with the local Postman
+PayPal simulation: 27 requests mocked and zero passed through. The intake
+test exercised customer upload, merchant download, deadlines, and unread
+messages in separate sessions. The refund test checked the customer-facing
+milestones after provider confirmation. The browser suite initially reused a
+link that the refund test had created; the revocation test now explicitly
+handles both creating and replacing that link. TypeScript and the production build passed. The generated
+Resolve contract was accepted by the local Postman mock generator. Ruff
+formatting and undefined/import checks passed.
+
+**Limits:** Local merchant access only; there is no email delivery, independent
+buyer identity, team permissions, file scanning, or hosted link delivery.
+Filtered inbox queries derive status over matching local merchant records;
+scale to a hosted database with an indexed projection when needed. Evidence
+files use SQLite BLOB storage for the bounded development workload. Existing
+refund execution remains separately approved and gated; no actual financial
+request was made for these changes.
+
+### CHG-020 - Add optional hosted customer follow-up and helpdesk
+
+**Date:** 7 November 2026 (Asia/Calcutta).
+
+**Objective:** Give buyers an emailed path back to their case, keep provider
+evidence current, and let a merchant refer to their existing helpdesk ticket.
+
+**Changes:** Migration 012 adds the case contact, outbox, sign-in/session,
+case access, refresh schedule, and helpdesk tables. The intake and portal
+modules bind an explicitly emailed invite to the contact and queue notices
+with stable event identities. `customer_email.py` sends via the Resend API,
+and the account API exchanges a one-time sign-in capability for a separate
+session. The frontend has a My cases screen with an HttpOnly cookie and a
+bounded proxy; existing local invites continue to work. The merchant invite
+dialog accepts an optional order email and the case overview can attach and
+refresh a Zendesk ticket. Zendesk uses OAuth with a fixed account host and
+stores only ticket ID, status and time checked.
+
+`followup_worker.py` processes the existing PayPal webhook inbox and queues
+refund notices only from independently verified completed observations on
+shared refund promises. It schedules EasyPost and Shopify reads against the
+existing provider adapters. Revisions and leases fence scheduling writes;
+unchanged results do not append duplicate proof. Manual warehouse findings
+and the existing refund recovery worker remain separate.
+
+**Decisions:** DEC-052 through DEC-055 explain the outbox, mailbox boundary,
+provider scheduling, and one-way helpdesk link. Using scheduled EasyPost and
+Shopify reads reuses the existing evidence logic without adding two more
+public webhook receivers before a hosted deployment.
+
+**Validation:** The configured actual PayPal Sandbox OAuth and read-only
+webhook inventory returned HTTP 200 with zero registrations and events.
+The isolated HTTPS tunnel probe did not reach the temporary listener, so no
+Sandbox webhook registration, invoice, payment, or refund was created.
+Genuine signed delivery remains a release check. Local case links, mailbox
+verification, provider simulations, and the hosted configuration are distinct
+from a deployed or account-backed integration.
+
+`uv --directory backend run python -m pytest -q` passed 238 tests.
+The [follow-up Postman simulation](../postman/simulations/hosted-followup/hosted-followup.context.yaml)
+passed three cases with 33 mocked HTTP requests and zero pass-through. It
+checked idempotent Resend retries, signed fixture receipt and reconciliation
+without any refund POST, scheduled provider updates and Zendesk OAuth reads.
+The generated Resolve OpenAPI contract was accepted by Postman's local mock
+generator. Ruff checks and the frontend type check and production build passed.
+A populated synthetic version-11 database upgraded to 12; a pre-upgrade
+order invite still opened its case and did not gain mailbox access. All 11
+browser tests passed with the email fixture and PayPal simulation (27 mocked
+provider requests and zero pass-through). The browser pass caught an issue
+when opening a sign-in link in an already open My cases tab; the page now
+handles fragment changes without consuming the token until the buyer continues.
+
+**Limits:** Email and scheduled carrier checks are opt-in and no live sender,
+carrier store, helpdesk account or hosted URL was configured. My cases is
+available to buyers with an email-bound case; prior copy-only invites remain
+case links. Provider acceptance does not establish inbox delivery. Zendesk
+linking does not synchronize comments or create tickets. No commits or pushes.
+
+### CHG-021 - Add PostgreSQL and verify a SQLite-to-PostgreSQL import
+
+**Date:** 7 November 2026 (Asia/Calcutta).
+
+**Objective:** Move off a single-machine database when hosting while
+preserving existing merchant records, evidence and refund safeguards.
+
+**Changes:** The shared repository keeps its existing case and payment
+logic. `postgres.py` provides the psycopg transaction adapter and
+checksummed migrations under `migrations/postgres`.
+`RESOLVE_DATABASE_URL` selects PostgreSQL across FastAPI, merchant admin,
+and both workers. SQLite remains available when the URL is unset.
+Shared statements use explicit integer flags, portable upserts, and a
+monotonic read marker. The case-order migration preserves the original
+SQLite insertion order with a column both engines can query. The FastAPI
+OpenAPI export is unchanged.
+
+`migrate_sqlite.py` upgrades a private snapshot, copies 32 tables to an
+empty target, checks foreign keys, preserves identity high-water marks,
+and compares every destination row before commit. No key or token is
+reissued. Evidence bytes, snapshots, money in cents, and historical IDs
+survive the copy. A populated target is refused.
+
+**Decisions:** DEC-056 through DEC-058 explain the choice of provider,
+why the first PostgreSQL driver serializes writers, and why migration
+copies and verifies before switching runtime configuration.
+
+**Validation:** The actual development SQLite snapshot was copied to an
+isolated local PostgreSQL 18 database: 32 tables and 21 rows verified.
+The API reopened that database through configuration and reconciled the
+imported Sandbox settlement offline; both workers started with integrations
+disabled. The source remained the active database. No managed database,
+external payment or email service was changed by the migration.
+
+The PostgreSQL provider suite passed 13 tests and made 204 mocked requests
+with zero pass-through. Its first run found an implicit SQLite row ordering
+in webhook case selection; migration 013 and PostgreSQL migration 002 preserve
+the case order explicitly. The OpenAPI export stayed byte-for-byte unchanged.
+The default suite passed 238 SQLite tests. The PostgreSQL integration suite
+passed 51 tests, covering the original merchant key, binary attachment
+preservation, identity counters, repeatable snapshots, write contention, and
+concurrent refund submission from two application instances. Ruff and
+`git diff --check` passed.
+
+**Limits:** The schema-wide write lock preserves the current invariants at
+the expense of parallel writes. PostgreSQL connections are short lived; no
+application pool is required for the first demo. A cloud connection and final
+cutover still need to be verified. No commits or pushes.
+
+### CHG-022 - Public landing, private merchant sign-in and optional PayPal identity
+
+**Date:** 7 November 2026 (Asia/Calcutta).
+
+**Objective:** Give buyers and merchants clear entry points and prepare Resolve
+for hosted access without changing how payment permissions or approvals work.
+
+**Changes:** Next.js exposes `/`, `/demo`, `/login`, `/workspace`, and
+`/workspace/settings`; the existing customer portal and My cases remain separate.
+The merchant sign-in page validates a Resolve key server-side and stores an
+opaque browser session in an HttpOnly cookie. The workspace checks the session
+before rendering merchant data. A configured PayPal account can be linked or
+unlinked after a recent key sign-in; later PayPal sign-in looks up that explicit
+link. `merchant_auth.py`, `merchant_auth_routes.py`, `auth.py`, and `settings.py`
+implement session creation, expiry, revocation, and PayPal callbacks. SQLite 014
+and PostgreSQL 003 add links, sessions, and short-lived OAuth flows without
+changing existing merchant keys, cases, or financial records.
+
+`GET /health` supports hosting probes alongside the existing `POST /health`.
+Private buyer invite URLs use the configured buyer origin even without email
+delivery. `frontend/package.json` adds `npm run start:hosted`, preserving the
+loopback default. Environment examples and `MERCHANT_SIGN_IN.md` document
+deployment, exact return URL, and the separate identity credentials.
+
+**Decisions:** DEC-059 through DEC-061 explain the route and session split, the
+existing-workspace requirement for linking, and the origin and form safeguards.
+
+**Validation:** Default `pytest -q`: 240 passed, 52 opt-in tests skipped.
+An isolated local PostgreSQL 18 instance passed five targeted migration and
+authentication tests; the OAuth simulation case was skipped in that run.
+The merchant auth module passed three tests under the PayPal TLS simulation
+(13 mocked requests, zero pass-through), including wrong browser binding,
+callback replay, expiry, unknown identity, and unlinking. `npm run test:e2e`
+with the provider simulation and email fixture passed 14 tests (33 mocked
+requests, zero pass-through), covering the landing page, sign-in, account
+settings, and existing buyer and merchant flows. The first browser run caught
+a native GET fallback before React hydrated; the form now declares POST and
+enables the key field and submit button after hydration. The browser fixture
+also now resolves configured hosted invite links back to its isolated test
+server. Mobile landing and desktop sign-in screenshots were reviewed and a
+low-contrast wordmark on light pages was corrected; all three focused browser
+tests passed again. `npm run check`, `npm run build`, Ruff F checks, and
+`git diff --check` passed. The regenerated Resolve OpenAPI contract
+was accepted by Postman's local mock generator.
+
+**Limits:** PayPal requires configuring the login add-on and registering an exact
+return URL; the OAuth flow was tested with a simulation and has not been exercised
+against a real PayPal app. Live login requires provider review. Login gives no
+additional payment permissions; the existing workspace membership and refund
+approval model is unchanged. No hosted database change, deployment, commit,
+external message, or AI integration was performed.
+
+### CHG-023 - Restore PostgreSQL migration history and fix OAuth schema upgrades
+
+**Date:** 7 November 2026 (Asia/Calcutta).
+
+**Objective:** Restore backend startup against a database that applied the
+original merchant authentication migration and add the OAuth callback claim
+column without losing its records.
+
+**Changes:** A read-only catalog check of the configured database confirmed
+that migrations 001 and 002 match, and that the stored checksum for 003 matches
+the file exactly once its inline `claimed_at` addition is removed. The three
+auth tables were present, but the claim column was absent. Restore the original
+PostgreSQL 003 and SQLite 014 SQL. PostgreSQL 004 and SQLite 015 install the
+nullable claim column, preserving existing sessions, links and pending flows.
+`postgres.py` recognizes the one exact interim checksum of 003 against the
+restored original; existing checksums are never rewritten. `storage.py` handles
+the two SQLite version-14 shapes under the existing write transaction.
+
+**Decision:** DEC-062 records why a forward migration and a checksum-specific
+compatibility exception were chosen over a reset or metadata edit.
+
+**Validation:** On isolated PostgreSQL, both 003 histories upgraded and restarted
+with their existing merchant key and flow state intact. An unknown checksum
+still prevented startup and was left unchanged. The targeted PostgreSQL and
+merchant-authentication run passed eight tests, with the PayPal HTTP simulation
+test skipped. The default suite passed 242 tests (55 opt-in tests skipped) and
+covered both SQLite 14 variants, existing claim preservation, and restart. Ruff
+focused checks and `git diff --check` passed. The exported OpenAPI contract was
+unchanged.
+
+**Limits:** The connected database was inspected read-only; migration 004 will
+apply when the owner restarts or redeploys the updated backend. No checkout,
+PayPal sign-in, hosted database write, deployment, commit, or push was performed.
+
+## Decision register
+
+### DEC-001 - Keep FastAPI/Pydantic and the existing uv project
+
+The owner already had a running Python backend. Reusing its framework and lockfile
+keeps progress incremental. Introducing a different backend framework or another
+package manager would add migration work without changing the immediate behavior.
+This is an existing project choice, not proof that it is universally optimal.
+
+### DEC-002 - Use Decimal and serialize money as decimal strings
+
+Binary floating-point arithmetic can introduce approximation in cent calculations.
+Decimal supports exact arithmetic for the submitted decimal values. JSON strings
+preserve that representation for clients. Integer minor units were another valid
+option; Decimal aligned with Pydantic and kept the initial examples readable.
+Future currencies require explicit precision and rounding rules.
+
+### DEC-003 - Restrict the first implementation to USD
+
+USD-only validation lets the prototype apply one two-decimal monetary rule.
+Accepting arbitrary currency strings would imply support that is not implemented.
+The tradeoff is deliberate rejection of non-USD cases. Supporting other currencies
+will require revisiting precision, validation, provider rules, and tests.
+
+### DEC-004 - Separate cases, payments, and commitments
+
+A complaint can precede any remedy, so the commitment is optional. A proposed
+remedy must not be treated as an accepted agreement, so the default is proposed.
+The original source message is required for traceability. These records remain
+manually entered; neither the text nor an accepted flag proves authorization.
+
+### DEC-005 - Validate field values and cross-record amounts in the backend
+
+Input constraints reject blanks, extra fields, nonfinite values, and invalid
+amounts. A model validator rejects commitments exceeding the submitted capture.
+These deterministic checks apply consistently before storage. They validate the
+local data model, not the truth of a payment or eligibility for a PayPal refund.
+
+### DEC-006 - Share the refund ledger by capture, with unique refund IDs
+
+**Extended by DEC-019:** sharing and uniqueness now apply within a merchant.
+
+Two cases can reference one payment. A case-local refund list could hide money
+already refunded through another case. Filtering one ledger by capture ensures
+both cases see the same recorded balance. Cases sharing a capture must agree on
+its amount and currency. Real multi-merchant support will require tenant ownership
+and database constraints in addition to provider identifiers.
+
+### DEC-007 - Treat identical replays as idempotent and conflicting replays as errors
+
+Repeating an identical refund observation returns the existing record instead of
+counting it twice. Reusing an ID with changed data is a conflict, so corrections
+cannot silently overwrite financial history. Status changes have a separate,
+restricted PATCH endpoint. This is local ingestion idempotency, not PayPal request
+idempotency; actual financial requests will need their own persistent action keys.
+
+### DEC-008 - Reserve pending amounts and wait before suggesting another refund
+
+Pending funds have not fulfilled the customer's commitment, but they may still
+complete. They therefore reduce available recorded balance while leaving the
+commitment outstanding. The prototype conservatively waits for any pending refund
+before recommending another, even when part of the agreement is still uncovered.
+This trades speed for simpler duplicate-payment avoidance. Failed funds release
+the reservation. It does not prove what the provider currently considers pending.
+
+### DEC-009 - Keep manual condition checks as a history with evidence notes
+
+**Extended by DEC-022:** new checks now include a server-derived merchant actor;
+the original limitations below describe the earlier implementation stage.
+
+A conditional promise must not trigger a suggestion solely because a complaint
+was submitted. Explicit met/not-met checks include an evidence note and UTC time;
+the latest governs the current recommendation while older checks remain visible.
+These are manual assertions, not independent verification. The prototype lacks
+authenticated actor identity, external evidence verification, and durable storage.
+
+### DEC-010 - Keep reconciliation separate from HTTP and execution
+
+`app/reconciliation.py` contains deterministic calculations. The routes coordinate
+records; no model decides the arithmetic. The result exposes totals and a next
+action with `verified_with_paypal=false`. Read-only computation does not close the
+case, authorize an operation, or call PayPal. This separation makes later storage
+and integration changes easier to assess without mixing them with money rules.
+
+### DEC-011 - Use a process-local lock for the in-memory prototype
+
+**Superseded for current storage by DEC-015 in CHG-005.**
+
+Concurrent requests must not both validate against the same balance and then
+reserve more than the capture. One lock protects the check-and-write operations.
+This is sufficient only for the single-process development store. Database
+transactions, uniqueness constraints, and appropriate concurrency control must
+replace these guarantees when persistence or multiple workers are introduced.
+
+### DEC-012 - Add pytest and HTTPX as development dependencies
+
+**Extended in CHG-008:** pytest remains a development dependency; HTTPX is now
+a runtime dependency for sandbox reads. The local route-testing rationale below
+still applies to the default suite; separate simulation tests now exercise sockets.
+
+pytest supports repeatable regression checks, and HTTPX backs the existing
+FastAPI TestClient. In-process requests exercise the actual routes, validation,
+and responses without a running external server or provider credentials. These
+tests do not exercise sockets, deployed infrastructure, or PayPal. Dependencies
+remain in the development group; uv records exact resolution in its lockfile.
+
+### DEC-013 - Limit refund statuses and reject contradictory active totals
+
+The initial lifecycle is pending -> completed/failed; terminal states cannot be
+reopened, and repeated same-state updates are allowed. Amount/capture/currency
+cannot be changed through the status endpoint. Completed plus pending records
+cannot exceed the captured amount, while failed records consume no balance.
+This deliberately small development model is not the full PayPal event lifecycle.
+Production ingestion must preserve and flag provider anomalies and handle actual
+provider statuses, reversals, ordering, and reconciliation rules explicitly.
+
+### DEC-014 - Use SQLite for the first persistence milestone
+
+The immediate goal is a backend that survives restarts on the owner's computer.
+Python's built-in SQLite driver needs no database account or extra dependency.
+The repository boundary makes the storage-specific logic explicit. PostgreSQL/
+Supabase remains the deployment direction and will require an adapter, migrations,
+ownership design, and tests. SQL dialect/locking behavior is not assumed portable.
+
+Reference: [Python sqlite3 documentation](https://docs.python.org/3.12/library/sqlite3.html).
+
+### DEC-015 - Replace the process lock with database transactions
+
+**Supersedes DEC-011.** A Python lock cannot coordinate independent worker
+processes. SQLite `BEGIN IMMEDIATE` reserves the write transaction before reading
+the balance and holds it through validation and mutation. A competing writer waits
+or receives a retryable busy error. Reads use a transaction for a consistent
+snapshot. Unique database keys retain identity after restart. This is local-file
+coordination, not a promise of unlimited write concurrency or multi-host support.
+
+Reference: [SQLite transaction documentation](https://www.sqlite.org/lang_transaction.html).
+
+### DEC-016 - Store capture/refund amounts as integer cents
+
+DEC-002 remains the API/calculation choice: Decimal and decimal strings. In SQLite,
+integer cents prevent monetary values from being stored as binary floating-point
+REAL values. USD-only validation makes the multiply/divide-by-100 conversion exact.
+Future currencies need explicit minor-unit rules; applying this conversion to all
+currencies would be incorrect. Commitments remain validated JSON with decimal strings
+because their current schema is read as a complete record rather than queried by SQL.
+
+### DEC-017 - Initialize storage through app lifespan and test isolated files
+
+**Migration support extended in CHG-006:** startup now applies explicit schema
+revisions 1 and 2; its app-factory and test-isolation design remains in use.
+
+The app factory accepts a database file path, and the FastAPI lifespan initializes
+that store. Imports do not create runtime files. Tests can construct independent
+apps and temporary databases without deleting the owner's development records.
+This makes restart and cross-instance guarantees testable rather than relying on
+global test fixtures that erase live state. Future migration revisions must be
+applied deliberately; the current version marker only manages the initial schema.
+
+Reference: [FastAPI lifespan documentation](https://fastapi.tiangolo.com/advanced/events/).
+
+### DEC-018 - Provision opaque local merchant tokens instead of password login
+
+The immediate API needs a merchant identity, while no external identity provider
+or frontend is configured. Administrator-provisioned random tokens keep this
+milestone independently usable. They are not customer passwords, PayPal credentials,
+or JWTs. Future Supabase/browser authentication can supply identity through the
+same ownership boundary, with a deliberate migration rather than an implicit claim
+that local tokens already implement the full account lifecycle.
+
+Reference: [Python secrets documentation](https://docs.python.org/3.12/library/secrets.html).
+
+### DEC-019 - Enforce merchant ownership in both queries and database relationships
+
+Every case lookup includes the authenticated merchant ID. Provider identifiers
+are scoped to that merchant so a second tenant cannot observe the existence or
+balance of another tenant's sample capture/refund ID. Composite foreign keys also
+reject mixed ownership at the database layer. Returning `404` for foreign resources
+limits identifier enumeration. These checks do not verify provider-account ownership.
+
+### DEC-020 - Preserve anonymous data without guessing its owner
+
+Older cases contain no authenticated owner. Automatically granting them to the
+first new merchant would be an arbitrary access decision. Migration therefore
+preserves them under an inaccessible unassigned identity, and a trusted operator
+must explicitly claim them. The claim is atomic and fails on collisions. This trades
+an extra local setup step for a visible, deliberate ownership assignment.
+
+Reference: [SQLite ALTER TABLE documentation](https://www.sqlite.org/lang_altertable.html).
+
+### DEC-021 - Hash random keys and keep privileged operations off the HTTP API
+
+Random 256-bit tokens have different requirements from human passwords; SHA-256
+lookup stores no recoverable raw key. The command reveals a token only at issuance,
+and a public key ID supports revocation without submitting the secret. Local CLI
+access is already a trusted database capability, so HTTP registration and admin
+endpoints are unnecessary at this stage. There is no automatic expiry or full
+production credential lifecycle yet. No credentials belong in Git or this log.
+
+Reference: [FastAPI HTTP bearer documentation](https://fastapi.tiangolo.com/reference/security/).
+
+### DEC-022 - Attribute new condition evidence without inventing historical actors
+
+The authenticated merchant ID is recorded on new condition checks. Client input
+cannot supply that actor field. Existing notes retain a null actor because the
+old system had no identity evidence; assigning a current merchant retroactively
+would misrepresent history. This adds provenance but is not a complete audit/event
+system, nor does an actor's assertion independently verify the physical return.
+
+### DEC-023 - Bind approval to the exact reconciliation state
+
+The existing reconciliation response supplies the preview amount and a deterministic
+fingerprint of case, refunds, and latest condition evidence. The merchant submits
+both, and the server recomputes them under the database write transaction. This
+detects a stale review or changed amount before saving consent. The full local
+snapshot is retained for later explanation. The hash does not establish truth or
+replace authentication; it is neither secret nor a provider signature.
+
+### DEC-024 - Use a short, revocable decision with one active approval per capture
+
+A durable request UUID makes identical retries return the original record. Terminal
+records never reactivate. A 15-minute server lifetime, explicit revocation, and
+capture-wide invalidation bound stale decisions. One active approval per merchant/
+capture prevents parallel authorizations against the same remaining amount across
+cases. These controls deliberately precede and do not implement one-time payment
+execution; a later executor still needs its own durable action/idempotency design.
+
+### DEC-025 - Save decision events atomically with approval and ledger changes
+
+An approval without its audit event, or a changed refund without invalidating its
+approval, would leave misleading state. Both are saved in one transaction; event
+failure rolls back the underlying change. Events retain actor, time, and reason.
+Expiry is materialized lazily by approval endpoints, so approval reads may write an
+expiry event. The reconciliation endpoint remains read-only. A future background
+worker can replace this maintenance behavior without weakening time checks.
+
+### DEC-026 - Separate consent, observed refunds, and future execution
+
+**Extended in CHG-008:** scoped capture verification may be true while overall
+PayPal verification remains false. DEC-028 defines the narrower evidence fields.
+
+The merchant's accepted remedy, backend recommendation, explicit approval, and
+provider-confirmed refund are separate records. An approval must not be counted
+as money returned. This milestone records exact consent over local development
+data and preserves its basis; all responses continue to mark PayPal verification
+false. Provider account verification, execution reservation, final revalidation,
+PayPal idempotency, and ambiguous-outcome recovery remain required before execution.
+
+### DEC-027 - Bind a fixed sandbox client to one Resolve merchant and expected seller
+
+The immediate development app uses first-party credentials for one sandbox seller.
+A local merchant UUID binding prevents another authenticated tenant from borrowing
+those credentials, and the returned payee must match the expected PayPal seller.
+The sandbox host is constant, redirect following is disabled, and user input
+cannot choose the request URL. Multi-merchant partner delegation and encrypted
+credential storage require a separate onboarding design; they are not implied by
+local merchant authentication. This deliberately small boundary fits account setup
+on one developer computer without exposing a live financial API.
+
+### DEC-028 - Persist exactly the provider evidence that was checked
+
+A capture read supports original identity, amount, currency, payee and observed
+status. It does not establish complete refund history, returned goods, or refund
+eligibility. Separate literal flags express those limits; existing global
+`verified_with_paypal=false` remains accurate. Missing payee causes verification
+failure even though the upstream schema permits its omission. A future order-read
+fallback must provide additional evidence rather than assume ownership. Saved
+timestamps mark historical observations; a future executor must refresh provider
+state instead of trusting an old record.
+
+### DEC-029 - Couple capture evidence to approval state without holding a network lock
+
+Holding SQLite's writer lock during HTTP would block unrelated local writes.
+Read the provider outside that transaction, then recheck case ownership/payment
+under the write transaction. Save the allowed fields and approval invalidation
+atomically. Evidence changes the fingerprint even if its numeric amounts match,
+so old consent is never silently reused against a new observation. Failed HTTP
+reads preserve earlier successful evidence; failed audit writes roll back the
+new observation. With no evidence, retain the previous fingerprint inputs so
+existing approvals are not invalidated just by upgrading the application.
+
+### DEC-030 - Exercise provider HTTP behavior with a local simulation and explicit gaps
+
+In-process transport stubs cannot establish real form encoding, proxy/TLS setup,
+redirect handling or socket timeout behavior. A Postman simulation runs the
+actual caller against synthetic OAuth/capture responses at the unchanged sandbox
+URL. Default tests still use no-network guards or clearly labeled synthetic
+storage DTOs where appropriate. The simulation's request log and persisted state
+establish caller behavior in specific fixtures; official provider sources establish
+the contract. Neither establishes how the owner's real app responds. Record
+partial Orbit coverage, skipped signed-out owner lookup and unknown payee
+availability so later work does not turn passing fixtures into an unsupported
+claim about PayPal.
+
+### DEC-031 - Start execution with a bounded first full-capture sandbox refund
+
+Complete external refund-history discovery is not yet available. Restrict execution
+to the original full USD amount, no recorded refunds and a fresh COMPLETED capture.
+Send that explicit amount rather than an empty remaining-balance request. Provider
+acceptance remains authoritative. Reject partial workflows rather than treating
+a local ledger as complete; retain false global history/eligibility claims.
+
+### DEC-032 - Persist action identity before network and bind its provider scope
+
+The local request UUID, execution ID, provider UUID, exact body, approval snapshot
+and final capture check are durable before submission. Retries reuse them and
+are bounded to 24 hours. Client ID/seller/sandbox identity hashing prevents retries
+under a new provider idempotency scope; secret rotation alone stays compatible.
+Response parent links identify resources and are never request destinations.
+
+### DEC-033 - Hold uncertain outcomes and fence competing workers
+
+A timeout is not a failed refund. Unknown/submitting records block competing
+recommendations and manual ledger writes. Submission leases and attempt counters
+prevent a stale worker from clearing a newer lease. Rejection during recovery
+does not settle the earlier unknown request. Known refund lookup can reconcile
+the actual outcome without another financial POST, including after the POST window.
+
+### DEC-034 - Commit provider projection and audit state together
+
+Only validated provider refund details create provider observations and ledger
+projections. Record observations, approval invalidation and execution events in
+one transaction; after a local failure retain recoverable uncertainty. Manual
+PATCH cannot overwrite provider-managed refunds. A completed execution and an
+approval decision remain separate records, and snapshots retain the original
+authorization basis even after later evidence invalidates active consent.
+
+### DEC-035 - Revise agreements optimistically and reset condition applicability
+
+The existing case model allowed missing/proposed agreements but had no later
+revision route. Use the same reconciliation fingerprint for stale-write checks,
+record previous/current agreement atomically and invalidate prior approvals.
+Changed condition text starts an evidence epoch rather than deleting history or
+manufacturing a new physical check. An identical update makes no new event.
+Active financial actions block changed terms until their outcome is reconciled.
+
+### DEC-036 - Build the timeline from actual recorded evidence
+
+Keep durable events for new mutable case/manual-ledger changes and aggregate the
+already timestamped domain histories. Do not invent timestamps/actors for legacy
+gaps. Scope by merchant and shared capture and preserve each source case. The
+small local version assembles history before slicing; bounded responses are not
+a claim of unlimited history-query scalability. Deployed SQL pagination remains
+a deliberate next infrastructure step.
+
+### DEC-037 - Recover existing consent through a scoped local worker
+
+The worker operates on durable approved reservations, not on complaints or fresh
+model recommendations. It preserves financial policy/identity/lease/window rules,
+backs off, and respects the configured merchant. Read-only status refresh is
+independent of financial write enablement. Failures and old unknown outcomes stay
+visible for reconciliation; no new approval is synthesized to make a job pass.
+
+### DEC-038 - Confirm refund history from the supported order and payment records
+
+Use Orders v2 for discovery, then independently validate each refund and its
+parent via Payments v2. Limit this gate to a single USD capture in a completed
+Sandbox order for the configured seller. Cross-check capture status and the
+provider's cumulative amount against the sum of completed records; reserve
+pending amounts and exclude failed/cancelled refunds. Refuse a missing local
+refund, mismatched provider evidence or unverified multi-capture allocation.
+Keep the stable evidence digest distinct from the observation timestamp so an
+identical refresh does not change the consent basis. This supersedes the
+full-only restriction in DEC-031 when the separate partial flag is enabled.
+Transaction reporting can lag and individual refund GETs cannot enumerate
+history; neither is a sufficient execution gate alone.
+
+### DEC-039 - Authenticate first, then reconcile durable webhook receipts
+
+Use PayPal's verification endpoint with the original event bytes and the app's
+registered webhook ID. Do not fetch callback-supplied URLs or retain raw event
+bodies. Record a verified event ID/digest and minimal routing fields before
+acknowledging. Reconcile independently in the bounded worker so delivery retries
+do not cause repeated ledger changes. Keep matching captures on hold during
+processing; route exhausted, orphaned and reversal events to review.
+
+### DEC-040 - Keep approvals exact and executions independent
+
+Replace the lifetime execution constraint with one active action per capture and
+preserve historical execution IDs and child audit records. Keep each approval
+single-use and each operation's PayPal idempotency UUID/body immutable. Include a
+unique PayPal custom ID for history-gated refunds so a lost response can be
+recovered by read and an unrelated same-amount refund cannot satisfy the action.
+If fresh history changed without that correlation, block another submission.
+PayPal enforces its own balance after preflight; it offers no shared transaction
+with Resolve or lock against another actor.
+
+### DEC-041 - Separate closure, evidence and exception review from payment facts
+
+Keep closure and its revision on the case; changing lifecycle does not change
+financial facts or erase evidence. Close/reopen records the reason and
+invalidates prior consent; an in-flight action must settle first. Keep bounded
+immutable attachments in SQLite for this local stage so bytes and metadata
+commit together. Evidence and review notes are merchant-scoped. A reviewer can
+acknowledge a known failure; they cannot clear unknown outcomes or override
+unresolved provider evidence with a note.
+
+### DEC-042 - Link the workspace to the existing refund case
+
+Keep the capture-specific tables and API intact. New workspaces can stand
+alone or link one existing refund case, with one cumulative refund promise
+per workspace. This avoids inventing capture IDs for subscriptions and
+shipments and avoids duplicating the financial ledger. Compound remedies are
+multiple promises with independent evidence. Earlier-only prerequisites
+avoid cycles and preserve an understandable initial authoring workflow.
+
+### DEC-043 - Keep merchant findings and external proof distinct
+
+For an internal warehouse or inspection milestone, allow an explicit
+revision-specific merchant finding, with actor and evidence note. Carrier
+delivery cannot stand in for the internal finding. Other remedy types need
+their corresponding provider observation. Keep old revisions for audit
+without allowing them to satisfy a newer promise. A material prerequisite
+change invalidates linked refund consent; safe read-only recovery remains
+available for an already attempted payment.
+
+### DEC-044 - Verify external remedies before considering provider writes
+
+Use provider-specific evidence rather than accepting a caller's generic
+completion flag. Authorizations, shipment movement, credit issuance and
+formal dispute state are independent results. Fixed read paths and
+account-bound credentials limit cross-tenant access. Shopify uses fixed
+GraphQL queries; no mutation is sent. Defer background refresh and other
+provider actions until account-backed scopes and resource visibility can
+be established.
+
+### DEC-045 - Build a local Next.js client over the existing API
+
+Keep the app in the shared repository and preserve the backend's authority
+over approval, money movement, and verified evidence. Use a loopback-only,
+allowlisted same-origin proxy and an opaque session so the merchant key does
+not need browser storage or a public frontend environment variable. This
+supports the current local bearer-token workflow; a process-memory session
+is not shared login infrastructure for a hosted system.
+
+### DEC-046 - Give the demo its own state and explicit payment steps
+
+Use a clearly labeled in-memory demo so judges can see the whole case without
+provider credentials. The simulated outside action can invalidate an approval
+without changing any real records. Connected mode calls the existing API and
+uses the actual returned state. Keep review, approval, and submission distinct.
+Render the buyer view from customer-facing case fields and leave support notes
+out. Printing gives a usable receipt without adding a public evidence endpoint.
+
+### DEC-047 - Grant customer access with a revocable case link
+
+Use an expiring random capability instead of making the customer create an
+account for a single case. Store only its hash and return a dedicated view
+that excludes merchant notes, approvals, provider IDs and private evidence.
+Use the URL fragment to avoid including the capability in the page request.
+This extends DEC-046's print-only customer view while preserving its
+separation of buyer and merchant records.
+
+### DEC-048 - Keep the conversation separate from financial evidence
+
+Use an explicitly shared, case-scoped conversation with merchant/customer
+roles. A message does not confirm a condition, change a promise or authorize
+a payment. Retries are idempotent and rate limits keep the local thread bounded.
+Avoid automatic email or SMS; the merchant explicitly shares the link and
+the customer reads updates in the portal.
+
+### DEC-049 - Redeem an order invite exactly once
+
+An order reference identifies the subject, not the buyer. Reuse DEC-047's
+hashed capability and URL fragment, pin the invite to a single merchant/order,
+and transactionally create the case, first message, and case link on submission.
+One URL continues from intake to status. Replaying an expired or revoked
+capability does not reopen access.
+
+### DEC-050 - Keep customer uploads distinct from verified evidence
+
+Photos and receipts can help a merchant investigate but cannot satisfy a
+refund prerequisite. Limit PDF/PNG/JPEG files by count and size, validate
+names and signatures, and authorize downloads on every request. Small
+SQLite BLOBs avoid another service in the local prototype. File type validation
+does not establish authenticity or replace a future scanning policy.
+
+### DEC-051 - Derive workflow from evidence and store only triage choices
+
+Persist the assignee label, deadline override, waiting flag, and read-through
+sequence. Compute approval and PayPal status from payment state, so inbox and
+buyer timeline cannot diverge because of a manually copied status. Use
+optimistic settings revisions and mark messages read only through the
+displayed watermark; a new buyer reply can clear waiting without disappearing
+from the unread count.
+
+### DEC-052 - Send customer emails from a durable outbox
+
+Store the reply and its notification intent in the same transaction. Use a
+stable per-event idempotency key and retry inside the provider's time window.
+Generate invite and sign-in secrets from a stable server key plus outbox
+identity so the database only needs the capability hash. Reply and refund
+notices point to My cases and omit message text and money amounts.
+
+### DEC-053 - Verify the mailbox before showing My cases
+
+Bind the case only to the merchant-supplied order contact. Prove control
+with a short-lived single-use email token, then grant a separate hashed
+customer session. Derive access from the specific bound contact and current
+case permission. Revocation and sign-out invalidate outstanding grants
+without changing merchant access.
+
+### DEC-054 - Run provider refreshes without issuing money movement
+
+Use verified PayPal receipts to trigger existing history reconciliation and
+poll the already-configured EasyPost and Shopify resources. Scheduling
+does not authorize a refund and carrier delivery cannot certify a warehouse
+finding. Keep a genuine HTTPS delivery as an explicit release check.
+
+### DEC-055 - Link helpdesk status with a read-only OAuth scope
+
+Resolve stays the system for buyer evidence and refund decisions. Link an
+existing Zendesk ticket and read its status from the configured account.
+Avoid duplicate ticket creation, public comments and cross-system copies of
+the conversation until a specific synchronization workflow is agreed.
+
+### DEC-056 - Keep the database independent of the hosting provider
+
+Use standard PostgreSQL and a private schema. Recommend Neon for this stage
+because Resolve already handles access and attachments; adding an Auth or
+Storage service is not necessary for this migration. Supabase is still viable
+with its SQL connection URL. This revises the earlier provider assumption
+in DEC-014 without invalidating the local SQLite decision.
+
+### DEC-057 - Preserve SQLite's writer serialization on PostgreSQL
+
+Use a transaction advisory lock for all Resolve writes and repeatable-read
+snapshots for reads. Acquire the write lock before reading financial state.
+This preserves the existing checks across the API and workers without
+introducing untested lock boundaries for refund balances and approvals.
+Measure contention before refining the lock granularity.
+
+### DEC-058 - Verify a read-only snapshot before any cutover
+
+Copy from an untouched SQLite file, upgrade only a temporary snapshot, and
+import into an empty target transaction. Compare rows and attachment bytes
+and retain identity counters. Avoid a merge or automatic runtime switch:
+operators can validate the target while the original is still available.
+
+### DEC-059 - Separate the demo and buyer routes from the merchant workspace
+
+Use explicit entry points so visitors can try sample data or use a buyer link
+without seeing the merchant inbox. Exchange the existing access key for a
+short-lived, hashed database session. This supersedes the in-memory merchant
+session in DEC-045 so browser sign-in survives server restarts and works across
+instances while key revocation still takes effect. Existing API clients keep
+their bearer-key contract.
+
+### DEC-060 - Treat PayPal as identity for an existing merchant
+
+Require a recent Resolve key session to link or unlink a PayPal identity. Bind
+the link to the provider, configured app, and stable subject rather than email.
+Use a one-time server-side state and a separate browser nonce. Request only
+`openid`; retain neither provider tokens nor profile data. Explicit linking avoids
+guessing account ownership and leaves seller permissions and refunds separate.
+
+### DEC-061 - Make public origins and login submissions explicit
+
+Use a configured HTTPS origin for hosted browser traffic and exact PayPal
+redirect matching, and use the configured buyer origin when issuing links.
+Allow loopback for development and explicitly trusted private HTTP for the
+frontend-to-API hop. Declare POST and wait for hydration on the sign-in form to
+keep credentials out of the URL. Keep the old health route for compatibility and
+add a GET probe for hosting.
+
+### DEC-062 - Preserve applied migrations and repair forward
+
+An applied migration file is immutable. Restore the exact original 003 and
+advance the schema with 004. The brief interim 003 shipped the same extra column;
+recognize only that exact checksum for that version against the restored file,
+and leave both variants' recorded histories intact. Use the same forward approach
+on SQLite, which records a version rather than a checksum. Unrecognized history
+still fails closed to avoid silently running against an incompatible schema.
+
+## Open work and boundaries
+
+1. Verify import (if needed), SSL connection, migration startup, and worker
+   access on the owner's hosted PostgreSQL target.
+2. Extend verified history beyond the supported order shape only after confirming
+   real Sandbox cross-app visibility, repeated partial refunds and cumulative
+   amount semantics. Browser roles and partner onboarding remain future work.
+3. Register an HTTPS Sandbox webhook, verify a signed account delivery, and
+   provision a hosted worker when deploying.
+4. Add AI commitment extraction with source references and evaluation. The current
+   commitment data is manually entered; no AI implementation exists yet.
+5. Extend production audit/retention and database-side history pagination. New
+   manual changes have durable events; legacy untimestamped changes remain gaps.
+6. Verify both hosted interfaces over HTTPS and complete a genuine PayPal
+   Sandbox login before enabling it for merchants. Live login requires PayPal review.
+
+## Template for the next entry
+
+```text
+### CHG-024 - Concrete change title
+Date:
+Objective:
+Files and resulting behavior:
+Reason and decision IDs:
+Alternatives/tradeoffs/assumptions (where relevant):
+Compatibility or data changes:
+Validation actually performed (command, result, evidence limits):
+Known limitations and follow-up:
+```

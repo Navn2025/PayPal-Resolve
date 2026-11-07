@@ -17,7 +17,7 @@ from .models import (
 )
 
 if TYPE_CHECKING:
-    from .storage import SQLiteStore
+    from .storage import ResolveStore
 
 
 APPROVAL_LIFETIME = timedelta(minutes=15)
@@ -77,7 +77,7 @@ def invalidate_approvals(connection, merchant_id, capture_id, reason):
 
 
 class RefundApprovalService:
-    def __init__(self, store: "SQLiteStore"):
+    def __init__(self, store: "ResolveStore"):
         self.store = store
 
     @staticmethod

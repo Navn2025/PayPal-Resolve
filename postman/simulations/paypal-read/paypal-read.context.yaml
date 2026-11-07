@@ -1,0 +1,112 @@
+purpose:
+  stands_in_for: PayPal Sandbox OAuth, Payments v2 reads and refund submission, Orders v2 history and webhook signature postback.
+  unblocks: Local verification of Resolve caller behavior without a PayPal account or real credentials.
+assumptions:
+  - id: oauth-and-capture-read-contract
+    status: supported
+    claim: PayPal documents client-credentials OAuth and GET capture details on the sandbox host.
+    reason: Confirmed against official OAuth documentation and the primary PayPal Payments v2 OpenAPI schema.
+    verification: Documentation inspected on 2026-11-07; real sandbox credentials were unavailable during CHG-008. CHG-009 separately verified OAuth after local setup; CHG-010 subsequently read one actual capture. Fingerprint paypal-read-local describes an uncommitted working tree, not a clean commit.
+    source: https://developer.paypal.com/api/rest/authentication/ ; https://github.com/paypal/paypal-rest-api-specifications/blob/main/openapi/payments_payment_v2.json
+    updated_at: '2026-11-07'
+  - id: payee-is-always-returned
+    status: unknown
+    claim: Every sandbox capture read needed by this app returns payee.merchant_id.
+    reason: The official schema and example permit payee, while Orbit's saved example omitted it. The caller refuses verification if it is absent.
+    verification: Originally unverified against the app. CHG-010 observed payee.merchant_id in one actual capture response and matched it to the configured seller. That one observation does not establish universal presence; missing payee still fails closed. The configured-sandbox-capture-read claim records the narrower result.
+    source: PayPal capture-2 schema; backend/app/paypal.py
+    updated_at: '2026-11-07'
+  - id: caller-checks-and-failure-handling
+    status: supported
+    claim: In the checked-in fixtures, Resolve validates capture identity and handles specified provider failures through actual HTTP requests.
+    reason: The real backend/client ran behind the local TLS proxy; assertions checked API responses and resulting database state. Scope is the fixtures, not provider behavior.
+    verification: Initially pending when added. On 2026-11-07 the final run passed 22 tests, handled 44 mocked requests and zero passed-through requests (session 56bcce1a-f96e-41c9-85a9-cb681ca7c0be; fingerprint paypal-read-local). Includes OAuth rejection, malformed token/JSON/amount/status, missing or wrong payee, wrong capture, amount/currency mismatch, 403/404/429/503, redirect refusal, real timeout, persistence, approval invalidation and failed-refresh preservation. No real PayPal outcome is claimed.
+    source: backend/tests/test_paypal_simulation.py ; postman/mocks/paypal-sandbox
+    updated_at: '2026-11-07'
+  - id: configured-sandbox-oauth-accepted
+    status: supported
+    claim: On 2026-11-07 the configured local app credentials were accepted by PayPal Sandbox's token endpoint.
+    reason: One real request using the existing application HTTP client returned HTTP 200 and a valid nonempty Bearer token with positive expiry. This does not establish capture access or seller identity.
+    verification: CHG-009; fingerprint paypal-sandbox-oauth. A temporary Python stdin script loaded ignored local settings, called the client's OAuth request, and validated the token model. Four contract checks passed; exit 0. Only status metadata was emitted; no credential/token was displayed or saved. No capture, order or refund request was sent.
+    source: backend/app/paypal.py ; docs/ENGINEERING_LOG.md#chg-009---sandbox-oauth-smoke-check-and-manual-purchase-guide
+    updated_at: '2026-11-07'
+  - id: configured-sandbox-capture-read
+    status: supported
+    claim: On 2026-11-07 the configured client read the user's USD 1.00 sandbox capture and matched ID, original amount, currency and configured payee.
+    reason: The real PayPalSandboxClient completed OAuth and GET capture details, passed all four identity/amount checks and observed COMPLETED. This is one account-backed sample, not universal provider behavior or refund eligibility.
+    verification: CHG-010; fingerprint paypal-sandbox-capture. Temporary Python stdin script used a non-persisted CaseResponse validation input from the user's reported capture and configured local owner. Exit 0; only result flags/status were emitted. No Resolve API authentication, case creation, saved verification or financial write was performed by this check.
+    source: backend/app/paypal.py ; docs/ENGINEERING_LOG.md#chg-010---account-backed-capture-read-and-dotenv-syntax-cleanup
+    updated_at: '2026-11-07'
+  - id: refund-api-and-idempotency-contract
+    status: supported
+    claim: Payments v2 supports a persisted PayPal-Request-Id on capture refund POSTs and lookup of a known refund ID.
+    reason: Orbit integration FIT Fully and primary PayPal refund, refund-read and API request documentation cover these operations. PayPal documents refund request-ID reuse up to 45 days; this caller limits POST recovery to 24 hours.
+    verification: CHG-012; official references inspected on 2026-11-07. Request identity is bound to client ID, seller and sandbox scope; a later rejected recovery does not settle a previously unknown outcome.
+    source: https://developer.paypal.com/api/payments/v2/captures-refund ; https://developer.paypal.com/api/payments/v2/refunds-get ; https://developer.paypal.com/api/rest/requests/ ; Orbit IDs urn:orbit:endpoint:v1:1I63l4CEzQrXTzITrBxLiV0SsAN5UjEDgcE4z77gKUdXFsvhCiHozgo54cWrR:paypal:refund-captured-payment and urn:orbit:endpoint:v1:1I63l4CEzQrXU4sjMsrGfCGZszqc9LWXQVTj5kE7oE6vaHNKgJsSZ91Qst9XR:paypal:show-refund-details
+    updated_at: '2026-11-07'
+  - id: simulated-refund-recovery
+    status: supported
+    claim: In checked-in fixtures, full-refund replays and recovery use one provider identity and create one simulated refund per capture.
+    reason: The actual client ran through the TLS proxy with stateful fake refund endpoints; tests checked provider counters and durable application state after restart.
+    verification: CHG-012; fingerprint paypal-refund-execution. 34 HTTP tests passed, 156 mocked requests, zero passed through. Includes timeout after refund creation, malformed response/amount/parent, pending refresh and rejection. The mock's idempotency behavior does not independently establish the real provider contract.
+    source: backend/tests/test_refund_execution_simulation.py ; postman/mocks/paypal-sandbox/default.js ; backend/.pytest_cache/paypal-simulation-run.log (ignored local run artifact)
+    updated_at: '2026-11-07'
+  - id: actual-full-sandbox-refund
+    status: supported
+    claim: The owner's existing USD 1.00 sandbox purchase completed one full refund through authenticated Resolve routes on 2026-11-07.
+    reason: The test reserved labelled sandbox consent, submitted one financial POST, read the refund independently as COMPLETED, observed REFUNDED capture and fulfilled reconciliation.
+    verification: CHG-013; fingerprint paypal-refund-execution. Request-hook counters observed one refund POST and one independent refund GET; replay returned the same execution without another financial POST. Temporary key/server were cleaned up. No live host was used; complete external refund history and general eligibility were not established.
+    source: docs/ENGINEERING_LOG.md#chg-013---complete-the-one-dollar-sandbox-resolution ; backend/data/autonomous-sandbox-result.json (ignored local metadata)
+    updated_at: '2026-11-07'
+  - id: recovery-worker-read-only-refresh
+    status: supported
+    claim: In the pending-refund fixture, the local worker refreshes the provider outcome over HTTP with financial writes disabled and no additional refund POST.
+    reason: The worker calls the production refund-read client through the local TLS proxy and updates the durable observed outcome; provider counters remain one financial POST.
+    verification: CHG-014; fingerprint paypal-refund-execution. Final combined HTTP run passed 35 tests with 165 mocked requests and zero passed through. This is simulation evidence; the account-backed refund completed synchronously and did not require pending-worker recovery.
+    source: backend/app/worker.py ; backend/tests/test_refund_execution_simulation.py#test_recovery_worker_refreshes_actual_http_pending_refund_with_writes_disabled
+    updated_at: '2026-11-07'
+  - id: actual-order-scoped-refund-history
+    status: supported
+    claim: The configured Sandbox REST app returned its existing completed USD 1.00 refund in Orders v2; the new history reader independently confirmed it and reported zero remaining.
+    reason: A read-only run against the actual Sandbox app projected the provider record into an isolated SQLite database.
+    verification: CHG-015, OAuth plus authenticated order, capture and refund GETs. No financial POST or signed delivery.
+    source: docs/ENGINEERING_LOG.md#chg-015---verified-paypal-history-partial-refunds-and-case-workflow
+    updated_at: '2026-11-07'
+  - id: merchant-wide-history-and-signed-delivery
+    status: unknown
+    claim: The registered app sees all cross-app and dashboard activity, and an actual signed delivery reaches this handler.
+    reason: The order and webhook contracts are app-scoped. The real read used one existing refund; no hosted webhook was registered for this change.
+    verification: The local mock exercises the verification protocol without claiming PayPal signed the synthetic input. Sandbox registration and separate partial purchase remain follow-up.
+    source: https://developer.paypal.com/api/rest/webhooks/ ; https://developer.paypal.com/api/orders/v2/orders-get
+    updated_at: '2026-11-07'
+  - id: local-history-and-signed-inbox-protocol
+    status: supported
+    claim: The real Resolve caller exercises simulated partial and external refunds, authenticated inbox dedupe and uncertain execution recovery through the local TLS proxy.
+    reason: Tests assert exact amounts and capture balances, provider POST counters, reviewed conflicts, and preserved signature bytes.
+    verification: CHG-015; 40 HTTP tests passed, 276 mocked requests, zero passed through. A separate default-suite transport test checks the raw signature envelope. This does not prove a real PayPal signature or a real partial refund.
+    source: backend/tests/test_paypal_history_simulation.py ; backend/tests/test_case_lifecycle.py ; backend/.pytest_cache/paypal-history-simulation.log
+    updated_at: '2026-11-07'
+  - id: paypal-merchant-browser-login
+    status: supported
+    claim: PayPal documents identity sign-in using an authorization code and UserInfo. Resolve links an identity only to a previously authenticated workspace.
+    reason: The checked-in fake provider exchanges a code and returns stable identities, including different subjects with the same email. Tests verify the caller's handling of errors, replay, identity lookup and unlinking.
+    verification: CHG-022. Three backend tests passed with 13 mocked requests and zero pass-through. Fourteen browser tests passed with the PayPal and email fixtures, 33 mocked requests and zero pass-through. An actual registered PayPal callback remains unverified.
+    source: https://developer.paypal.com/log-in/build ; https://developer.paypal.com/api/identity/v1/userinfo-get ; backend/tests/test_merchant_auth.py ; frontend/tests/site-auth.spec.ts
+    updated_at: '2026-11-07'
+fingerprints:
+  - id: paypal-read-local
+    date: '2026-11-07'
+    commit: e87c933af341888b9973be99aa79978d5c7a1085
+    cli: '1.82.0'
+  - id: paypal-sandbox-oauth
+    date: '2026-11-07'
+    commit: e87c933af341888b9973be99aa79978d5c7a1085
+    cli: '1.82.0'
+  - id: paypal-sandbox-capture
+    date: '2026-11-07'
+    commit: e87c933af341888b9973be99aa79978d5c7a1085
+    cli: '1.82.0'
+  - id: paypal-refund-execution
+    date: '2026-11-07'
+    commit: e87c933af341888b9973be99aa79978d5c7a1085
+    cli: '1.82.0'

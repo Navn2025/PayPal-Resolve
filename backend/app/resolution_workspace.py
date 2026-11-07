@@ -144,6 +144,40 @@ class ResolutionWorkspace:
         with self.store.transaction() as connection:
             return self._view(connection, self._case(connection, case_id, merchant_id))
 
+    def link_payment(self, case_id, merchant_id, refund_case_id):
+        with self.store.transaction(write=True) as connection:
+            case = self._case(connection, case_id, merchant_id)
+            payment_id = str(refund_case_id)
+            if case["refund_case_id"] == payment_id:
+                return self._view(connection, case)
+            if case["refund_case_id"]:
+                raise StoreError(
+                    409, "This resolution case already has a linked payment"
+                )
+            self.store._require_case(connection, refund_case_id, merchant_id)
+            if connection.execute(
+                "SELECT 1 FROM resolution_cases WHERE merchant_id=? AND refund_case_id=?",
+                (case["merchant_id"], payment_id),
+            ).fetchone():
+                raise StoreError(
+                    409, "Refund case is already linked to a resolution case"
+                )
+            connection.execute(
+                "UPDATE resolution_cases SET refund_case_id=? WHERE id=? AND merchant_id=?",
+                (payment_id, case["id"], case["merchant_id"]),
+            )
+            self._event(
+                connection,
+                case,
+                "merchant_evidence",
+                "merchant_recorded",
+                {
+                    "note": "An existing payment record was linked.",
+                    "refund_case_id": payment_id,
+                },
+            )
+            return self._view(connection, self._case(connection, case_id, merchant_id))
+
     def _validate_terms(self, connection, case, terms, current=None):
         rows = promises_for(connection, case["id"])
         prior = {
@@ -295,7 +329,16 @@ class ResolutionWorkspace:
     def _event_sequence(row):
         return row["sequence"] if row else None
 
-    def refresh(self, case_id, promise_id, merchant_id, paypal, expected_revision):
+    def refresh(
+        self,
+        case_id,
+        promise_id,
+        merchant_id,
+        paypal,
+        expected_revision,
+        *,
+        automatic=False,
+    ):
         with self.store.transaction() as connection:
             case = self._case(connection, case_id, merchant_id)
             row = self._promise(connection, case, promise_id)
@@ -344,6 +387,7 @@ class ResolutionWorkspace:
                     "verification_failed",
                     "system",
                     {"detail": error.detail, "http_status": error.status_code},
+                    suppress_unchanged=automatic,
                 )
             raise
         return self._save_refresh(
@@ -355,22 +399,38 @@ class ResolutionWorkspace:
             "provider_observation",
             "provider_confirmed",
             {"proofs": [p.model_dump(mode="json") for p in proofs]},
+            suppress_unchanged=automatic,
         )
 
     def _save_refresh(
-        self, case_id, promise_id, merchant_id, revision, prior, event, source, data
+        self,
+        case_id,
+        promise_id,
+        merchant_id,
+        revision,
+        prior,
+        event,
+        source,
+        data,
+        *,
+        suppress_unchanged=False,
     ):
         with self.store.transaction(write=True) as connection:
             case = self._case(connection, case_id, merchant_id)
             row = self._promise(connection, case, promise_id)
-            if (
-                row["revision"] != revision
-                or self._event_sequence(latest_proof(connection, row)) != prior
-            ):
+            current = latest_proof(connection, row)
+            if row["revision"] != revision or self._event_sequence(current) != prior:
                 raise StoreError(
                     409,
                     "Promise or evidence changed during verification; refresh again",
                 )
+            if (
+                suppress_unchanged
+                and current
+                and current["event_type"] == event
+                and json.loads(current["data_json"]) == data
+            ):
+                return self._selected(connection, case, promise_id)
             before = self._gate(connection, case)
             self._event(connection, case, event, source, data, row)
             self._invalidate_if_changed(connection, case, before)

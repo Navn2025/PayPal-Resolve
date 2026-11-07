@@ -246,6 +246,10 @@ class PromiseView(BaseModel):
     updated_at: datetime
 
 
+class ResolutionPaymentLink(Input):
+    refund_case_id: UUID
+
+
 class ResolutionSummary(BaseModel):
     id: UUID
     title: str

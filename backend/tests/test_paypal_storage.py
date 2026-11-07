@@ -199,5 +199,5 @@ def test_old_schema_upgrade_preserves_approval_and_snapshot(
             item["event_type"] == "case.created" for item in timeline["items"]
         )
     with sqlite3.connect(database) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 9
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 15
         assert connection.execute("PRAGMA foreign_key_check").fetchall() == []

@@ -1,0 +1,11 @@
+node_modules/
+.next/
+.next-test/
+.env*
+!.env.example
+playwright-report/
+test-results/
+tsconfig.tsbuildinfo
+next-env.d.ts
+*.log
+__pycache__/

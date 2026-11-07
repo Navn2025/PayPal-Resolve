@@ -1,4 +1,4 @@
-"""SQLite development repository; no provider calls or financial execution."""
+"""Resolve repository and its local SQLite transaction implementation."""
 
 import sqlite3
 import json
@@ -57,7 +57,7 @@ def from_cents(amount: int) -> Decimal:
     return (Decimal(amount) / 100).quantize(Decimal("0.01"))
 
 
-class SQLiteStore:
+class _SQLiteTransactions:
     def __init__(self, path: Path, timeout: float = 5.0):
         self.path = Path(path).resolve()
         self.timeout = timeout
@@ -97,25 +97,47 @@ class SQLiteStore:
             directory / "007_case_events.sql",
             directory / "008_refund_history_and_case_lifecycle.sql",
             directory / "009_resolution_workspace.sql",
+            directory / "010_customer_portal.sql",
+            directory / "011_customer_intake_and_triage.sql",
+            directory / "012_hosted_followup.sql",
+            directory / "013_case_order.sql",
+            directory / "014_merchant_web_auth.sql",
+            directory / "015_merchant_paypal_flow_claim.sql",
         ]
         with self.transaction(write=True) as connection:
             version = connection.execute("PRAGMA user_version").fetchone()[0]
             if version not in range(len(migrations) + 1):
                 raise RuntimeError(f"Unsupported database schema version: {version}")
             for index in range(version, len(migrations)):
-                statement = ""
-                for line in (
-                    migrations[index].read_text(encoding="utf-8").splitlines(True)
+                migration = migrations[index]
+                if migration.name == "015_merchant_paypal_flow_claim.sql" and any(
+                    column["name"] == "claimed_at"
+                    for column in connection.execute(
+                        "PRAGMA table_info(merchant_paypal_flows)"
+                    )
                 ):
+                    # Some version-14 databases received this column inline.
+                    connection.execute(f"PRAGMA user_version = {index + 1}")
+                    continue
+                statement = ""
+                for line in migration.read_text(encoding="utf-8").splitlines(True):
                     statement += line
                     if sqlite3.complete_statement(statement):
                         connection.execute(statement)
                         statement = ""
                 if statement.strip():
                     raise RuntimeError(
-                        f"Incomplete migration: {migrations[index].name}"
+                        f"Incomplete migration: {migration.name}"
                     )
                 connection.execute(f"PRAGMA user_version = {index + 1}")
+
+
+class ResolveStore:
+    def initialize(self) -> None:
+        raise NotImplementedError
+
+    def transaction(self, *, write: bool = False):
+        raise NotImplementedError
 
     @staticmethod
     def _require_merchant(connection, merchant_id: UUID) -> MerchantIdentity:
@@ -378,7 +400,7 @@ class SQLiteStore:
             rows = connection.execute(
                 "SELECT id FROM cases WHERE "
                 + where
-                + " ORDER BY rowid DESC LIMIT ? OFFSET ?",
+                + " ORDER BY case_sequence DESC LIMIT ? OFFSET ?",
                 [*parameters, limit, offset],
             ).fetchall()
             return CasePage(
@@ -1049,3 +1071,17 @@ class SQLiteStore:
             "PayPal refund evidence refreshed",
         )
         return observation
+
+
+class SQLiteStore(_SQLiteTransactions, ResolveStore):
+    """File-backed store for local development and the SQLite test suite."""
+
+
+def configured_store(settings, *, sqlite_path=None) -> ResolveStore:
+    if sqlite_path is not None:
+        return SQLiteStore(sqlite_path)
+    if settings.database_url is not None:
+        from .postgres import PostgresStore
+
+        return PostgresStore(settings.database_url)
+    return SQLiteStore(settings.database_path)

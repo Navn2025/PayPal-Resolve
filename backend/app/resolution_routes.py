@@ -14,6 +14,7 @@ from .resolution_models import (
     ResolutionBundle,
     ResolutionCreate,
     ResolutionPage,
+    ResolutionPaymentLink,
     ResolutionTimeline,
     ResolutionView,
 )
@@ -44,6 +45,19 @@ def list_resolutions(
 @router.get("/{case_id}", response_model=ResolutionView)
 def get_resolution(case_id: UUID, store: Store, merchant: CurrentMerchant):
     return ResolutionWorkspace(store).get(case_id, merchant.id)
+
+
+@router.put("/{case_id}/payment-link", response_model=ResolutionView)
+def link_resolution_payment(
+    case_id: UUID,
+    payload: ResolutionPaymentLink,
+    store: Store,
+    merchant: CurrentMerchant,
+):
+    """Attach a merchant-owned payment record once, without calling PayPal."""
+    return ResolutionWorkspace(store).link_payment(
+        case_id, merchant.id, payload.refund_case_id
+    )
 
 
 @router.post("/{case_id}/promises", status_code=201, response_model=PromiseView)

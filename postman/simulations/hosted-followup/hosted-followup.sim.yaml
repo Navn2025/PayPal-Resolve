@@ -1,0 +1,23 @@
+simulation: hosted-followup
+routing: path
+mocks:
+  - name: paypal-sandbox
+    routeKey: paypal
+    origin: api-m.sandbox.paypal.com
+    path: postman/mocks/paypal-sandbox
+  - name: shopify-evidence
+    routeKey: shopify
+    origin: resolve-shop.myshopify.com
+    path: postman/mocks/shopify-evidence
+  - name: easypost-evidence
+    routeKey: easypost
+    origin: api.easypost.com
+    path: postman/mocks/easypost-evidence
+  - name: resend-followup
+    routeKey: resend
+    origin: api.resend.com
+    path: postman/mocks/resend-followup
+  - name: zendesk-followup
+    routeKey: zendesk
+    origin: resolve-helpdesk.zendesk.com
+    path: postman/mocks/zendesk-followup

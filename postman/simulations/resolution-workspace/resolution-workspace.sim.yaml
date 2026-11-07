@@ -1,0 +1,15 @@
+simulation: resolution-workspace
+routing: path
+mocks:
+  - name: paypal-sandbox
+    routeKey: paypal
+    origin: api-m.sandbox.paypal.com
+    path: postman/mocks/paypal-sandbox
+  - name: shopify-evidence
+    routeKey: shopify
+    origin: resolve-shop.myshopify.com
+    path: postman/mocks/shopify-evidence
+  - name: easypost-evidence
+    routeKey: easypost
+    origin: api.easypost.com
+    path: postman/mocks/easypost-evidence

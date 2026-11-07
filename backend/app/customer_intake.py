@@ -1,0 +1,217 @@
+"""One-use order invites. Redeeming an invite never looks up another case."""
+
+from datetime import datetime, timezone
+from hashlib import sha256
+import re
+import secrets
+from typing import Literal
+from uuid import uuid4
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+from .customer_email import enqueue, mail_config, mail_token, normalize_email
+
+from .customer_portal import (
+    CustomerPortal,
+    LINK_LIFETIME,
+    MessageCreate,
+    PortalCredentials,
+    _timestamp,
+)
+from .errors import StoreError
+from .merchant_auth import web_origin
+
+
+ISSUE_LABELS = {
+    "missing_item": "Missing item",
+    "duplicate_charge": "Duplicate charge",
+    "damaged_delivery": "Damaged delivery",
+    "refund_delay": "Refund delay",
+    "other": "Order support request",
+}
+IssueType = Literal[
+    "missing_item", "duplicate_charge", "damaged_delivery", "refund_delay", "other"
+]
+INVITE_PATTERN = re.compile(r"rint_[A-Za-z0-9_-]{43}")
+
+
+class InviteCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    order_reference: str = Field(min_length=1, max_length=160)
+    customer_email: str | None = None
+
+    @field_validator("customer_email")
+    @classmethod
+    def check_email(cls, value):
+        return normalize_email(value) if value is not None else None
+
+
+class InviteIssued(BaseModel):
+    token: str
+    order_reference: str
+    expires_at: datetime
+    email_queued: bool = False
+    public_url: str | None = None
+
+
+class IntakeView(BaseModel):
+    order_reference: str
+    submitted: bool
+
+
+class IntakeSubmit(PortalCredentials):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    issue_type: IssueType
+    description: str = Field(min_length=1, max_length=2000)
+
+
+class Intake:
+    def __init__(self, store):
+        self.store = store
+        self.portal = CustomerPortal(store)
+
+    def invite(self, merchant_id, order_reference, customer_email=None, settings=None):
+        now = datetime.now(timezone.utc)
+        identifier = str(uuid4())
+        origin = (
+            web_origin(settings.customer_public_origin or settings.merchant_web_origin)
+            if settings
+            else None
+        )
+        if customer_email:
+            origin, key, _, _ = mail_config(settings)
+            if merchant_id != (
+                settings.customer_email_merchant_id
+                or settings.paypal_resolve_merchant_id
+            ):
+                raise StoreError(
+                    503, "Customer email is not configured for this merchant"
+                )
+            token = mail_token(key, "invite", identifier)
+        else:
+            token = "rint_" + secrets.token_urlsafe(32)
+        with self.store.transaction(write=True) as db:
+            self.store._require_merchant(db, merchant_id)
+            db.execute(
+                """INSERT INTO customer_intake_invites
+                   (token_hash,merchant_id,order_reference,created_at,expires_at,customer_email)
+                   VALUES (?,?,?,?,?,?)""",
+                (
+                    sha256(token.encode()).hexdigest(),
+                    str(merchant_id),
+                    order_reference,
+                    _timestamp(now),
+                    _timestamp(now + LINK_LIFETIME),
+                    customer_email,
+                ),
+            )
+            if customer_email:
+                enqueue(
+                    db,
+                    "invite",
+                    "invite:" + identifier,
+                    customer_email,
+                    now,
+                    identifier=identifier,
+                )
+        return InviteIssued(
+            token=token,
+            order_reference=order_reference,
+            expires_at=now + LINK_LIFETIME,
+            email_queued=bool(customer_email),
+            public_url=origin + "/customer#" + token if origin else None,
+        )
+
+    def _require(self, db, secret):
+        token = secret.get_secret_value()
+        error = StoreError(404, "This order invite is invalid, expired, or revoked.")
+        if not INVITE_PATTERN.fullmatch(token):
+            raise error
+        row = db.execute(
+            "SELECT * FROM customer_intake_invites WHERE token_hash=?",
+            (sha256(token.encode()).hexdigest(),),
+        ).fetchone()
+        if not row:
+            raise error
+        if row["resolution_id"]:
+            self.portal._authorized_link(db, secret)
+        elif row["expires_at"] <= _timestamp(datetime.now(timezone.utc)):
+            raise error
+        return row
+
+    def view(self, secret):
+        with self.store.transaction() as db:
+            invite = self._require(db, secret)
+            return IntakeView(
+                order_reference=invite["order_reference"],
+                submitted=invite["resolution_id"] is not None,
+            )
+
+    def submit(self, payload):
+        with self.store.transaction(write=True) as db:
+            invite = self._require(db, payload.token)
+            if not invite["resolution_id"]:
+                now = datetime.now(timezone.utc)
+                identifier = str(uuid4())
+                title = ISSUE_LABELS[payload.issue_type]
+                db.execute(
+                    "INSERT INTO resolution_cases VALUES (?,?,?,?,?,?)",
+                    (
+                        identifier,
+                        invite["merchant_id"],
+                        None,
+                        title,
+                        invite["order_reference"],
+                        _timestamp(now),
+                    ),
+                )
+                case = self.portal.workspace._case(
+                    db, identifier, invite["merchant_id"]
+                )
+                self.portal.workspace._event(
+                    db,
+                    case,
+                    "case_created",
+                    "system",
+                    {"note": "Customer submitted an order issue."},
+                )
+                db.execute(
+                    """UPDATE customer_intake_invites SET resolution_id=?,submitted_at=?,issue_type=?
+                    WHERE token_hash=?""",
+                    (
+                        identifier,
+                        _timestamp(now),
+                        payload.issue_type,
+                        invite["token_hash"],
+                    ),
+                )
+                db.execute(
+                    """INSERT INTO customer_portal_links
+                    (resolution_id,merchant_id,token_hash,title,show_order_reference,created_at,expires_at)
+                    VALUES (?,?,?,?,1,?,?)""",
+                    (
+                        identifier,
+                        invite["merchant_id"],
+                        invite["token_hash"],
+                        title,
+                        _timestamp(now),
+                        _timestamp(now + LINK_LIFETIME),
+                    ),
+                )
+                if invite["customer_email"]:
+                    db.execute(
+                        "INSERT INTO customer_case_contacts VALUES (?,?,?,?)",
+                        (
+                            identifier,
+                            invite["merchant_id"],
+                            invite["customer_email"],
+                            _timestamp(now),
+                        ),
+                    )
+                self.portal._record(
+                    db,
+                    case,
+                    "customer",
+                    MessageCreate(request_id=uuid4(), body=payload.description),
+                )
+        return self.portal.read(payload.token)

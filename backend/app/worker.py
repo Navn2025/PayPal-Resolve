@@ -10,7 +10,7 @@ from .executions import RECOVERY_WINDOW, SUBMISSION_LEASE, RefundExecutionServic
 from .paypal import PayPalSandboxClient
 from .paypal_history import PayPalHistoryService
 from .settings import Settings
-from .storage import SQLiteStore
+from .storage import ResolveStore, configured_store
 
 
 def _due(row, now):
@@ -28,7 +28,7 @@ def _due(row, now):
     return age >= timedelta(seconds=30)
 
 
-def run_once(store: SQLiteStore, paypal: PayPalSandboxClient, *, limit=20, now=None):
+def run_once(store: ResolveStore, paypal: PayPalSandboxClient, *, limit=20, now=None):
     if not 1 <= limit <= 100:
         raise ValueError("Worker limit must be between 1 and 100")
     merchant_id = paypal.settings.paypal_resolve_merchant_id
@@ -112,7 +112,7 @@ def main(argv=None):
         settings = Settings()
         if settings.paypal_resolve_merchant_id is None:
             raise StoreError(503, "A configured Resolve merchant is required")
-        store = SQLiteStore(settings.database_path)
+        store = configured_store(settings)
         store.initialize()
         paypal = PayPalSandboxClient(settings)
         while True:

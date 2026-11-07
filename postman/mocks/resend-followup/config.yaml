@@ -1,0 +1,11 @@
+version: 1
+id: 87d2d19f-dd9e-4543-8a8e-f091ecdc303f
+name: resend-followup
+slug: resend-followup
+protocol: http
+origin: api.resend.com
+interceptRequests: true
+scenarios:
+  - name: default
+    path: ./default.js
+    default: true

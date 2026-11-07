@@ -74,7 +74,7 @@ def add_exception(
             capture_id,
             source,
             reason,
-            blocking,
+            int(blocking),
             now,
             now,
         ),

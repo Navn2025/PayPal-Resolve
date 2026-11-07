@@ -1,0 +1,16 @@
+version: 1
+id: 94ac9b6a-ffd5-4ed2-8a7f-d8427ef03ccc
+name: paypal-sandbox
+slug: paypal-sandbox
+protocol: http
+origin: api-m.sandbox.paypal.com
+interceptRequests: true
+port: 4500
+scenarios:
+  - name: default
+    path: ./default.js
+    default: true
+generatedFrom:
+  type: spec
+  mode: static
+  path: ../../contracts/paypal-capture-read.openapi.yaml

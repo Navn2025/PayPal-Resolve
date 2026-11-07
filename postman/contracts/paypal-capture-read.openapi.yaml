@@ -1,0 +1,239 @@
+openapi: 3.0.3
+info:
+  title: PayPal Sandbox payment history and webhook verification subset
+  version: 1.1.0
+  description: Resolve's caller contract for OAuth, Payments v2, Orders v2 and webhook postback verification. This is a scoped subset of the provider APIs.
+externalDocs:
+  url: https://developer.paypal.com/api/payments/v2/captures-get
+servers:
+  - url: https://api-m.sandbox.paypal.com
+paths:
+  /v1/oauth2/token:
+    post:
+      operationId: sandboxClientCredentials
+      security:
+        - appCredentials: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [grant_type]
+              properties:
+                grant_type: {type: string, enum: [client_credentials]}
+      responses:
+        '200':
+          description: Test-only bearer token
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [access_token, token_type, expires_in]
+                properties:
+                  access_token: {type: string, minLength: 1}
+                  token_type: {type: string, enum: [Bearer]}
+                  expires_in: {type: integer, minimum: 1}
+              example:
+                access_token: simulation-access-token
+                token_type: Bearer
+                expires_in: 300
+        '401': {description: App credentials rejected}
+  /v2/payments/captures/{capture_id}:
+    get:
+      operationId: sandboxCaptureRead
+      security:
+        - accessToken: []
+      parameters:
+        - name: capture_id
+          in: path
+          required: true
+          schema: {type: string}
+      responses:
+        '200':
+          description: Original capture fields; payee is required by this caller's verification policy.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CaptureDetails'
+              example:
+                id: SIMCAPTUREOK
+                amount: {value: '100.00', currency_code: USD}
+                status: COMPLETED
+                payee: {merchant_id: SIMSELLER001}
+        '401': {description: Token rejected}
+        '403': {description: Capture access denied}
+        '404': {description: Capture not found}
+        '429': {description: Rate limited}
+        '503': {description: Provider unavailable}
+  /v2/payments/captures/{capture_id}/refund:
+    post:
+      operationId: sandboxRefund
+      security:
+        - accessToken: []
+      parameters:
+        - {name: capture_id, in: path, required: true, schema: {type: string}}
+        - {name: PayPal-Request-Id, in: header, required: true, schema: {type: string, format: uuid}}
+        - {name: Prefer, in: header, required: true, schema: {type: string, enum: [return=representation]}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount]
+              properties:
+                amount:
+                  type: object
+                  required: [value, currency_code]
+                  properties:
+                    value: {type: string}
+                    currency_code: {type: string, enum: [USD]}
+                custom_id:
+                  type: string
+                  description: Resolve request correlation for history-gated execution and recovery.
+      responses:
+        '200': {description: Idempotent result, content: {application/json: {schema: {$ref: '#/components/schemas/RefundDetails'}}}}
+        '201': {description: Refund resource, content: {application/json: {schema: {$ref: '#/components/schemas/RefundDetails'}}}}
+        '422': {description: Refund rejected}
+        '500': {description: Outcome may be ambiguous}
+  /v2/payments/refunds/{refund_id}:
+    get:
+      operationId: sandboxRefundRead
+      security:
+        - accessToken: []
+      parameters:
+        - {name: refund_id, in: path, required: true, schema: {type: string}}
+      responses:
+        '200': {description: Known refund, content: {application/json: {schema: {$ref: '#/components/schemas/RefundDetails'}}}}
+        '404': {description: Refund not found}
+  /v2/checkout/orders/{order_id}:
+    get:
+      operationId: sandboxOrderHistory
+      security:
+        - accessToken: []
+      parameters:
+        - {name: order_id, in: path, required: true, schema: {type: string}}
+      responses:
+        '200':
+          description: Resolve verifies one purchase unit and capture plus the unit's refund list.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, status, purchase_units]
+                properties:
+                  id: {type: string}
+                  status: {type: string}
+                  purchase_units:
+                    type: array
+                    items:
+                      type: object
+                      required: [payee, payments]
+                      properties:
+                        payee:
+                          type: object
+                          properties:
+                            merchant_id: {type: string}
+                        payments:
+                          type: object
+                          properties:
+                            captures:
+                              type: array
+                              items: {$ref: '#/components/schemas/CaptureDetails'}
+                            refunds:
+                              type: array
+                              items: {$ref: '#/components/schemas/RefundDetails'}
+        '404': {description: Order not found}
+  /v1/notifications/verify-webhook-signature:
+    post:
+      operationId: sandboxVerifyWebhookSignature
+      security:
+        - accessToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [auth_algo, cert_url, transmission_id, transmission_sig, transmission_time, webhook_id, webhook_event]
+              properties:
+                auth_algo: {type: string}
+                cert_url: {type: string}
+                transmission_id: {type: string}
+                transmission_sig: {type: string}
+                transmission_time: {type: string}
+                webhook_id: {type: string}
+                webhook_event: {type: object, description: Original unreserialized event JSON.}
+      responses:
+        '200':
+          description: Verification result from PayPal.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [verification_status]
+                properties:
+                  verification_status: {type: string, enum: [SUCCESS, FAILURE]}
+        '503': {description: Verification temporarily unavailable}
+components:
+  securitySchemes:
+    appCredentials:
+      type: http
+      scheme: basic
+    accessToken:
+      type: http
+      scheme: bearer
+  schemas:
+    RefundDetails:
+      type: object
+      required: [id, amount, status, links]
+      properties:
+        id: {type: string}
+        custom_id: {type: string}
+        seller_payable_breakdown:
+          type: object
+          properties:
+            total_refunded_amount:
+              type: object
+              required: [value, currency_code]
+              properties:
+                value: {type: string}
+                currency_code: {type: string}
+        amount:
+          type: object
+          required: [value, currency_code]
+          properties:
+            value: {type: string}
+            currency_code: {type: string}
+        status: {type: string, enum: [CANCELLED, FAILED, PENDING, COMPLETED]}
+        links:
+          type: array
+          description: Caller requires a parent capture link but never follows provider links.
+          items:
+            type: object
+            required: [rel, href]
+            properties:
+              rel: {type: string}
+              href: {type: string}
+              method: {type: string}
+    CaptureDetails:
+      type: object
+      required: [id, amount, status]
+      properties:
+        id: {type: string}
+        update_time: {type: string, format: date-time}
+        amount:
+          type: object
+          required: [value, currency_code]
+          properties:
+            value: {type: string, example: '100.00'}
+            currency_code: {type: string, example: USD}
+        status:
+          type: string
+          enum: [COMPLETED, DECLINED, PARTIALLY_REFUNDED, PENDING, REFUNDED, FAILED]
+        payee:
+          type: object
+          description: Optional in the provider schema; Resolve requires merchant_id before saving verification.
+          properties:
+            merchant_id: {type: string}

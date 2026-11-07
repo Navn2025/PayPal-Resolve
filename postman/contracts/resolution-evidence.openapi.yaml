@@ -1,0 +1,178 @@
+openapi: 3.0.3
+info:
+  title: Resolve external resolution evidence subset
+  version: 1.0.0
+  description: Read-only caller contract for the PayPal Sandbox, Shopify Admin and EasyPost fields consumed by Resolve.
+servers:
+  - url: https://api-m.sandbox.paypal.com
+security:
+  - paypalBearer: []
+paths:
+  /v2/payments/authorizations/{id}:
+    get:
+      operationId: getAuthorizationEvidence
+      parameters:
+        - $ref: '#/components/parameters/ResourceId'
+      responses:
+        '200':
+          description: VOIDED confirms PayPal authorization release; CAPTURED is a different outcome.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/PayPalStatus'}
+  /v1/billing/subscriptions/{id}:
+    get:
+      operationId: getSubscriptionEvidence
+      parameters:
+        - $ref: '#/components/parameters/ResourceId'
+      responses:
+        '200':
+          description: Current subscription status, independent of refunds.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/PayPalStatus'}
+  /v2/invoicing/invoices/{id}:
+    get:
+      operationId: getInvoiceEvidence
+      parameters:
+        - $ref: '#/components/parameters/ResourceId'
+      responses:
+        '200':
+          description: Invoice state. Only CANCELLED confirms the cancellation remedy.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/PayPalStatus'}
+  /v1/customer/disputes/{id}:
+    get:
+      operationId: getDisputeHandoffEvidence
+      parameters:
+        - $ref: '#/components/parameters/ResourceId'
+      responses:
+        '200':
+          description: PayPal dispute state, seller transaction reference and optional seller response deadline.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [dispute_id, status, disputed_transactions]
+                properties:
+                  dispute_id: {type: string}
+                  status: {type: string}
+                  seller_response_due_date: {type: string, format: date-time}
+                  disputed_transactions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        seller_transaction_id: {type: string}
+                        seller:
+                          type: object
+                          properties:
+                            merchant_id: {type: string}
+  /admin/api/2026-10/graphql.json:
+    post:
+      operationId: queryShopifyEvidence
+      servers:
+        - url: 'https://{shop}.myshopify.com'
+          variables:
+            shop:
+              default: resolve-shop
+              description: The configured single shop; the sample name is simulation-only.
+      security:
+        - shopifyToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [query, variables]
+              properties:
+                query: {type: string, description: A fixed server-owned GraphQL node query; no mutation.}
+                variables:
+                  type: object
+                  required: [id]
+                  properties:
+                    id: {type: string}
+      responses:
+        '200':
+          description: Order cancellation, exact store-credit transaction, or fulfillment with order and line item. A GraphQL error can also arrive with HTTP 200.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      node:
+                        type: object
+                        nullable: true
+                        properties:
+                          id: {type: string}
+                          cancelledAt: {type: string, nullable: true, format: date-time}
+                          account: {$ref: '#/components/schemas/GraphqlId'}
+                          amount:
+                            type: object
+                            properties:
+                              amount: {type: string}
+                              currencyCode: {type: string}
+                          order: {$ref: '#/components/schemas/GraphqlId'}
+                          status: {type: string}
+                          displayStatus: {type: string, nullable: true}
+                          fulfillmentLineItems:
+                            type: object
+                            properties:
+                              nodes:
+                                type: array
+                                items:
+                                  type: object
+                                  properties:
+                                    lineItem: {$ref: '#/components/schemas/GraphqlId'}
+                  errors:
+                    type: array
+                    items: {type: object}
+  /v2/trackers/{id}:
+    get:
+      operationId: getEasyPostTrackerEvidence
+      servers:
+        - url: https://api.easypost.com
+      security:
+        - easyPostKey: []
+      parameters:
+        - $ref: '#/components/parameters/ResourceId'
+      responses:
+        '200':
+          description: Carrier-observed tracking state, including pre-transit and delivery.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, carrier, tracking_code, status]
+                properties:
+                  id: {type: string}
+                  carrier: {type: string}
+                  tracking_code: {type: string}
+                  status: {type: string}
+                  mode: {type: string, enum: [test, production]}
+components:
+  parameters:
+    ResourceId:
+      name: id
+      in: path
+      required: true
+      schema: {type: string}
+  schemas:
+    PayPalStatus:
+      type: object
+      required: [id, status]
+      properties:
+        id: {type: string}
+        status: {type: string}
+    GraphqlId:
+      type: object
+      properties:
+        id: {type: string}
+  securitySchemes:
+    paypalBearer: {type: http, scheme: bearer}
+    shopifyToken: {type: apiKey, in: header, name: X-Shopify-Access-Token}
+    easyPostKey: {type: http, scheme: basic}

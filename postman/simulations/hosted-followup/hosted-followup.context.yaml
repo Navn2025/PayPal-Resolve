@@ -1,0 +1,45 @@
+purpose:
+  stands_in_for: Resend email API, Zendesk Tickets, and the existing PayPal Sandbox, EasyPost and Shopify evidence endpoints.
+  unblocks: Testing the follow-up worker and customer access without sending email, modifying a helpdesk, or moving money.
+assumptions:
+  - id: resend-deduplicates-request-keys
+    status: supported
+    claim: Resend accepts Idempotency-Key on POST /emails for a 24-hour retention window.
+    reason: The documented header lets the worker retry the same intended message; the worker bounds retries below that window.
+    verification: The TLS stand-in returned 429 once per job. Retrying the same key accepted each invite, sign-in, reply and refund message once.
+    source: https://resend.com/docs/dashboard/emails/idempotency-keys ; backend/tests/test_hosted_followup_simulation.py
+    updated_at: '2026-11-07'
+  - id: paypal-webhook-triggers-verified-refund-notice
+    status: supported
+    claim: In the simulation a signature-verified refund webhook triggers an independent provider read and a single email notice.
+    reason: The webhook is only a trigger; the completed refund comes from the provider history and verification reads.
+    verification: Invalid signature was rejected, duplicate delivery was acknowledged, the worker reconciled one receipt, and the payment fixture counted zero financial refund POSTs.
+    source: https://developer.paypal.com/api/rest/webhooks/rest/ ; backend/tests/test_hosted_followup_simulation.py
+    updated_at: '2026-11-07'
+  - id: hosted-sandbox-delivery
+    status: unknown
+    claim: A configured public HTTPS listener receives and verifies a genuine signed PayPal Sandbox delivery.
+    reason: The actual Sandbox app had zero registrations and no events to replay; the temporary HTTPS probe was not reachable. A simulated signature is not this evidence.
+    source: https://developer.paypal.com/api/rest/webhooks/rest/ ; docs/ENGINEERING_LOG.md
+    updated_at: '2026-11-07'
+  - id: scheduled-shipment-and-order-reads
+    status: supported
+    claim: The local worker refreshes linked carrier and Shopify resources without marking warehouse receipt or creating duplicate proof when status is unchanged.
+    reason: The worker runs existing scoped read adapters; manual warehouse and inspection milestones are outside its schedule.
+    verification: Three scheduled passes moved a carrier tracker to delivered; later unchanged reads left the timeline intact. The warehouse promise stayed open.
+    source: https://docs.easypost.com/docs/trackers ; backend/tests/test_hosted_followup_simulation.py
+    updated_at: '2026-11-07'
+  - id: zendesk-oauth-ticket-read
+    status: supported
+    claim: The connector sends only a ticket read to the configured Zendesk hostname and uses the resulting ticket ID and status.
+    reason: The account configuration fixes the outbound host, and the connector projects two properties from the verified ticket response.
+    verification: The mock accepted OAuth bearer auth, served open and pending states, and returned 404 for another ticket. Description text did not appear in Resolve.
+    source: https://developer.zendesk.com/api-reference/ticketing/tickets/tickets/#show-ticket ; backend/tests/test_hosted_followup_simulation.py
+    updated_at: '2026-11-07'
+  - id: actual-delivery-and-credentials
+    status: unknown
+    claim: Live Resend delivery, Shopify/EasyPost visibility, and Zendesk OAuth permission are available for a hosted merchant.
+    reason: The simulation used synthetic credentials and local fixtures. Real accounts, a verified sending domain, and hosting were not configured.
+    source: docs/HOSTED_FOLLOWUP.md
+    updated_at: '2026-11-07'
+fingerprints: []

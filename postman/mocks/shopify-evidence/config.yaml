@@ -1,0 +1,11 @@
+version: 1
+id: 41002e2c-82aa-4175-9671-5db7d4eed41a
+name: shopify-evidence
+slug: shopify-evidence
+protocol: http
+origin: resolve-shop.myshopify.com
+interceptRequests: true
+scenarios:
+  - name: default
+    path: ./default.js
+    default: true

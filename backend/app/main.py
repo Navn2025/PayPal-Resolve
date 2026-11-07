@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+import httpx
 from pathlib import Path
 from uuid import UUID
 
@@ -31,17 +32,20 @@ from .models import (
 from .auth import CurrentMerchant, Store
 from .approvals import RefundApprovalService
 from .settings import Settings
-from .storage import SQLiteStore, StoreError
+from .storage import ResolveStore, StoreError, configured_store
 from .paypal import PayPalSandboxClient
 from .executions import RefundExecutionService
 from .workspace_routes import router as workspace_router
 from .resolution_routes import router as resolution_router
+from .customer_routes import router as customer_router
+from .merchant_auth_routes import router as merchant_auth_router
 
 
 router = APIRouter()
 
 
 @router.post("/health", status_code=200)
+@router.get("/health", status_code=200)
 def health():
     return {
         "status": "ok",
@@ -361,21 +365,31 @@ def list_paypal_refund_verifications(
 
 
 def create_app(
-    database_path: Path | None = None, *, settings: Settings | None = None
+    database_path: Path | None = None,
+    *,
+    settings: Settings | None = None,
+    store: ResolveStore | None = None,
 ) -> FastAPI:
     configuration = settings if settings is not None else Settings()
-    store = SQLiteStore(
-        database_path if database_path is not None else configuration.database_path
+    store = (
+        store
+        if store is not None
+        else configured_store(configuration, sqlite_path=database_path)
     )
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         store.initialize()
         app.state.paypal_client = PayPalSandboxClient(configuration)
+        followup_http = httpx.Client(
+            trust_env=False, timeout=10, follow_redirects=False
+        )
+        app.state.followup_http = followup_http
         try:
             yield
         finally:
             app.state.paypal_client.close()
+            followup_http.close()
 
     application = FastAPI(
         title="Resolve for PayPal API",
@@ -384,6 +398,7 @@ def create_app(
         lifespan=lifespan,
     )
     application.state.store = store
+    application.state.settings = configuration
 
     @application.exception_handler(StoreError)
     async def handle_store_error(request: Request, error: StoreError):
@@ -393,6 +408,8 @@ def create_app(
 
     application.include_router(router)
     application.include_router(workspace_router)
+    application.include_router(customer_router)
+    application.include_router(merchant_auth_router)
     application.include_router(resolution_router)
     return application
 

@@ -129,6 +129,38 @@ def test_unknown_schema_fails_startup_without_resetting_existing_data(tmp_path):
         assert connection.execute("SELECT value FROM sentinel").fetchone()[0] == "preserve me"
 
 
+@pytest.mark.parametrize("already_has_claim", [False, True])
+def test_sqlite_14_upgrades_both_paypal_flow_variants(tmp_path, already_has_claim):
+    database = tmp_path / "prior.sqlite3"
+    with sqlite3.connect(database) as connection:
+        files = sorted((BACKEND_DIR / "migrations").glob("[0-9][0-9][0-9]_*.sql"))
+        for path in files[:14]:
+            connection.executescript(path.read_text(encoding="utf-8"))
+        connection.execute("PRAGMA user_version = 14")
+        connection.execute(
+            """INSERT INTO merchant_paypal_flows
+               (state_hash,browser_hash,issuer_key,intent,expires_at)
+               VALUES ('existing','browser','issuer','signin','2030-01-01')"""
+        )
+        if already_has_claim:
+            connection.execute(
+                "ALTER TABLE merchant_paypal_flows ADD COLUMN claimed_at TEXT"
+            )
+            connection.execute(
+                "UPDATE merchant_paypal_flows SET claimed_at='already claimed'"
+            )
+    app = create_app(database, settings=Settings(_env_file=None))
+    for _ in range(2):
+        with TestClient(app) as client:
+            assert client.get("/health").status_code == 200
+    with sqlite3.connect(database) as connection:
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 15
+        flows = connection.execute(
+            "SELECT state_hash,claimed_at FROM merchant_paypal_flows"
+        ).fetchall()
+        assert flows == [("existing", "already claimed" if already_has_claim else None)]
+
+
 def test_first_migration_is_recorded_and_repeated_startup_preserves_data(
     tmp_path, durable_case, merchant_client
 ):
@@ -141,7 +173,7 @@ def test_first_migration_is_recorded_and_repeated_startup_preserves_data(
                 case_id = client.post("/cases", json=durable_case).json()["id"]
             assert client.get(f"/cases/{case_id}").status_code == 200
     with sqlite3.connect(database) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 9
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 15
         assert connection.execute("SELECT count(*) FROM cases").fetchone()[0] == 1
         assert connection.execute("SELECT count(*) FROM captures").fetchone()[0] == 1
 

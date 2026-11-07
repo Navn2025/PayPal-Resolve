@@ -1,7 +1,8 @@
 # Resolve backend
 
 FastAPI backend for recording customer cases, payment references, and refund
-commitments. Cases, refunds, and condition checks persist in a local SQLite file.
+commitments. Cases, refunds, and condition checks persist in SQLite by default
+or PostgreSQL when configured.
 Payment and refund details are submitted development data. An optional,
 disabled-by-default client can read PayPal Sandbox capture details and retain a
 scoped verification observation. Separate opt-ins enable approved Sandbox refunds
@@ -19,6 +20,11 @@ uv run uvicorn app.main:app --reload
 
 Interactive API documentation: <http://127.0.0.1:8000/docs>.
 
+The [merchant UI](../frontend/README.md) can also connect to this backend
+using the same merchant key. Its built-in demo works without FastAPI.
+The [customer portal](../docs/CUSTOMER_PORTAL.md) uses expiring case links to
+show the customer-facing summary and conversation without merchant credentials.
+
 ## Merchant access
 
 Create a local merchant and token from the backend directory:
@@ -34,7 +40,7 @@ token, not a password or PayPal credential. No public registration endpoint exis
 In `/docs`, select **Authorize** and paste only the token. Requests use
 `Authorization: Bearer <api_key>`. `GET /auth/me` returns the authenticated merchant.
 All case, refund, condition, and reconciliation endpoints require authentication;
-`POST /health` stays public. Missing, invalid, or revoked credentials return `401`.
+`GET /health` and `POST /health` stay public. Missing, invalid, or revoked credentials return `401`.
 Another merchant's case returns `404`, just like a missing case.
 
 Ownership comes from the token, never a request-body merchant ID. Capture and
@@ -52,7 +58,8 @@ uv run python -m app.manage revoke-key --key-id <key_uuid>
 New keys do not revoke older keys automatically. Revocation blocks subsequent
 requests using that key. Tokens currently have no automatic expiry. These commands
 require trusted access to the database file; they are not exposed through HTTP.
-Supabase Auth, browser login, user roles, and production identity remain future work.
+The [merchant sign-in guide](../docs/MERCHANT_SIGN_IN.md) covers the browser
+session endpoints and optional PayPal identity. Team roles remain future work.
 
 ### Existing anonymous development records
 
@@ -185,23 +192,27 @@ The optional `RESOLVE_DATABASE_PATH` setting accepts a local file path, either i
 the environment or in `backend/.env`; see `.env.example`. Relative paths resolve
 from the backend directory, independently of the terminal working directory.
 
-SQLite is the local development database for this milestone. Supabase/PostgreSQL
-remains a future integration and is not configured by this setting. Storage uses
-Python's built-in `sqlite3` module, so no database account or extra package is needed.
+SQLite remains the local default. Set `RESOLVE_DATABASE_URL` in `.env` to
+select PostgreSQL for the API, merchant CLI and both workers. Use the
+[migration guide](../docs/POSTGRES_MIGRATION.md) to copy an existing SQLite
+database into an empty target. The merchant CLI's explicit `--database`
+option continues to select a SQLite file.
 
 Payments and refunds store integer cents; the API still uses decimal strings.
-Refund validation and writes share a `BEGIN IMMEDIATE` transaction so separate
-app instances using the same file cannot independently reserve the same balance.
-Reconciliation reads one consistent transaction snapshot. Lock contention exceeding
-the wait timeout returns `503`.
+SQLite writes start with `BEGIN IMMEDIATE`. PostgreSQL writes use a transaction
+lock shared by Resolve processes connected to the same schema. Both paths
+serialize financial state changes and give reconciliation a consistent read
+snapshot. Lock contention exceeding the wait timeout returns `503`.
 
-Schema version 9 is recorded in SQLite's `user_version`. Startup applies the
+Schema version 15 is recorded in SQLite's `user_version`. Startup applies the
 initial, merchant-ownership, refund-approval, capture-verification, durable
 execution/refund-evidence, provider-identity, case-event/condition-epoch, and
-refund-history/case-lifecycle and shared resolution workspace migrations
+refund-history/case-lifecycle, shared resolution workspace, customer portal,
+intake/triage, hosted follow-up, case ordering, and merchant browser authentication migrations
 atomically as needed. Version-1
 records are preserved as described above. An unknown newer version fails startup
-instead of resetting it. Future schema changes need new migrations.
+instead of resetting it. The PayPal flow claim column is installed by SQLite
+migration 015 and PostgreSQL migration 004. Future schema changes need new migrations.
 
 Old in-memory records are not automatically imported. Databases and `.env` files
 are ignored by Git. Stop the server before copying the file for a local backup.
@@ -209,7 +220,14 @@ Keep the file on local disk; this is not a multi-host or network-filesystem setu
 
 ## API contract
 
-- `POST /health`: public development health check.
+See [customer intake and case triage](../docs/CUSTOMER_WORKFLOW.md) for order
+invites, the public status timeline, scoped evidence uploads, inbox filters,
+and linking an existing payment to an intake case.
+The optional [follow-up worker and account integrations](../docs/HOSTED_FOLLOWUP.md)
+add transactional emails, My cases, scheduled proof reads, and Zendesk ticket
+status. These connections are off unless explicitly configured.
+
+- `GET /health` and `POST /health`: public liveness check.
 - `GET /auth/me`: authenticated merchant identity.
 - `POST /cases`: create a case; returns `201` with an ID and status `open`.
 - `GET /cases`: owned case page with `limit`, `offset`, and optional `capture_id`.

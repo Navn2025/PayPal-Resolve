@@ -1,0 +1,30 @@
+purpose:
+  stands_in_for: Configured PayPal Sandbox, Shopify Admin GraphQL 2026-10, and EasyPost read-only evidence sources.
+  unblocks: Exercising the actual backend HTTP clients and proof checks without live tokens or external writes.
+assumptions:
+  - id: authoritative-tracking-milestone
+    status: supported
+    claim: EasyPost provides carrier tracking status and a tracker identity distinct from a warehouse check.
+    reason: The carrier tracker has a status, carrier, code and mode. Only the merchant's own evidence can satisfy this workspace's internal warehouse and inspection milestones.
+    source: https://docs.easypost.com/docs/trackers
+    updated_at: '2026-11-07'
+  - id: shopify-query-scopes
+    status: unknown
+    claim: The eventual Shopify development store can read the selected order, fulfillment and credit transaction using its configured app scopes.
+    reason: These fields are documented, but there is no account-backed store or token validation in this run. The fixture is not an authorization grant.
+    source: https://shopify.dev/docs/api/admin-graphql/latest/objects/StoreCreditAccountCreditTransaction ; https://shopify.dev/docs/api/admin-graphql/latest/objects/Fulfillment
+    updated_at: '2026-11-07'
+  - id: sandbox-provider-resource-visibility
+    status: unknown
+    claim: This project's actual PayPal REST app has permission to see each new authorization, subscription, invoice and formal dispute type.
+    reason: A previous account-backed refund check only establishes that existing order flow. New remedy checks use synthetic account resources and mock credentials.
+    source: docs/RESOLUTION_WORKSPACE.md ; backend/tests/test_resolution_simulation.py
+    updated_at: '2026-11-07'
+  - id: local-resolution-transport-and-rules
+    status: supported
+    claim: The workspace uses the expected read-only provider calls and preserves distinct evidence and approval outcomes in the simulated scenarios.
+    reason: The actual HTTP clients went through the TLS proxy to the three local mocks.
+    verification: CHG-016; 45 tests passed, 336 mocked requests and zero passed through. Covers external refunds, prerequisites, evidence errors and billing/dispute checks. The only simulated provider money movement is the established approved refund path.
+    source: backend/tests/test_resolution_simulation.py ; backend/.pytest_cache/resolution-simulation-final.log
+    updated_at: '2026-11-07'
+fingerprints: []

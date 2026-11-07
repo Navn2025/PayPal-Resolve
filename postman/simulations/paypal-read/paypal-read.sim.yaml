@@ -1,0 +1,7 @@
+simulation: paypal-read
+routing: path
+mocks:
+  - name: paypal-sandbox
+    routeKey: paypal
+    origin: api-m.sandbox.paypal.com
+    path: postman/mocks/paypal-sandbox

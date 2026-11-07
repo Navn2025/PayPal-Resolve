@@ -6,7 +6,33 @@ Resolve is an AI-powered payment aftercare platform for PayPal merchants. It con
 
 A successful payment does not always mean a successful purchase. Resolve helps buyers and merchants understand what was agreed, what has happened, and what still needs to be done.
 
-> **Status:** Early development. The repository has been initialized. The capabilities below describe the planned product.
+> **Status:** The public landing page links to a sample demo, private buyer portal, and authenticated merchant workspace. Merchant browser sessions and optional PayPal sign-in are implemented. Email notices, My cases, automatic provider checks, and Zendesk linking are optional. Hosted OAuth and payment webhook delivery still need account-backed verification. PayPal Sandbox refund writes default to disabled.
+
+The [resolution workspace](docs/RESOLUTION_WORKSPACE.md) can track several
+promises in one case: refunds, returns, replacements, cancellation, subscriptions,
+store credit/exchanges, billing corrections, and dispute handoff. PayPal, Shopify,
+and EasyPost evidence reads are optional; refund execution remains the only
+provider write.
+
+## Development Documentation
+
+- [Merchant UI: run the demo or connect your local backend](frontend/README.md)
+- [Customer portal: case links, access, and messaging](docs/CUSTOMER_PORTAL.md)
+- [Customer intake, evidence, and merchant triage](docs/CUSTOMER_WORKFLOW.md)
+- [Hosted follow-up: email, My cases, automatic checks, and Zendesk](docs/HOSTED_FOLLOWUP.md)
+- [PostgreSQL setup and SQLite import](docs/POSTGRES_MIGRATION.md)
+- [Merchant sign-in, PayPal login, and hosted frontend setup](docs/MERCHANT_SIGN_IN.md)
+- [Backend setup and API examples](backend/README.md)
+- [Current status, sandbox result, and review steps](docs/PROJECT_STATUS.md)
+- [Case workspace, commitment revisions, timeline, and recovery worker](docs/BACKEND_OPERATIONS.md)
+- [Make a sandbox test purchase and verify its capture](docs/SANDBOX_TEST_PURCHASE.md)
+- [Sandbox refund execution contract and recovery](docs/REFUND_EXECUTION.md)
+- [PayPal HTTP simulation and its evidence limits](postman/README.md)
+- [Engineering log: changes, decisions, reasons, tests, and limitations](docs/ENGINEERING_LOG.md)
+- [Repository working instructions](AGENTS.md)
+
+Every code change must include an engineering-log update in the same change set.
+The log preserves the reasoning behind decisions as the implementation evolves.
 
 ## The Problem
 
@@ -25,7 +51,7 @@ Resolve aims to connect these records and track each commitment through to its o
 ## How Resolve Works
 
 1. **Capture the issue**
-   Create a case from a customer complaint or support conversation.
+   Invite a customer to report an issue for their order, or create the case directly.
 
 2. **Identify the commitment**
    Extract the proposed or agreed remedy, amount, conditions, deadline, and source message.
@@ -118,18 +144,29 @@ An AI recommendation alone will not authorize a financial action.
 | Layer | Technology |
 | --- | --- |
 | Frontend | Next.js, React, TypeScript |
-| Styling | Tailwind CSS, shadcn/ui |
+| Styling | Local CSS tokens and responsive components |
 | Backend | Python, FastAPI |
 | Validation | Pydantic |
-| Database | PostgreSQL through Supabase |
-| Authentication | Supabase Auth |
-| Evidence storage | Supabase Storage |
+| Database | SQLite locally or PostgreSQL (Neon recommended for hosting) |
+| Authentication | Merchant access keys or linked PayPal accounts; buyer email sign-in |
+| Evidence storage | Case-scoped database attachments |
 | AI integration | OpenAI API with structured outputs |
 | Payment integration | PayPal REST APIs |
-| Background processing | Python worker and Supabase Queues |
+| Background processing | Python workers and database queues |
 | Testing | pytest and Playwright |
 
-Development begins with the backend.
+The local frontend and backend run as separate processes.
+
+SQLite is the credential-free default. FastAPI and both workers use PostgreSQL
+when `RESOLVE_DATABASE_URL` is set. The [migration guide](docs/POSTGRES_MIGRATION.md)
+shows how to verify a copy of the existing database before switching.
+
+Local merchant access currently uses administrator-provisioned bearer tokens.
+Create a merchant with `uv run python -m app.manage create-merchant --name "My store"`
+from the backend directory, then use the returned token in the UI's Connect
+account dialog or in Swagger. See the backend guide for key revocation and legacy-data assignment.
+PayPal sign-in must be linked from an existing merchant workspace.
+Team roles remain separate work.
 
 ## Proposed Repository Structure
 
@@ -153,15 +190,30 @@ This structure is a development plan and will evolve with the implementation.
 ## Development Roadmap
 
 - [x] Initialize the repository
-- [ ] Create the FastAPI application and health endpoint
-- [ ] Define case, commitment, payment, and refund models
-- [ ] Add database persistence
-- [ ] Implement reconciliation using sample records
-- [ ] Integrate PayPal Sandbox payments and refunds
-- [ ] Add merchant authorization and duplicate-action protection
+- [x] Create the FastAPI application and health endpoint
+- [x] Define case, commitment, payment, and refund models
+- [x] Add local database persistence and restart recovery tests
+- [x] Add local merchant token authentication and case ownership checks
+- [x] Add a PostgreSQL driver, schema and verified SQLite import
+- [ ] Provision and verify a hosted PostgreSQL database
+- [x] Implement reconciliation using sample records
+- [x] Implement sandbox-only capture reads and local HTTP failure simulation
+- [x] Verify OAuth authentication with the configured PayPal Sandbox app
+- [x] Verify the client's capture read with the owner's PayPal Sandbox account
+- [x] Save the actual sandbox capture through authenticated case endpoints
+- [ ] Integrate approved PayPal Sandbox refunds and complete refund history
+- [x] Add persistent, state-bound merchant approvals and decision audit events
+- [x] Add paginated case browsing, safe commitment revisions and a shared timeline
+- [x] Add a local recovery worker for already-approved executions
+- [x] Add durable first full-capture sandbox refunds and provider idempotency
+- [x] Add partial and repeated refunds behind verified Sandbox order history
 - [ ] Add AI commitment extraction
-- [ ] Implement webhook verification and status reconciliation
-- [ ] Build the merchant workspace and buyer status page
+- [x] Implement Sandbox webhook signature verification and event reconciliation
+- [x] Add case attachments, close/reopen and the merchant review queue
+- [x] Build the local merchant workspace and printable buyer receipt
+- [x] Add local customer case links and two-way messaging
+- [x] Add durable merchant browser login and optional PayPal identity
+- [ ] Verify hosted buyer access and a registered PayPal OAuth callback
 - [ ] Evaluate complete resolution workflows
 
 ## First Milestone

@@ -39,6 +39,7 @@ from .workspace_routes import router as workspace_router
 from .resolution_routes import router as resolution_router
 from .customer_routes import router as customer_router
 from .merchant_auth_routes import router as merchant_auth_router
+from .ai_routes import router as ai_router
 
 
 router = APIRouter()
@@ -411,6 +412,7 @@ def create_app(
     application.include_router(customer_router)
     application.include_router(merchant_auth_router)
     application.include_router(resolution_router)
+    application.include_router(ai_router)
     return application
 
 

@@ -4535,6 +4535,75 @@
           }
         }
       }
+    },
+    "/resolution-cases/{case_id}/ai/extract-promises": {
+      "post": {
+        "tags": [
+          "AI promise extraction"
+        ],
+        "summary": "Extract Promise Proposals",
+        "description": "Propose promises for review from the case's customer conversation, or from\nsupplied messages. Does not record promises or call PayPal.",
+        "operationId": "extract_promise_proposals_resolution_cases__case_id__ai_extract_promises_post",
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/ExtractionRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtractionResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resolution case not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -4970,6 +5039,44 @@
         ],
         "title": "CaseTimelinePage"
       },
+      "ChatMessage": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Id"
+          },
+          "sender": {
+            "type": "string",
+            "enum": [
+              "buyer",
+              "merchant"
+            ],
+            "title": "Sender"
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Text"
+          },
+          "sent_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Sent At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "sender",
+          "text",
+          "sent_at"
+        ],
+        "title": "ChatMessage"
+      },
       "CommitmentUpdate": {
         "properties": {
           "state_fingerprint": {
@@ -5325,6 +5432,68 @@
           "paypal_dispute_id"
         ],
         "title": "DisputeHandoffTarget"
+      },
+      "DroppedProposal": {
+        "properties": {
+          "reason": {
+            "type": "string",
+            "enum": [
+              "schema_invalid",
+              "unknown_kind",
+              "unknown_message",
+              "buyer_message",
+              "quote_not_found",
+              "amount_not_allowed",
+              "amount_not_in_quote",
+              "duplicate",
+              "limit_exceeded"
+            ],
+            "title": "Reason"
+          },
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
+          },
+          "source_message_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Message Id"
+          },
+          "exact_quote": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exact Quote"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reason",
+          "detail"
+        ],
+        "title": "DroppedProposal"
       },
       "EmailSignIn": {
         "properties": {
@@ -5924,6 +6093,113 @@
           "checked_at"
         ],
         "title": "ExecutionCaptureCheck"
+      },
+      "ExtractionRequest": {
+        "properties": {
+          "messages": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ChatMessage"
+                },
+                "type": "array",
+                "maxItems": 200,
+                "minItems": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Messages",
+            "description": "Omit to use the case's stored customer conversation."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ExtractionRequest"
+      },
+      "ExtractionResult": {
+        "properties": {
+          "case_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Case Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "needs_review"
+            ],
+            "title": "Status"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "case_conversation",
+              "merchant_supplied"
+            ],
+            "title": "Source"
+          },
+          "review_reasons": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "not_configured",
+                "no_messages",
+                "auth_error",
+                "model_not_found",
+                "rate_limited",
+                "bad_request",
+                "timeout",
+                "connection_error",
+                "provider_error",
+                "unexpected_error",
+                "invalid_json",
+                "schema_invalid",
+                "low_confidence"
+              ]
+            },
+            "type": "array",
+            "title": "Review Reasons"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "proposals": {
+            "items": {
+              "$ref": "#/components/schemas/PromiseProposal"
+            },
+            "type": "array",
+            "title": "Proposals"
+          },
+          "dropped": {
+            "items": {
+              "$ref": "#/components/schemas/DroppedProposal"
+            },
+            "type": "array",
+            "title": "Dropped"
+          }
+        },
+        "type": "object",
+        "required": [
+          "case_id",
+          "status",
+          "source",
+          "review_reasons",
+          "model",
+          "proposals",
+          "dropped"
+        ],
+        "title": "ExtractionResult"
       },
       "GoogleFinish": {
         "properties": {
@@ -7387,6 +7663,92 @@
           "created_at"
         ],
         "title": "PortalMessage"
+      },
+      "PromiseProposal": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "refund",
+              "return",
+              "replacement",
+              "order_cancellation",
+              "subscription",
+              "store_credit_or_exchange",
+              "billing_correction",
+              "dispute_handoff"
+            ],
+            "title": "Kind"
+          },
+          "amount_cents": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 100000000.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Cents"
+          },
+          "condition": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Condition"
+          },
+          "deadline": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 160
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deadline"
+          },
+          "source_message_id": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Source Message Id"
+          },
+          "exact_quote": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Exact Quote"
+          },
+          "confidence": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence"
+          },
+          "needs_review": {
+            "type": "boolean",
+            "title": "Needs Review"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "source_message_id",
+          "exact_quote",
+          "confidence",
+          "needs_review"
+        ],
+        "title": "PromiseProposal"
       },
       "PromiseRevision": {
         "properties": {

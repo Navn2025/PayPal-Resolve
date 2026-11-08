@@ -106,6 +106,7 @@ def test_valid_extraction_returns_traceable_proposal_without_recording(client, a
     assert body["proposals"] == [
         {
             **proposal(),
+            "action": None,
             "needs_review": False,
             "supporting_message_ids": [],
             "possible_revision": False,
@@ -393,7 +394,7 @@ def test_restatements_merge_into_the_first_statement(ai):
     ]
 
 
-def test_changed_amount_or_condition_is_a_possible_revision_not_a_merge(ai):
+def test_changed_amount_is_a_possible_revision_and_reworded_condition_merges(ai):
     body = ai(
         {
             "proposals": [
@@ -418,17 +419,146 @@ def test_changed_amount_or_condition_is_a_possible_revision_not_a_merge(ai):
     ).json()
 
     assert [
-        (p["kind"], p["source_message_id"], p["amount_cents"], p["possible_revision"])
+        (
+            p["kind"],
+            p["source_message_id"],
+            p["amount_cents"],
+            p["supporting_message_ids"],
+            p["possible_revision"],
+        )
         for p in body["proposals"]
     ] == [
-        ("refund", "m2", 4000, False),
-        ("return", "m2", None, False),
-        ("refund", "m4", 6000, True),
-        # A dropped condition is a change of terms, so it is not merged either.
-        ("refund", "m4", 4000, True),
+        # Same amount without the condition is a restatement; the first keeps its condition.
+        ("refund", "m2", 4000, ["m4"], False),
+        ("return", "m2", None, [], False),
+        ("refund", "m4", 6000, [], True),
     ]
-    assert all(p["supporting_message_ids"] == [] for p in body["proposals"])
+    assert body["proposals"][0]["condition"] == "Once you send a photo"
     assert body["status"] == "ok" and body["dropped"] == []
+
+
+def test_changed_action_is_a_possible_revision_and_missing_action_merges(ai):
+    messages = [
+        {"id": "m1", "sender": "buyer", "text": "Stop my plan.", "sent_at": "2026-11-08T09:00:00Z"},
+        {
+            "id": "m2",
+            "sender": "merchant",
+            "text": "We'll pause your subscription for a month.",
+            "sent_at": "2026-11-08T09:01:00Z",
+        },
+        {"id": "m3", "sender": "buyer", "text": "No, cancel it.", "sent_at": "2026-11-08T09:02:00Z"},
+        {
+            "id": "m4",
+            "sender": "merchant",
+            "text": "Understood, we will cancel your subscription today. The pause is withdrawn.",
+            "sent_at": "2026-11-08T09:03:00Z",
+        },
+    ]
+
+    def plan(source, quote, action):
+        return proposal(
+            kind="subscription", amount_cents=None, condition=None, deadline=None,
+            source_message_id=source, exact_quote=quote, action=action,
+        )
+
+    body = ai(
+        {
+            "proposals": [
+                plan("m2", "We'll pause your subscription", "pause"),
+                plan("m4", "we will cancel your subscription today", "Cancel"),
+                plan("m4", "The pause is withdrawn", None),
+                plan("m2", "pause your subscription for a month", "gift"),
+            ]
+        },
+        messages=messages,
+    ).json()
+
+    assert [
+        (p["source_message_id"], p["action"], p["supporting_message_ids"], p["possible_revision"])
+        for p in body["proposals"]
+    ] == [("m2", "pause", ["m4"], False), ("m4", "cancel", [], True)]
+    assert [(d["reason"], d["source_message_id"]) for d in body["dropped"]] == [
+        ("duplicate", "m2")
+    ]
+    assert [(a["reason"], a["source_message_id"]) for a in body["adjustments"]] == [
+        ("action_removed", "m2")
+    ]
+
+
+def test_quote_check_ignores_case_spacing_and_curly_quotes_but_not_the_message(ai):
+    messages = [
+        MESSAGES[0],
+        {**MESSAGES[1], "text": "Sorry!  We’ll refund   $25.00 by “Friday”."},
+    ]
+    body = ai(
+        {
+            "proposals": [
+                proposal(exact_quote="we'll REFUND $25.00 by \"friday\""),
+                # Text from the buyer's message is not found in the merchant's.
+                proposal(exact_quote="The mug arrived broken"),
+            ]
+        },
+        messages=messages,
+    ).json()
+
+    # The returned quote is the merchant's own text, not the model's rewrite.
+    assert [p["exact_quote"] for p in body["proposals"]] == [
+        "We’ll refund   $25.00 by “Friday”"
+    ]
+    assert [a["reason"] for a in body["adjustments"]] == ["quote_normalized"]
+    assert [d["reason"] for d in body["dropped"]] == ["quote_not_found"]
+
+
+def test_store_credit_amount_is_removed_but_other_kinds_still_drop(ai):
+    messages = [MESSAGES[0], {**MESSAGES[1], "text": "We will add $25 store credit and send a $5 label."}]
+    body = ai(
+        {
+            "proposals": [
+                proposal(
+                    kind="store_credit_or_exchange", amount_cents=2500, condition=None,
+                    action="store_credit", exact_quote="We will add $25 store credit",
+                ),
+                proposal(kind="return", amount_cents=500, condition=None, exact_quote="send a $5 label"),
+            ]
+        },
+        messages=messages,
+    ).json()
+
+    assert [(p["kind"], p["amount_cents"], p["action"]) for p in body["proposals"]] == [
+        ("store_credit_or_exchange", None, "store_credit")
+    ]
+    assert [a["reason"] for a in body["adjustments"]] == ["amount_removed"]
+    assert [d["reason"] for d in body["dropped"]] == ["amount_not_allowed"]
+
+
+@pytest.mark.parametrize(
+    ("text", "cents"),
+    [
+        ("We will refund $ 15.5 for shipping.", 1550),
+        ("We will refund 15.50 USD for shipping.", 1550),
+        ("We'll send back 20 bucks for the trouble.", 2000),
+        ("We will refund USD 1,250 today.", 125000),
+    ],
+)
+def test_amount_formats_are_recognised(ai, text, cents):
+    messages = [MESSAGES[0], {**MESSAGES[1], "text": text}]
+    body = ai(
+        {"proposals": [proposal(amount_cents=cents, condition=None, exact_quote=text)]},
+        messages=messages,
+    ).json()
+
+    assert [p["amount_cents"] for p in body["proposals"]] == [cents]
+    assert body["dropped"] == []
+
+
+def test_order_number_is_still_not_an_amount(ai):
+    messages = [MESSAGES[0], {**MESSAGES[1], "text": "Order 4999 will be refunded in full."}]
+    body = ai(
+        {"proposals": [proposal(amount_cents=499900, condition=None, exact_quote=messages[1]["text"])]},
+        messages=messages,
+    ).json()
+
+    assert [d["reason"] for d in body["dropped"]] == ["amount_not_in_quote"]
 
 
 def test_distinct_amounts_in_one_message_are_not_revisions(ai):

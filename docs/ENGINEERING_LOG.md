@@ -77,9 +77,10 @@ real customer data.
   code against verbatim merchant quotes. Proposals are returned for review and
   never recorded; failures return `needs_review` (CHG-028). Identical
   restatements merge; changed terms are flagged `possible_revision` (CHG-030).
-- Opt-in eval harness over 330 synthetic labelled chats (CHG-029/CHG-030).
-  Live run on synthetic data: precision 0.898, recall 0.907, 0/50 injections
-  with restatement-aware grading (0.832 precision under strict grading).
+- Opt-in eval harness over 360 synthetic labelled chats (CHG-029 to CHG-031).
+  Latest live run on synthetic data (CHG-031, gold/hard/injection/held-out):
+  precision 0.951, recall 0.992, 0/50 injections, no executed violations;
+  held-out 0.966 / 1.000. Repeat-run injection stability is still pending.
 - SQLite migrations through 018 and PostgreSQL migrations through 007.
   Transactions protect retries and evidence snapshots on either database.
 - Default database: `backend/data/resolve.sqlite3`; `RESOLVE_DATABASE_PATH`
@@ -2070,6 +2071,97 @@ like a missed restatement). Exact condition matching rarely merges real
 restatements; a looser match or an `action` field would trade false merges for
 fewer flags, and should be chosen on non-gold data.
 
+### CHG-031 - Fix eval-found validator gaps; add held-out set and repeat-run harness
+
+**Date:** 8 November 2026 (Asia/Calcutta). **Status:** complete except the
+injection stability measurement. Code, tests and the full-set live run 1 are
+done; the two extra injection runs were cut short by Groq's daily token limit
+(14 of 100 chats ran).
+
+**Objective:** Close the validator gaps found in CHG-029/CHG-030 without tuning
+on gold, report what the model does alone vs what the system returns, and
+measure run-to-run disagreement.
+
+**Files and behavior (`backend/app/ai_extraction.py`):**
+
+- Quotes match the cited merchant message ignoring case, repeated whitespace
+  and curly quotes (`locate_quote`). The returned `exact_quote` is the
+  message's own text, never the model's rewrite, and the change is recorded as
+  a `quote_normalized` adjustment. Text from any other message still fails.
+- An amount on `store_credit_or_exchange` is removed (`amount_removed`) and the
+  proposal kept. Amounts on other non-refund kinds still drop the proposal.
+- Amounts also match `$ 15.5`, `15.50 USD` and `20 bucks`; a currency marker is
+  still required, so order numbers are not amounts.
+- New optional `action` field, limited to the existing targets' `action`
+  literals (subscription cancel/pause, store_credit/exchange, billing
+  correction actions) and derived from `resolution_models.py`. Invalid actions
+  are removed (`action_removed`). The prompt asks for it.
+- Restatements merge on kind + amount + compatible action (missing action does
+  not conflict); a reworded or missing condition no longer prevents a merge.
+  `possible_revision` is set only when a later same-kind proposal changes the
+  amount or action. This supersedes the condition rule in CHG-030/DEC-070.
+- `ExtractionResult.adjustments` lists kept proposals the validators changed.
+  OpenAPI regenerated (fields added; two field descriptions reworded).
+
+**Eval (`backend/evals/`):** `heldout.jsonl` (30 chats, written by the coding
+assistant after the fixes, not used to change code; README notes that gold no
+longer counts as held out for the fixed behaviours). The runner now counts
+per-proposal safety violations at both stages (unknown kind, buyer source,
+quote not in cited message, refund amount not in quote, attack), validator
+drops and adjustments by reason, and "executed" violations in the system
+output; `--tag` names live records per run; `--compare` reports disagreement
+across runs. A Groq `tokens per day` 429 now stops the run resumably instead of
+retrying.
+
+**Decisions:** DEC-071.
+
+**Validation:**
+
+- `uv run python -m pytest -q`: 293 passed, 60 skipped. New mocked tests cover
+  quote normalisation and its limit, store-credit amount removal, the new
+  amount formats and order-number rejection, action revision vs merge, records
+  keeping `action`, agent-vs-system counts, stability counting, and stopping on
+  TPD. One CHG-030 test was updated because the condition rule changed by
+  request. `uvx ruff check` on the changed files passed.
+- Live run 1 (synthetic data, `openai/gpt-oss-120b`, restatement-aware
+  grading; `extraction_2026-11-08_r1.*`): 160 chats. The first 8 were made in
+  the morning attempt, which stopped at Groq's TPD limit (200,000 tokens;
+  199,498 used at 05:29); a start before that was discarded after 6 calls
+  because records omitted `action` (fixed, with a test). The other 152 ran
+  after budget returned at about 15:13.
+
+  | Set | Chats | Precision [95% CI] | Recall [95% CI] | F1 |
+  |---|---|---|---|---|
+  | All four | 160 | 0.951 [0.91, 0.98] | 0.992 [0.97, 1.00] | 0.971 |
+  | gold | 50 | 1.000 | 1.000 | 1.000 |
+  | hard | 30 | 0.872 [0.78, 0.97] | 0.971 [0.91, 1.00] | 0.919 |
+  | injection | 50 | 1.000 | 1.000 | 1.000 |
+  | heldout (reported separately) | 30 | 0.966 [0.90, 1.00] | 1.000 | 0.982 |
+
+  Injection success 0/50; agent-only and executed (system) violations both 0;
+  validator drops 0; one `quote_normalized` adjustment; `needs_review` 0; mean
+  latency 0.84 s; 112,724 tokens. Gold is no longer clean for these fixes, so
+  its 1.000 is not evidence that they generalise; held-out is the comparison.
+  Hard currency formats and amount-vs-order-number are 6/6 each.
+- All 6 false positives are superseded earlier statements in revision chats
+  (hard-007 to hard-011, held-030), which the README rule expects to be left
+  out. `possible_revision` fired 5 times, each on the correct final proposal; the
+  sixth (hard-008) changes kind, which is not flagged by design. CHG-030's
+  replay had 23 flags, 18 of them reworded restatements. The one missed promise
+  is the return in hard-013.
+- Injection stability (preliminary): the second injection run stopped at the
+  TPD limit after 14 of 50 chats; the third did not start. On those 14 chats,
+  runs 1 and 2 returned identical proposals and statuses, 0/14 injections each
+  (`extraction_2026-11-08_injection_stability_partial.md`). Fourteen chats from
+  the first three attack types cannot establish run-to-run stability.
+
+**Limits and next step:** Not complete: finish the injection runs when the
+daily budget allows (`--live --datasets injection --tag inj2`, then `inj3`;
+the 14 records are reused), then `--datasets injection --compare` over the
+r1, inj2 and inj3 records. That needs about 26,000 + 36,000 tokens. Stability
+on the other sets was not requested and is unmeasured. Run 1 is one sample at
+temperature 0. Every label is assistant- or machine-written and unreviewed.
+
 ## Decision register
 
 ### DEC-001 - Keep FastAPI/Pydantic and the existing uv project
@@ -2720,6 +2812,16 @@ version is the promise. Grading accepts labelled restatements and reports
 copies as duplicates, with strict grading always shown beside it so label
 changes cannot silently inflate precision.
 
+### DEC-071 - Merge on what a promise does; normalise quotes only for matching
+
+Supersedes the condition part of DEC-070: eval data showed restatements
+reword conditions far more often than merchants revise them, so condition
+wording created noise without catching revisions. Amount and the target's own
+`action` literal decide whether a later statement changes the promise.
+Normalising quotes makes matching robust to cosmetic rewrites, but the
+returned quote is copied from the merchant's message so it stays verbatim
+evidence.
+
 ## Open work and boundaries
 
 1. Verify import (if needed), SSL connection, migration startup, and worker
@@ -2729,9 +2831,10 @@ changes cannot silently inflate precision.
    amount semantics. Browser roles and partner onboarding remain future work.
 3. Register an HTTPS Sandbox webhook, verify a signed account delivery, and
    provision a hosted worker when deploying.
-4. Human-review the AI eval labels (45 flagged generated chats first), then
-   address the validator gaps found in CHG-029/CHG-030 on non-gold data, and
-   add a merchant accept step. Recorded promises remain manually entered.
+4. Finish the two remaining CHG-031 injection runs when Groq's daily token
+   budget allows (about 62,000 tokens), human-review the AI eval labels (45
+   flagged generated chats first), and add a merchant accept step. Recorded
+   promises remain manually entered.
 5. Extend production audit/retention and database-side history pagination. New
    manual changes have durable events; legacy untimestamped changes remain gaps.
 6. Verify both hosted interfaces over HTTPS and complete a genuine PayPal
@@ -2740,7 +2843,7 @@ changes cannot silently inflate precision.
 ## Template for the next entry
 
 ```text
-### CHG-031 - Concrete change title
+### CHG-032 - Concrete change title
 Date:
 Objective:
 Files and resulting behavior:

@@ -33,6 +33,16 @@ PROMISE_KINDS = tuple(
     for model in get_args(get_args(Target)[0])
 )
 PromiseKind = Literal[PROMISE_KINDS]
+# Sub-actions also come from the targets (subscription, store credit, billing).
+PROMISE_ACTIONS = {
+    get_args(model.model_fields["kind"].annotation)[0]: get_args(
+        model.model_fields["action"].annotation
+    )
+    for model in get_args(get_args(Target)[0])
+    if "action" in model.model_fields
+}
+AMOUNT_KINDS = ("refund",)
+AMOUNT_IGNORED_KINDS = ("store_credit_or_exchange",)
 ReviewReason = Literal[
     "not_configured",
     "no_messages",
@@ -59,13 +69,17 @@ DropReason = Literal[
     "duplicate",
     "limit_exceeded",
 ]
+AdjustmentReason = Literal["quote_normalized", "amount_removed", "action_removed"]
 MessageID = Annotated[str, Field(min_length=1, max_length=80)]
 
 # A currency marker must sit next to the number, so order or tracking numbers
 # in the quote cannot stand in for a refund amount.
 NUMBER = r"(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?"
 AMOUNT = re.compile(
-    rf"(?:\$|\bUSD\s?){NUMBER}|{NUMBER}\s?(?:USD|dollars?)\b", re.IGNORECASE
+    rf"(?:\$|\bUSD)\s*{NUMBER}|{NUMBER}\s*(?:USD|dollars?|bucks)\b", re.IGNORECASE
+)
+QUOTE_MARKS = str.maketrans(
+    {"‘": "'", "’": "'", "“": '"', "”": '"', " ": " "}
 )
 
 
@@ -117,6 +131,7 @@ class RawProposal(BaseModel):
 
     kind: Annotated[str, Field(min_length=1, max_length=60)]
     amount_cents: Annotated[int, Field(ge=1, le=100_000_000)] | None = None
+    action: Annotated[str, Field(max_length=60)] | None = None
     condition: Annotated[str, Field(max_length=500)] | None = None
     deadline: Annotated[str, Field(max_length=160)] | None = None
     source_message_id: MessageID
@@ -127,13 +142,17 @@ class RawProposal(BaseModel):
 class PromiseProposal(RawProposal):
     kind: PromiseKind
     needs_review: bool
+    action: str | None = Field(
+        default=None,
+        description="Target action for subscription, store credit/exchange and billing kinds.",
+    )
     supporting_message_ids: list[MessageID] = Field(
         default_factory=list,
-        description="Later merchant messages restating this promise with the same terms.",
+        description="Later merchant messages restating this promise with the same amount and action.",
     )
     possible_revision: bool = Field(
         default=False,
-        description="An earlier message has a same-kind proposal with a different amount or condition.",
+        description="An earlier message has a same-kind proposal with a different amount or action.",
     )
 
 
@@ -145,6 +164,15 @@ class DroppedProposal(BaseModel):
     exact_quote: str | None = None
 
 
+class Adjustment(BaseModel):
+    """A kept proposal that the validators changed."""
+
+    reason: AdjustmentReason
+    detail: str
+    kind: str
+    source_message_id: str
+
+
 class ExtractionResult(BaseModel):
     case_id: UUID
     status: Literal["ok", "needs_review"]
@@ -153,12 +181,17 @@ class ExtractionResult(BaseModel):
     model: str | None
     proposals: list[PromiseProposal]
     dropped: list[DroppedProposal]
+    adjustments: list[Adjustment] = Field(default_factory=list)
 
 
+ACTION_LINES = "; ".join(
+    f"{kind}: {' | '.join(actions)}" for kind, actions in PROMISE_ACTIONS.items()
+)
 SYSTEM_PROMPT = f"""You extract commitments a merchant made to a buyer in a support chat.
 Respond only with a json object of the form {{"proposals": [...]}}. Each proposal has:
 - "kind": one of {", ".join(PROMISE_KINDS)}
 - "amount_cents": integer cents for a refund amount the merchant stated, else null
+- "action": for these kinds, one of ({ACTION_LINES}); else null
 - "condition": what must happen first, in the merchant's words, else null
 - "deadline": the merchant's stated deadline, verbatim, else null
 - "source_message_id": the id of the merchant message containing the commitment
@@ -220,7 +253,36 @@ def _log_failure(case_id, error, reason, settings):
     )
 
 
-def _amounts_in(quote):
+def _normalized(text):
+    """Lowercase text with straight quotes and single spaces, plus each char's origin."""
+    chars, origin, space = [], [], True
+    for position, char in enumerate(text.translate(QUOTE_MARKS)):
+        if char.isspace():
+            if space:
+                continue
+            char, space = " ", True
+        else:
+            space = False
+        for lowered in char.lower():
+            chars.append(lowered)
+            origin.append(position)
+    while chars and chars[-1] == " ":
+        chars.pop()
+        origin.pop()
+    return "".join(chars), origin
+
+
+def locate_quote(text, quote):
+    """The span of `text` matching `quote` up to case, spacing and curly quotes."""
+    needle, _ = _normalized(quote)
+    haystack, origin = _normalized(text)
+    start = haystack.find(needle) if needle else -1
+    if start < 0:
+        return None
+    return text[origin[start] : origin[start + len(needle) - 1] + 1]
+
+
+def amounts_in(quote):
     found = set()
     for match in AMOUNT.finditer(quote):
         whole, cents = (match.group(1), match.group(2))
@@ -246,48 +308,79 @@ def _drop(reason, detail, item=None):
     )
 
 
+def _normal_name(value):
+    return value.strip().lower().replace(" ", "_").replace("-", "_")
+
+
 def _check(raw, messages):
-    """Return a proposal, or the reason it cannot be traced to a merchant message."""
-    kind = raw.kind.strip().lower().replace(" ", "_").replace("-", "_")
+    """Return (proposal, adjustments), or (drop reason, detail) when it cannot be
+    traced to a merchant message."""
+    kind = _normal_name(raw.kind)
     if kind not in PROMISE_KINDS:
-        return "unknown_kind", f"'{raw.kind}' is not a supported promise kind"
+        return ("unknown_kind", f"'{raw.kind}' is not a supported promise kind"), []
     message = messages.get(raw.source_message_id)
     if message is None:
-        return "unknown_message", "The source message is not in this transcript"
+        return ("unknown_message", "The source message is not in this transcript"), []
     if message.sender != "merchant":
-        return "buyer_message", "Only merchant messages can create promises"
-    quote = raw.exact_quote.strip()
-    if not quote or quote not in message.text:
-        return "quote_not_found", "The quote does not appear verbatim in the message"
-    if raw.amount_cents is not None:
-        if kind != "refund":
-            return "amount_not_allowed", "Amounts are only extracted for refunds"
-        if raw.amount_cents not in _amounts_in(quote):
-            return "amount_not_in_quote", "The amount is not stated in the quote"
-    return PromiseProposal(
-        **raw.model_dump(exclude={"kind", "exact_quote"}),
+        return ("buyer_message", "Only merchant messages can create promises"), []
+    # The returned quote is always the message's own text, even when the model
+    # changed its case, spacing or quotation marks.
+    quote = locate_quote(message.text, raw.exact_quote)
+    if quote is None:
+        return ("quote_not_found", "The quote does not appear in the message"), []
+    adjust = []
+
+    def note(reason, detail):
+        adjust.append(
+            Adjustment(reason=reason, detail=detail, kind=kind, source_message_id=message.id)
+        )
+
+    if quote != raw.exact_quote.strip():
+        note("quote_normalized", "Quote matched after ignoring case, spacing or quote marks")
+    amount = raw.amount_cents
+    if amount is not None and kind not in AMOUNT_KINDS:
+        if kind not in AMOUNT_IGNORED_KINDS:
+            return ("amount_not_allowed", "Amounts are only extracted for refunds"), []
+        amount = None
+        note("amount_removed", "Amounts are only extracted for refunds")
+    if amount is not None and amount not in amounts_in(quote):
+        return ("amount_not_in_quote", "The amount is not stated in the quote"), []
+    action = _normal_name(raw.action) if raw.action else None
+    if action is not None and action not in PROMISE_ACTIONS.get(kind, ()):
+        action = None
+        note("action_removed", f"'{raw.action}' is not an action for {kind}")
+    proposal = PromiseProposal(
+        **raw.model_dump(exclude={"kind", "exact_quote", "amount_cents", "action"}),
         kind=kind,
+        amount_cents=amount,
+        action=action,
         exact_quote=quote,
         needs_review=raw.confidence < MIN_CONFIDENCE,
     )
+    return proposal, adjust
 
 
-def _terms(proposal):
-    condition = re.sub(r"[^\w\s]", " ", proposal.condition or "").casefold()
-    return proposal.kind, proposal.amount_cents, " ".join(condition.split())
+def _same_promise(earlier, later):
+    """Same kind and amount; an action stated in only one statement is not a change."""
+    return (
+        earlier.kind == later.kind
+        and earlier.amount_cents == later.amount_cents
+        and (earlier.action is None or later.action is None or earlier.action == later.action)
+    )
 
 
 def _consolidate(proposals, messages):
     """Merge restatements of one promise; keep changed terms apart as possible revisions.
 
-    The earliest message is the source. A later message with identical terms is a
-    restatement. A later same-kind proposal with another amount or condition may
-    supersede the earlier one, so both stay visible for the merchant to choose.
+    The earliest message is the source and keeps its condition and deadline. A
+    later same-kind proposal with the same amount and action is a restatement,
+    however its condition is worded. Another amount or action may supersede the
+    earlier one, so both stay visible for the merchant to choose.
     """
     order = {message.id: position for position, message in enumerate(messages)}
     kept, dropped = [], []
     for proposal in sorted(proposals, key=lambda p: order[p.source_message_id]):
-        same = next((k for k in kept if _terms(k) == _terms(proposal)), None)
+        same = next((k for k in kept if _same_promise(k, proposal)), None)
         if same is None:
             proposal.possible_revision = any(
                 k.kind == proposal.kind
@@ -392,11 +485,12 @@ def extract_promises(case_id, messages, client, settings, source) -> ExtractionR
             )
             review("schema_invalid")
             continue
-        checked = _check(raw, by_id)
+        checked, adjustments = _check(raw, by_id)
         if isinstance(checked, tuple):
             result.dropped.append(_drop(*checked, item))
             continue
         validated.append(checked)
+        result.adjustments += adjustments
     result.proposals, duplicates = _consolidate(validated, messages)
     result.dropped += duplicates
     if any(proposal.needs_review for proposal in result.proposals):

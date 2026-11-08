@@ -1,0 +1,430 @@
+{
+  "meta": {
+    "label": "live eval on synthetic data",
+    "date": "2026-11-08",
+    "model": "openai/gpt-oss-120b",
+    "provider": "groq",
+    "generator_model": null,
+    "generated_flagged": 0,
+    "restatement_labeler": null,
+    "counts": "gold 50, hard 30, injection 50, heldout 30",
+    "scored": 8,
+    "items": 160,
+    "tag": "r1_partial",
+    "mode_note": "recorded live model output from `extraction_2026-11-08_r1_records.jsonl`, rescored"
+  },
+  "groups": {
+    "overall": {
+      "validated": {
+        "chats": 8,
+        "predicted": 8,
+        "expected": 8,
+        "tp": 8,
+        "duplicates": 0,
+        "false_positives": 0,
+        "possible_revisions": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "ci95": {
+          "precision": [
+            1.0,
+            1.0
+          ],
+          "recall": [
+            1.0,
+            1.0
+          ],
+          "f1": [
+            1.0,
+            1.0
+          ]
+        },
+        "kind_accuracy": 1.0,
+        "source_accuracy": 1.0,
+        "amount_accuracy": 1.0,
+        "attacked_chats": 0,
+        "injection_successes": 0,
+        "injection_success_rate": null,
+        "unknown_kind": 0,
+        "hallucinated_quotes": 0,
+        "buyer_sourced": 0,
+        "amount_not_in_quote": 0,
+        "injection": 0,
+        "violating_proposals": 0,
+        "needs_review_rate": 0.0,
+        "review_reasons": {},
+        "avg_latency_s": 1.0469999999913853,
+        "total_tokens": 6016,
+        "dropped_by_reason": {},
+        "adjustments_by_reason": {}
+      },
+      "validated_strict": {
+        "chats": 8,
+        "predicted": 8,
+        "expected": 8,
+        "tp": 8,
+        "duplicates": 0,
+        "false_positives": 0,
+        "possible_revisions": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "ci95": {
+          "precision": [
+            1.0,
+            1.0
+          ],
+          "recall": [
+            1.0,
+            1.0
+          ],
+          "f1": [
+            1.0,
+            1.0
+          ]
+        },
+        "kind_accuracy": 1.0,
+        "source_accuracy": 1.0,
+        "amount_accuracy": 1.0,
+        "attacked_chats": 0,
+        "injection_successes": 0,
+        "injection_success_rate": null,
+        "unknown_kind": 0,
+        "hallucinated_quotes": 0,
+        "buyer_sourced": 0,
+        "amount_not_in_quote": 0,
+        "injection": 0,
+        "violating_proposals": 0,
+        "needs_review_rate": 0.0,
+        "review_reasons": {},
+        "avg_latency_s": 1.0469999999913853,
+        "total_tokens": 6016,
+        "dropped_by_reason": {},
+        "adjustments_by_reason": {}
+      },
+      "raw": {
+        "chats": 8,
+        "predicted": 8,
+        "expected": 8,
+        "tp": 8,
+        "duplicates": 0,
+        "false_positives": 0,
+        "possible_revisions": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "ci95": {
+          "precision": [
+            1.0,
+            1.0
+          ],
+          "recall": [
+            1.0,
+            1.0
+          ],
+          "f1": [
+            1.0,
+            1.0
+          ]
+        },
+        "kind_accuracy": 1.0,
+        "source_accuracy": 1.0,
+        "amount_accuracy": 1.0,
+        "attacked_chats": 0,
+        "injection_successes": 0,
+        "injection_success_rate": null,
+        "unknown_kind": 0,
+        "hallucinated_quotes": 0,
+        "buyer_sourced": 0,
+        "amount_not_in_quote": 0,
+        "injection": 0,
+        "violating_proposals": 0
+      },
+      "ablation": {
+        "hallucinated_quotes_blocked": 0,
+        "buyer_sourced_blocked": 0,
+        "violations_agent": 0,
+        "violations_system": 0,
+        "injections_blocked": 0,
+        "true_positives_lost": 0,
+        "false_positives_removed": 0
+      }
+    },
+    "dataset:gold": {
+      "validated": {
+        "chats": 8,
+        "predicted": 8,
+        "expected": 8,
+        "tp": 8,
+        "duplicates": 0,
+        "false_positives": 0,
+        "possible_revisions": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "ci95": {
+          "precision": [
+            1.0,
+            1.0
+          ],
+          "recall": [
+            1.0,
+            1.0
+          ],
+          "f1": [
+            1.0,
+            1.0
+          ]
+        },
+        "kind_accuracy": 1.0,
+        "source_accuracy": 1.0,
+        "amount_accuracy": 1.0,
+        "attacked_chats": 0,
+        "injection_successes": 0,
+        "injection_success_rate": null,
+        "unknown_kind": 0,
+        "hallucinated_quotes": 0,
+        "buyer_sourced": 0,
+        "amount_not_in_quote": 0,
+        "injection": 0,
+        "violating_proposals": 0,
+        "needs_review_rate": 0.0,
+        "review_reasons": {},
+        "avg_latency_s": 1.0469999999913853,
+        "total_tokens": 6016,
+        "dropped_by_reason": {},
+        "adjustments_by_reason": {}
+      },
+      "validated_strict": {
+        "chats": 8,
+        "predicted": 8,
+        "expected": 8,
+        "tp": 8,
+        "duplicates": 0,
+        "false_positives": 0,
+        "possible_revisions": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "ci95": {
+          "precision": [
+            1.0,
+            1.0
+          ],
+          "recall": [
+            1.0,
+            1.0
+          ],
+          "f1": [
+            1.0,
+            1.0
+          ]
+        },
+        "kind_accuracy": 1.0,
+        "source_accuracy": 1.0,
+        "amount_accuracy": 1.0,
+        "attacked_chats": 0,
+        "injection_successes": 0,
+        "injection_success_rate": null,
+        "unknown_kind": 0,
+        "hallucinated_quotes": 0,
+        "buyer_sourced": 0,
+        "amount_not_in_quote": 0,
+        "injection": 0,
+        "violating_proposals": 0,
+        "needs_review_rate": 0.0,
+        "review_reasons": {},
+        "avg_latency_s": 1.0469999999913853,
+        "total_tokens": 6016,
+        "dropped_by_reason": {},
+        "adjustments_by_reason": {}
+      },
+      "raw": {
+        "chats": 8,
+        "predicted": 8,
+        "expected": 8,
+        "tp": 8,
+        "duplicates": 0,
+        "false_positives": 0,
+        "possible_revisions": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "ci95": {
+          "precision": [
+            1.0,
+            1.0
+          ],
+          "recall": [
+            1.0,
+            1.0
+          ],
+          "f1": [
+            1.0,
+            1.0
+          ]
+        },
+        "kind_accuracy": 1.0,
+        "source_accuracy": 1.0,
+        "amount_accuracy": 1.0,
+        "attacked_chats": 0,
+        "injection_successes": 0,
+        "injection_success_rate": null,
+        "unknown_kind": 0,
+        "hallucinated_quotes": 0,
+        "buyer_sourced": 0,
+        "amount_not_in_quote": 0,
+        "injection": 0,
+        "violating_proposals": 0
+      },
+      "ablation": {
+        "hallucinated_quotes_blocked": 0,
+        "buyer_sourced_blocked": 0,
+        "violations_agent": 0,
+        "violations_system": 0,
+        "injections_blocked": 0,
+        "true_positives_lost": 0,
+        "false_positives_removed": 0
+      }
+    },
+    "category:gold/refund": {
+      "validated": {
+        "chats": 8,
+        "predicted": 8,
+        "expected": 8,
+        "tp": 8,
+        "duplicates": 0,
+        "false_positives": 0,
+        "possible_revisions": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "ci95": {
+          "precision": [
+            1.0,
+            1.0
+          ],
+          "recall": [
+            1.0,
+            1.0
+          ],
+          "f1": [
+            1.0,
+            1.0
+          ]
+        },
+        "kind_accuracy": 1.0,
+        "source_accuracy": 1.0,
+        "amount_accuracy": 1.0,
+        "attacked_chats": 0,
+        "injection_successes": 0,
+        "injection_success_rate": null,
+        "unknown_kind": 0,
+        "hallucinated_quotes": 0,
+        "buyer_sourced": 0,
+        "amount_not_in_quote": 0,
+        "injection": 0,
+        "violating_proposals": 0,
+        "needs_review_rate": 0.0,
+        "review_reasons": {},
+        "avg_latency_s": 1.0469999999913853,
+        "total_tokens": 6016,
+        "dropped_by_reason": {},
+        "adjustments_by_reason": {}
+      },
+      "validated_strict": {
+        "chats": 8,
+        "predicted": 8,
+        "expected": 8,
+        "tp": 8,
+        "duplicates": 0,
+        "false_positives": 0,
+        "possible_revisions": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "ci95": {
+          "precision": [
+            1.0,
+            1.0
+          ],
+          "recall": [
+            1.0,
+            1.0
+          ],
+          "f1": [
+            1.0,
+            1.0
+          ]
+        },
+        "kind_accuracy": 1.0,
+        "source_accuracy": 1.0,
+        "amount_accuracy": 1.0,
+        "attacked_chats": 0,
+        "injection_successes": 0,
+        "injection_success_rate": null,
+        "unknown_kind": 0,
+        "hallucinated_quotes": 0,
+        "buyer_sourced": 0,
+        "amount_not_in_quote": 0,
+        "injection": 0,
+        "violating_proposals": 0,
+        "needs_review_rate": 0.0,
+        "review_reasons": {},
+        "avg_latency_s": 1.0469999999913853,
+        "total_tokens": 6016,
+        "dropped_by_reason": {},
+        "adjustments_by_reason": {}
+      },
+      "raw": {
+        "chats": 8,
+        "predicted": 8,
+        "expected": 8,
+        "tp": 8,
+        "duplicates": 0,
+        "false_positives": 0,
+        "possible_revisions": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "ci95": {
+          "precision": [
+            1.0,
+            1.0
+          ],
+          "recall": [
+            1.0,
+            1.0
+          ],
+          "f1": [
+            1.0,
+            1.0
+          ]
+        },
+        "kind_accuracy": 1.0,
+        "source_accuracy": 1.0,
+        "amount_accuracy": 1.0,
+        "attacked_chats": 0,
+        "injection_successes": 0,
+        "injection_success_rate": null,
+        "unknown_kind": 0,
+        "hallucinated_quotes": 0,
+        "buyer_sourced": 0,
+        "amount_not_in_quote": 0,
+        "injection": 0,
+        "violating_proposals": 0
+      },
+      "ablation": {
+        "hallucinated_quotes_blocked": 0,
+        "buyer_sourced_blocked": 0,
+        "violations_agent": 0,
+        "violations_system": 0,
+        "injections_blocked": 0,
+        "true_positives_lost": 0,
+        "false_positives_removed": 0
+      }
+    }
+  },
+  "errors": []
+}

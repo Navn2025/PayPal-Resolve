@@ -4669,6 +4669,40 @@
         ],
         "title": "AccountToken"
       },
+      "Adjustment": {
+        "properties": {
+          "reason": {
+            "type": "string",
+            "enum": [
+              "quote_normalized",
+              "amount_removed",
+              "action_removed"
+            ],
+            "title": "Reason"
+          },
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "source_message_id": {
+            "type": "string",
+            "title": "Source Message Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reason",
+          "detail",
+          "kind",
+          "source_message_id"
+        ],
+        "title": "Adjustment",
+        "description": "A kept proposal that the validators changed."
+      },
       "BillingCorrectionTarget": {
         "properties": {
           "kind": {
@@ -6187,6 +6221,13 @@
             },
             "type": "array",
             "title": "Dropped"
+          },
+          "adjustments": {
+            "items": {
+              "$ref": "#/components/schemas/Adjustment"
+            },
+            "type": "array",
+            "title": "Adjustments"
           }
         },
         "type": "object",
@@ -7693,6 +7734,18 @@
             ],
             "title": "Amount Cents"
           },
+          "action": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action",
+            "description": "Target action for subscription, store credit/exchange and billing kinds."
+          },
           "condition": {
             "anyOf": [
               {
@@ -7747,12 +7800,12 @@
             },
             "type": "array",
             "title": "Supporting Message Ids",
-            "description": "Later merchant messages restating this promise with the same terms."
+            "description": "Later merchant messages restating this promise with the same amount and action."
           },
           "possible_revision": {
             "type": "boolean",
             "title": "Possible Revision",
-            "description": "An earlier message has a same-kind proposal with a different amount or condition.",
+            "description": "An earlier message has a same-kind proposal with a different amount or action.",
             "default": false
           }
         },

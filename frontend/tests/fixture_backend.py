@@ -121,6 +121,8 @@ def main():
                 promise="Refund $30 after warehouse receipt", source_note="Agreed refund",
                 target={"kind": "refund", "amount": "30.00"}, requires=[milestone.id],
             ))
+        from app.investigation_worker import run_once
+        run_once(store)
         if SIMULATED:
             with sandbox_http() as client:
                 for _, capture_id in cases:

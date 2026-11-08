@@ -1,3 +1,7 @@
+import { PostgresCommerce, projectCommerceSnapshot } from "./commerce.js";
+import type { PostgresReader, PostgresCommerceOptions } from "./commerce.js";
+export { PostgresCommerce, CommerceSourceError } from "./commerce.js";
+export type { PostgresReader, PostgresCommerceOptions, CommerceBackfillOptions } from "./commerce.js";
 import type { paths } from "./generated.js";
 
 type Auth = paths["/auth/me"]["get"];
@@ -10,6 +14,11 @@ type RecordLink = paths["/resolution-cases/{case_id}/evidence/records"]["post"];
 type EvidenceEvent = paths["/resolution-cases/{case_id}/evidence/events"]["post"];
 type Refresh = paths["/resolution-cases/{case_id}/evidence/refresh"]["post"];
 type Bundle = paths["/resolution-cases/{case_id}/evidence-bundle"]["get"];
+type Investigations = paths["/resolution-cases/{case_id}/investigations"]["get"];
+type InvestigationReview = paths["/resolution-cases/{case_id}/investigations/{investigation_id}/review"]["post"];
+export type InvestigationPage = Investigations["responses"][200]["content"]["application/json"];
+export type InvestigationReviewInput = InvestigationReview["requestBody"]["content"]["application/json"];
+export type InvestigationReviewReceipt = InvestigationReview["responses"][200]["content"]["application/json"];
 
 export type Merchant = Auth["responses"][200]["content"]["application/json"];
 export type CreateCaseInput = Cases["post"]["requestBody"]["content"]["application/json"];
@@ -26,18 +35,36 @@ export type EvidenceReceipt = EvidenceEvent["responses"][200]["content"]["applic
 export type EvidenceRefresh = Refresh["responses"][200]["content"]["application/json"];
 export type EvidenceBundle = Bundle["responses"][200]["content"]["application/json"];
 export type EvidenceSummary = NonNullable<ResolutionCase["evidence_summary"]>;
+type CommerceSync = paths["/commerce/orders/sync"]["post"];
+type CommerceRegister = paths["/commerce/orders/register"]["post"];
+export type CommerceRegisterInput = CommerceRegister["requestBody"]["content"]["application/json"];
+export type CommerceOrderReceipt = CommerceRegister["responses"][200]["content"]["application/json"];
+type CommerceGet = paths["/resolution-cases/{case_id}/commerce"]["get"];
+export type CommerceSyncInput = CommerceSync["requestBody"]["content"]["application/json"];
+export type CommerceSyncResult = CommerceSync["responses"][200]["content"]["application/json"];
+export type CommerceReport = CommerceGet["responses"][200]["content"]["application/json"];
+export type CommerceContact = paths["/resolution-cases/{case_id}/commerce/contact"]["get"]["responses"][200]["content"]["application/json"];
 export type CustomerLinkInput = Link["post"]["requestBody"]["content"]["application/json"];
 export type IssuedCustomerLink = Link["post"]["responses"][201]["content"]["application/json"];
 export type CustomerLinkStatus = Link["get"]["responses"][200]["content"]["application/json"];
 
 export interface ResolveClientOptions {
-  /** Resolve's FastAPI base URL. Keep this in trusted server configuration. */
+  /** Resolve's SDK gateway or FastAPI base URL. Use trusted server configuration. */
   baseUrl: string;
   /** Merchant key issued by Resolve. Keep this in a server-side secret. */
   apiKey: string;
   /** Overall request timeout in milliseconds. Defaults to 10,000. */
   timeoutMs?: number;
+  /** Stable app label used by syncOrder and the PostgreSQL adapter. */
+  source?: string;
 }
+
+export type SimpleOrder = Omit<CommerceRegisterInput, "source" | "order_reference" | "revision" | "order_status"> & {
+  id: string;
+  /** Defaults to 1 for a new order. Use a higher app version when data changes. */
+  version?: number;
+  status?: string | null;
+};
 
 export interface RequestOptions {
   signal?: AbortSignal;
@@ -45,7 +72,7 @@ export interface RequestOptions {
 
 export class ResolveApiError extends Error {
   readonly status: number;
-  readonly code: "case_reference_conflict" | "record_conflict" | "evidence_event_conflict" | "refresh_conflict" | undefined;
+  readonly code: "case_reference_conflict" | "record_conflict" | "evidence_event_conflict" | "refresh_conflict" | "commerce_conflict" | undefined;
 
   constructor(status: number, code?: ResolveApiError["code"]) {
     const messages: Record<number, string> = {
@@ -61,6 +88,7 @@ export class ResolveApiError extends Error {
       record_conflict: "The record conflicts with the linked payment or source, or the case reached its link limit.",
       evidence_event_conflict: "The source event ID is already used with different evidence.",
       refresh_conflict: "The linked records changed during refresh. Try again.",
+      commerce_conflict: "The app revision is stale or conflicts with an existing order, case, or payment link.",
     };
     super(code ? conflict[code] : messages[status] ?? `Resolve returned HTTP ${status}.`);
     this.name = "ResolveApiError";
@@ -118,6 +146,7 @@ export class ResolveClient {
   #base: string;
   #apiKey: string;
   #timeoutMs: number;
+  #source: string;
 
   constructor(options: ResolveClientOptions) {
     if (typeof window !== "undefined" && typeof window.document !== "undefined") {
@@ -128,10 +157,49 @@ export class ResolveClient {
     }
     this.#base = apiBase(options.baseUrl);
     this.#apiKey = options.apiKey;
+    this.#source = options.source ?? "my-app";
+    if (!/^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$/.test(this.#source)) {
+      throw new TypeError("Set a valid RESOLVE_APP_SOURCE, such as my-store.");
+    }
     this.#timeoutMs = options.timeoutMs ?? 10_000;
     if (!Number.isInteger(this.#timeoutMs) || this.#timeoutMs < 1 || this.#timeoutMs > 120_000) {
       throw new TypeError("Set timeoutMs to an integer between 1 and 120,000.");
     }
+  }
+
+  /** Send an order to the dashboard using your configured app source. */
+  syncOrder(order: SimpleOrder, options?: RequestOptions): Promise<CommerceOrderReceipt> {
+    const { id, version, status, ...fields } = order;
+    return this.registerCommerceOrder({
+      ...fields, source: this.#source, order_reference: id, revision: version ?? 1,
+      ...(status !== undefined ? { order_status: status } : {}),
+    }, options);
+  }
+
+  /** Publish a routine order to the merchant dashboard without opening a case. */
+  registerCommerceOrder(input: CommerceRegisterInput, options?: RequestOptions): Promise<CommerceOrderReceipt> {
+    return this.#request("POST", "/commerce/orders/register", options, projectCommerceSnapshot(input, false));
+  }
+
+  syncCommerceOrder(input: CommerceSyncInput, options?: RequestOptions): Promise<CommerceSyncResult> {
+    return this.#request("POST", "/commerce/orders/sync", options, projectCommerceSnapshot(input));
+  }
+
+  getCommerceOrder(caseId: string, options?: RequestOptions): Promise<CommerceReport> {
+    return this.#request("GET", casePath(caseId) + "/commerce", options);
+  }
+
+  /** Requires a full merchant key, not a commerce integration key. */
+  getCommerceContact(caseId: string, options?: RequestOptions): Promise<CommerceContact> {
+    return this.#request("GET", casePath(caseId) + "/commerce/contact", options);
+  }
+
+  refreshCommerceOrder(caseId: string, options?: RequestOptions): Promise<CommerceReport> {
+    return this.#request("POST", casePath(caseId) + "/commerce/refresh", options);
+  }
+
+  connectPostgres(reader: PostgresReader, options: Partial<PostgresCommerceOptions> = {}): PostgresCommerce {
+    return new PostgresCommerce(this, reader, { ...options, source: options.source ?? this.#source });
   }
 
   getMerchant(options?: RequestOptions): Promise<Merchant> {
@@ -156,6 +224,17 @@ export class ResolveClient {
 
   refreshEvidence(caseId: string, options?: RequestOptions): Promise<EvidenceRefresh> {
     return this.#request("POST", casePath(caseId) + "/evidence/refresh", options);
+  }
+
+  /** Private advisory results; requires full merchant credentials and the direct API. */
+  getInvestigations(caseId: string, options?: RequestOptions): Promise<InvestigationPage> {
+    return this.#request("GET", casePath(caseId) + "/investigations", options);
+  }
+
+  /** Records advisory review only. Never creates refund authorization. */
+  reviewInvestigation(caseId: string, investigationId: string, input: InvestigationReviewInput, options?: RequestOptions): Promise<InvestigationReviewReceipt> {
+    casePath(investigationId); // Reuse strict identifier validation before constructing a URL.
+    return this.#request("POST", casePath(caseId) + "/investigations/" + investigationId + "/review", options, input);
   }
 
   getCase(caseId: string, options?: RequestOptions): Promise<ResolutionCase> {
@@ -200,7 +279,7 @@ export class ResolveClient {
     method: "GET" | "POST" | "DELETE",
     path: string,
     options?: RequestOptions,
-    input?: CreateCaseInput | CustomerLinkInput | UpsertCaseInput | LinkRecordInput | AddEvidenceInput,
+    input?: CreateCaseInput | CustomerLinkInput | UpsertCaseInput | LinkRecordInput | AddEvidenceInput | InvestigationReviewInput | ReturnType<typeof projectCommerceSnapshot>,
   ): Promise<T> {
     const body = input === undefined ? undefined : JSON.stringify(input);
     const deadline = AbortSignal.timeout(this.#timeoutMs);
@@ -226,7 +305,8 @@ export class ResolveClient {
         : path.endsWith("/upsert") ? "case_reference_conflict"
         : path.endsWith("/evidence/records") ? "record_conflict"
         : path.endsWith("/evidence/events") ? "evidence_event_conflict"
-        : path.endsWith("/evidence/refresh") ? "refresh_conflict" : undefined;
+        : (path.endsWith("/evidence/refresh") || path.endsWith("/commerce/refresh")) ? "refresh_conflict" :
+        (path === "/commerce/orders/sync" || path === "/commerce/orders/register") ? "commerce_conflict" : undefined;
       throw new ResolveApiError(response.status, conflict);
     }
     let value: unknown;
@@ -238,4 +318,20 @@ export class ResolveClient {
     }
     return value as T;
   }
+}
+
+
+/** Read the SDK setup copied from Workspace Settings, with optional explicit overrides. */
+export function createResolve(options: Partial<ResolveClientOptions> = {}): ResolveClient {
+  const env = (globalThis as typeof globalThis & {
+    process?: { env?: Record<string, string | undefined> };
+  }).process?.env;
+  const baseUrl = options.baseUrl ?? env?.RESOLVE_API_URL;
+  const apiKey = options.apiKey ?? env?.RESOLVE_API_KEY;
+  if (!baseUrl || !apiKey) {
+    throw new TypeError("Set RESOLVE_API_URL and RESOLVE_API_KEY in your app server's environment.");
+  }
+  return new ResolveClient({
+    ...options, baseUrl, apiKey, source: options.source ?? env?.RESOLVE_APP_SOURCE ?? "my-app",
+  });
 }

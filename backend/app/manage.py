@@ -20,6 +20,7 @@ def main(argv: list[str] | None = None) -> int:
     create.add_argument("--name", required=True)
     issue = commands.add_parser("issue-key", help="Issue an additional merchant key")
     issue.add_argument("--merchant-id", type=UUID, required=True)
+    issue.add_argument("--scope", choices=("full", "commerce"), default="full")
     revoke = commands.add_parser("revoke-key", help="Revoke a key by its public key ID")
     revoke.add_argument("--key-id", type=UUID, required=True)
     claim = commands.add_parser("claim-legacy", help="Explicitly assign unowned sample records")
@@ -32,7 +33,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.command in ("create-merchant", "issue-key"):
             issued = (
                 store.create_merchant(args.name) if args.command == "create-merchant"
-                else store.issue_key(args.merchant_id)
+                else store.issue_key(args.merchant_id, scope=args.scope)
             )
             print(json.dumps({
                 "merchant": issued.merchant.model_dump(mode="json"),

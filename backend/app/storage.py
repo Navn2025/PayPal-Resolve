@@ -125,6 +125,13 @@ class _SQLiteTransactions:
             directory / "016_customer_google_and_smtp.sql",
             directory / "017_customer_email_notifications.sql",
             directory / "018_resolution_evidence_sdk.sql",
+            directory / "019_commerce_evidence.sql",
+            directory / "020_merchant_orders.sql",
+            directory / "021_investigations.sql",
+            directory / "022_investigation_commerce.sql",
+            directory / "023_investigation_payment_facts.sql",
+            directory / "024_investigation_financial_state.sql",
+            directory / "025_investigation_queue_audit.sql",
         ]
         with self.transaction(write=True) as connection:
             version = connection.execute("PRAGMA user_version").fetchone()[0]
@@ -132,6 +139,8 @@ class _SQLiteTransactions:
                 raise RuntimeError(f"Unsupported database schema version: {version}")
             for index in range(version, len(migrations)):
                 migration = migrations[index]
+                if migration.name == "021_investigations.sql":
+                    connection.execute((directory / "investigation_prerequisite.sql").read_text(encoding="utf-8"))
                 statement = ""
                 for line in migration.read_text(encoding="utf-8").splitlines(True):
                     statement += line
@@ -140,9 +149,7 @@ class _SQLiteTransactions:
                             connection.execute(statement)
                         statement = ""
                 if statement.strip():
-                    raise RuntimeError(
-                        f"Incomplete migration: {migration.name}"
-                    )
+                    raise RuntimeError(f"Incomplete migration: {migration.name}")
                 connection.execute(f"PRAGMA user_version = {index + 1}")
 
 
@@ -167,17 +174,20 @@ class ResolveStore:
         )
 
     @staticmethod
-    def _issue_key(connection, merchant: MerchantIdentity) -> IssuedMerchantKey:
+    def _issue_key(
+        connection, merchant: MerchantIdentity, scope: str = "full"
+    ) -> IssuedMerchantKey:
         api_key = "rslv_" + secrets.token_urlsafe(32)
         key_id = uuid4()
         connection.execute(
             """INSERT INTO merchant_api_keys
-               (id, merchant_id, token_hash, created_at) VALUES (?, ?, ?, ?)""",
+               (id, merchant_id, token_hash, created_at, scope) VALUES (?, ?, ?, ?, ?)""",
             (
                 str(key_id),
                 str(merchant.id),
                 hashlib.sha256(api_key.encode()).hexdigest(),
                 datetime.now(timezone.utc).isoformat(),
+                scope,
             ),
         )
         return IssuedMerchantKey(merchant=merchant, key_id=key_id, api_key=api_key)
@@ -194,13 +204,15 @@ class ResolveStore:
             )
             return self._issue_key(connection, merchant)
 
-    def issue_key(self, merchant_id: UUID) -> IssuedMerchantKey:
+    def issue_key(self, merchant_id: UUID, *, scope: str = "full") -> IssuedMerchantKey:
         with self.transaction(write=True) as connection:
             return self._issue_key(
-                connection, self._require_merchant(connection, merchant_id)
+                connection, self._require_merchant(connection, merchant_id), scope
             )
 
-    def authenticate(self, api_key: str) -> MerchantIdentity | None:
+    def authenticate(
+        self, api_key: str, *, allow_commerce: bool = False
+    ) -> MerchantIdentity | None:
         if not api_key.startswith("rslv_") or len(api_key) > 512:
             return None
         digest = hashlib.sha256(api_key.encode()).hexdigest()
@@ -208,8 +220,9 @@ class ResolveStore:
             row = connection.execute(
                 """SELECT merchants.* FROM merchant_api_keys
                    JOIN merchants ON merchants.id = merchant_api_keys.merchant_id
-                   WHERE token_hash = ? AND revoked_at IS NULL AND merchants.id != ?""",
-                (digest, str(LEGACY_MERCHANT_ID)),
+                   WHERE token_hash = ? AND revoked_at IS NULL AND merchants.id != ?
+                   AND (scope='full' OR ?=1)""",
+                (digest, str(LEGACY_MERCHANT_ID), int(allow_commerce)),
             ).fetchone()
             if row is None:
                 return None

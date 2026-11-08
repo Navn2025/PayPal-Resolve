@@ -4,11 +4,16 @@ import { error, forward, readBody, sameOrigin, session } from "@/lib/server";
 const id = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
 const rules = {
   GET: [
-    "resolution-cases", "resolution-cases/inbox", `resolution-cases/${id}(?:/(?:timeline|evidence-bundle|customer-link|customer-messages|operations|helpdesk|customer-evidence(?:/${id})?))?`,
+    `resolution-cases/${id}/investigations`,
+    "merchant-auth/commerce-keys", "commerce/orders", `commerce/orders/${id}`,
+    "resolution-cases", "resolution-cases/inbox", `resolution-cases/${id}(?:/(?:timeline|evidence-bundle|commerce|customer-link|customer-messages|operations|helpdesk|customer-evidence(?:/${id})?))?`,
     "cases", `cases/${id}(?:/(?:reconciliation|refund-approvals|refund-executions))?`,
     "review-queue",
   ],
   POST: [
+    `resolution-cases/${id}/investigations/${id}/review`,
+    "merchant-auth/commerce-keys",
+    `commerce/orders/${id}/case`, `resolution-cases/${id}/commerce/refresh`,
     "resolution-cases", "resolution-cases/intake-invites", `resolution-cases/${id}/promises(?:/${id}/(?:refresh|evidence))?`,
     `resolution-cases/${id}/(?:customer-link|customer-messages)`,
     `resolution-cases/${id}/operations/read`,
@@ -17,7 +22,7 @@ const rules = {
     `review-queue/${id}/resolve`,
   ],
   PUT: [`resolution-cases/${id}/promises/${id}`, `resolution-cases/${id}/(?:operations|payment-link|helpdesk)`],
-  DELETE: [`resolution-cases/${id}/customer-link`],
+  DELETE: [`merchant-auth/commerce-keys/${id}`, `resolution-cases/${id}/customer-link`],
 };
 type Context = { params: Promise<{ path: string[] }> };
 type Method = keyof typeof rules;
@@ -32,7 +37,9 @@ async function handle(request: NextRequest, context: Context, method: Method) {
   }
   const query = new URLSearchParams();
   for (const [key, value] of request.nextUrl.searchParams) {
-    const max = path === "resolution-cases/inbox" && key === "q" ? 160
+    const max = ["resolution-cases/inbox", "commerce/orders"].includes(path) && key === "q" ? 160
+      : path === "commerce/orders" && key === "source" ? 64
+        : path === "commerce/orders" && key === "offset" ? 16
       : path === "resolution-cases/inbox" && key === "filter_by" ? 24
         : ["limit", "offset", "status"].includes(key) ? 12 : 0;
     if (method !== "GET" || !max || query.has(key) || value.length > max) {

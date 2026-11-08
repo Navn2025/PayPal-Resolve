@@ -175,6 +175,8 @@ class PostgresStore(ResolveStore):
                         "and restore the original migration files."
                     )
             for index in range(len(applied), len(scripts)):
+                if files[index].name == "010_investigations.sql":
+                    db.execute((MIGRATIONS.parent / "investigation_prerequisite.sql").read_text(encoding="utf-8"))
                 db.execute(scripts[index])
                 db.execute(
                     "INSERT INTO schema_migrations VALUES (?,?)",

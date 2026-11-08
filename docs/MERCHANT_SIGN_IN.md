@@ -65,7 +65,7 @@ approved and tested.
   Preserve the external `Host` header when proxying browser routes.
 - Use FastAPI `GET /health` as a deployment liveness check. The original
   POST endpoint still works. Backend startup applies pending migrations
-  (currently through SQLite 018 or PostgreSQL 007).
+  (currently through SQLite 020 or PostgreSQL 009).
 - Restrict public backend ingress to the existing PayPal webhook and
   appropriate health routes if the frontend can reach FastAPI privately.
   Configure access logs to omit query strings on the PayPal callback.

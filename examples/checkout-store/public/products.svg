@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg">
+<symbol id="kettle" viewBox="0 0 320 220">
+  <ellipse cx="163" cy="185" rx="100" ry="12" fill="#1d302b" opacity=".16"/>
+  <path d="M111 109C96 49 116 30 163 31c53 1 70 34 51 79" fill="none" stroke="#1c382e" stroke-width="13" stroke-linecap="round"/>
+  <path d="M110 100c-22 0-30-14-38-35l-24 5c10 38 28 62 57 68" fill="#c68151" stroke="#1c382e" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M112 94h101l26 49c11 21-5 38-24 38H100c-24 0-34-20-26-38Z" fill="#e5ab76" stroke="#1c382e" stroke-width="5"/>
+  <path d="M102 162c5 7 15 9 35 9h75c14 0 20-8 21-19" fill="none" stroke="#fff0d1" stroke-width="4" stroke-linecap="round" opacity=".58"/>
+  <ellipse cx="163" cy="93" rx="54" ry="10" fill="#f3c997" stroke="#1c382e" stroke-width="4"/>
+  <path d="M150 89v-9q13-12 26 0v9" fill="#1c382e"/>
+  <path d="M151 127h27m-24 6h21" stroke="#855d46" stroke-width="2" stroke-linecap="round"/>
+</symbol>
+<symbol id="cup" viewBox="0 0 320 220">
+  <ellipse cx="160" cy="179" rx="91" ry="10" fill="#273b30" opacity=".14"/>
+  <path d="M209 101h23q35 0 26 29-6 21-40 15" fill="none" stroke="#24433a" stroke-width="10"/>
+  <path d="M97 87h122l-14 74q-6 13-43 14-41 0-48-14Z" fill="#f6e4a9" stroke="#24433a" stroke-width="5"/>
+  <path d="M111 137q46 15 100 1l-6 23q-6 13-43 14-41 0-48-14Z" fill="#c58b55"/>
+  <ellipse cx="158" cy="87" rx="61" ry="15" fill="#faf1ce" stroke="#24433a" stroke-width="5"/>
+  <ellipse cx="158" cy="88" rx="50" ry="9" fill="#805a45"/>
+  <path d="m139 129 12-16 7 10 7-8 15 14" fill="none" stroke="#24433a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+</symbol>
+<symbol id="cone" viewBox="0 0 320 220">
+  <ellipse cx="161" cy="184" rx="94" ry="10" fill="#273b30" opacity=".13"/>
+  <ellipse cx="161" cy="172" rx="90" ry="16" fill="#536d58" stroke="#203c33" stroke-width="4"/>
+  <path d="M87 74h146l-52 90q-18 15-36 0Z" fill="#789472" stroke="#203c33" stroke-width="5"/>
+  <path d="m111 92 46 69m-23-69 27 69m-4-70 10 68m13-67-6 64m28-64-22 60" stroke="#cee0b6" stroke-width="3" opacity=".65"/>
+  <ellipse cx="160" cy="73" rx="73" ry="19" fill="#b9cb9e" stroke="#203c33" stroke-width="5"/>
+  <ellipse cx="160" cy="74" rx="61" ry="12" fill="#627d60"/>
+</symbol>
+<symbol id="scale" viewBox="0 0 320 220">
+  <ellipse cx="160" cy="182" rx="93" ry="10" fill="#273b30" opacity=".13"/>
+  <path d="m97 73 128 5 23 83-9 15-153-5-12-15Z" fill="#405e58" stroke="#203c33" stroke-width="5" stroke-linejoin="round"/>
+  <path d="m97 67 128 5 23 81-160-6-14 8Z" fill="#789c94" stroke="#203c33" stroke-width="4" stroke-linejoin="round"/>
+  <path d="m108 82 105 4 13 48-132-4Z" fill="#afc5bb" stroke="#547b70" stroke-width="2"/>
+  <rect x="142" y="152" width="46" height="14" rx="4" fill="#dbeaaf"/>
+  <path d="M152 159h7m6 0h9" stroke="#293f36" stroke-width="2"/>
+</symbol>
+<symbol id="tin" viewBox="0 0 320 220">
+  <ellipse cx="160" cy="182" rx="85" ry="10" fill="#273b30" opacity=".13"/>
+  <path d="M108 71h104v94c0 15-104 15-104 0Z" fill="#be9061" stroke="#303e32" stroke-width="5"/>
+  <path d="M109 100q53 13 102 0v42q-52 13-102 0Z" fill="#ede3c7"/>
+  <path d="M148 122q8-16 19-4 5 9-6 14-10 3-13-10Z" fill="#66805c"/>
+  <ellipse cx="160" cy="72" rx="57" ry="19" fill="#d6ae7d" stroke="#303e32" stroke-width="5"/>
+  <ellipse cx="160" cy="71" rx="42" ry="12" fill="none" stroke="#f7deb0" stroke-width="3"/>
+</symbol>
+<symbol id="brush" viewBox="0 0 320 220">
+  <ellipse cx="162" cy="183" rx="91" ry="10" fill="#273b30" opacity=".13"/>
+  <path d="m74 143 19 28 54-32-24-33Z" fill="#67443d" stroke="#263a31" stroke-width="4"/>
+  <path d="m80 147 44-31m-39 39 45-31m-39 39 46-31" stroke="#d3a28f" stroke-width="2" opacity=".65"/>
+  <path d="m119 107 32-20 21 30-28 23Z" fill="#b7c6ad" stroke="#263a31" stroke-width="4"/>
+  <path d="m147 87 78-50q21-9 31 9t-7 29l-78 45Z" fill="#b97c63" stroke="#263a31" stroke-width="4"/>
+  <circle cx="240" cy="53" r="6" fill="#ead8d5" stroke="#263a31" stroke-width="2"/>
+  <path d="m171 87 50-31" stroke="#efd1b5" stroke-width="3" stroke-linecap="round" opacity=".65"/>
+</symbol>
+</svg>

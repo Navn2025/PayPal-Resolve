@@ -178,3 +178,61 @@ def test_verified_paypal_identity_links_only_to_existing_merchant(
     assert client.delete(BASE + "/paypal/link", headers=web).status_code == 200
     assert client.get("/auth/me", headers=paypal_session).status_code == 401
     assert client.get("/auth/me", headers=web).status_code == 200
+
+
+def test_browser_sdk_keys_are_once_only_scoped_and_revocable(client):
+    from uuid import UUID
+
+    base = "/merchant-auth/commerce-keys"
+    store = client.app.state.store
+    merchant = UUID(client.get("/auth/me").json()["id"])
+    full = store.issue_key(merchant)
+    web = session(client, full.api_key)
+    foreign = store.create_merchant("Different workspace")
+    other_web = session(client, foreign.api_key)
+    assert client.get(base, headers=web).json() == {"keys": [], "can_manage": True}
+
+    created = client.post(base, headers=web)
+    assert created.status_code == 201
+    assert "no-store" in created.headers["cache-control"]
+    secret, identifier = created.json()["api_key"], created.json()["key_id"]
+    scoped = {"Authorization": "Bearer " + secret}
+    listing = client.get(base, headers=web)
+    assert listing.json()["keys"][0]["key_id"] == identifier
+    assert secret not in listing.text and "token_hash" not in listing.text
+    with store.transaction() as db:
+        row = db.execute(
+            "SELECT token_hash, scope FROM merchant_api_keys WHERE id=?", (identifier,)
+        ).fetchone()
+        assert row["token_hash"] == sha256(secret.encode()).hexdigest()
+        assert row["scope"] == "commerce"
+
+    path = base + "/" + identifier
+    assert client.get(base, headers=scoped).status_code == 401
+    assert client.post(base, headers=scoped).status_code == 403
+    assert client.delete(path, headers=other_web).status_code == 404
+    assert client.delete(base + "/" + str(full.key_id), headers=web).status_code == 404
+    assert (
+        client.post("/merchant-auth/session/key", json={"key": secret}).status_code
+        == 401
+    )
+    assert client.get("/commerce/orders", headers=scoped).status_code == 401
+    order = {"source": "sdk-key-test", "order_reference": "ORDER-SDK-1", "revision": 1}
+    route = "/commerce/orders/register"
+    assert client.post(route, headers=scoped, json=order).status_code == 200
+
+    assert client.delete(path, headers=web).status_code == 200
+    assert client.delete(path, headers=web).status_code == 200
+    assert client.post(route, headers=scoped, json=order).status_code == 401
+    assert client.get(base, headers=web).json()["keys"] == []
+    assert client.get("/auth/me", headers=web).status_code == 200
+
+    old = (datetime.now(timezone.utc) - timedelta(minutes=31)).isoformat()
+    with store.transaction(write=True) as db:
+        db.execute(
+            "UPDATE merchant_web_sessions SET issued_at=? WHERE api_key_id=?",
+            (old, str(full.key_id)),
+        )
+    assert client.get(base, headers=web).json()["can_manage"] is False
+    assert client.post(base, headers=web).status_code == 403
+    assert client.delete(path, headers=web).status_code == 403

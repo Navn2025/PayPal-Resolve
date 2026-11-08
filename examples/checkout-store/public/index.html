@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Field Brew Supply — six pieces for brewing good coffee outdoors. A PayPal Sandbox store connected to Resolve.">
+  <title>Field Brew Supply | The Outdoor Coffee Shop</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+  <div class="notice"><span class="lamp"></span> SANDBOX STORE <span class="divider">/</span> Test purchases only. No items ship.</div>
+  <header class="mast wrap">
+    <a href="/" class="logo" aria-label="Field Brew Supply home"><span class="mark">F<span>B</span></span><span>Field Brew<span class="supply">SUPPLY CO.</span></span></a>
+    <nav aria-label="Main navigation"><a href="#shop">Shop gear</a><button class="bag" id="open-cart" type="button">Cart <span id="cart-count">0</span></button></nav>
+  </header>
+  <main class="wrap">
+    <section class="hero" aria-labelledby="hero-heading">
+      <div class="hero-copy">
+        <p class="kicker"><span class="tiny-line"></span> THE CAMP COFFEE COLLECTION</p>
+        <h1 id="hero-heading">Good coffee.<br><em>Great outdoors.</em></h1>
+        <p>Simple gear for slow mornings, wherever you wake up.</p>
+        <a class="hero-link" href="#shop">Shop the collection <span aria-hidden="true">↘</span></a>
+      </div>
+      <div class="hero-art" aria-hidden="true">
+        <div class="halo"></div>
+        <div class="ring ring-one"></div><div class="ring ring-two"></div>
+        <svg viewBox="0 0 320 220"><use href="/products.svg#kettle"></use></svg>
+        <span class="hero-tag">01 / TRAIL KETTLE</span>
+      </div>
+    </section>
+    <section id="receipt" class="receipt" hidden aria-live="polite">
+      <p class="eyebrow">YOUR SANDBOX ORDER</p>
+      <h2 id="receipt-title">Order receipt</h2>
+      <p id="receipt-message"></p>
+      <dl id="receipt-details" class="receipt-details"></dl>
+      <div id="receipt-checks" class="checks"></div>
+      <button class="primary" id="retry" type="button" hidden>Check again</button>
+    </section>
+    <section class="catalog" id="shop" aria-labelledby="shop-heading">
+      <div class="section-head">
+        <div><p class="eyebrow">FIELD-TESTED ESSENTIALS</p><h2 id="shop-heading">The brew kit</h2></div>
+        <p>Six good things to pack.</p>
+      </div>
+      <div class="grid" id="products"></div>
+      <p id="catalog-error" class="error" hidden></p>
+    </section>
+  </main>
+  <footer class="wrap footer"><span><strong>Field Brew Supply</strong> · A demo store for Resolve</span><span>PayPal Sandbox checkout <span aria-hidden="true">↗</span></span></footer>
+  <dialog id="cart" aria-labelledby="cart-title">
+    <div class="drawer">
+      <header class="drawer-head"><div><p class="eyebrow">YOUR SELECTION</p><h2 id="cart-title">Cart</h2></div><button class="close" id="close-cart" type="button" aria-label="Close cart">×</button></header>
+      <div id="cart-items" class="cart-items"></div>
+      <div class="drawer-foot">
+        <div class="total"><span>Subtotal</span><strong id="cart-total">$0.00</strong></div>
+        <button class="primary pay" id="checkout" type="button" disabled>Continue to PayPal Sandbox <span aria-hidden="true">↗</span></button>
+        <p id="cart-message" aria-live="polite"></p>
+      </div>
+    </div>
+  </dialog>
+  <p class="sr-only" id="cart-announcement" aria-live="polite"></p>
+</body>
+</html>

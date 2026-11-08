@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Activity, ArrowRight, BookOpen, CheckCircle2, ChevronRight, CircleAlert, ClipboardList, FlaskConical, Inbox, Layers3, Link2, LogOut, Plus, RefreshCw, Search, Settings2, ShieldCheck, X } from "lucide-react";
+import { Activity, ArrowRight, BookOpen, CheckCircle2, ChevronRight, CircleAlert, ClipboardList, FlaskConical, Inbox, Layers3, Link2, LogOut, Package, Plus, RefreshCw, Search, Settings2, ShieldCheck, X } from "lucide-react";
 import Link from "next/link";
 import { DemoStore, demoPrimary } from "@/lib/demo";
 import { activeApproval, ApiError, dateText, money, outcomeLabels, pretty, reconcileLabels, shortId, timeText, uuid,
@@ -11,6 +11,7 @@ import { backendRequest, readJson } from "@/lib/http";
 import { workflowLabels, type Operations, type Workflow } from "@/lib/customer";
 import { Badge, Brand, Button, Empty, Notice, remedyIcons } from "./ui";
 import { CaseDesk, type DeskTab } from "./case-desk";
+import { InvestigationReviewPanel } from "./investigation-review";
 import { CaseForm, ConnectForm, EvidenceForm, LocalGuide, PromiseForm, RefundForm, ReviewForm } from "./forms";
 import { InviteForm, OperationsForm, PaymentLinkForm } from "./merchant-triage";
 
@@ -137,17 +138,17 @@ async function fetchCase(request: Requester, id: string): Promise<Detail> {
   }
 }
 
-export function Workspace({ mode }: { mode: "demo" | "merchant" }) {
+export function Workspace({ mode, initialCaseId = null }: { mode: "demo" | "merchant"; initialCaseId?: string | null }) {
   const demo = mode === "demo";
   const [demoStore, setDemoStore] = useState(() => new DemoStore());
   const [merchant, setMerchant] = useState<Merchant | null>(null);
   const [sessionError, setSessionError] = useState("");
   const [inbox, setInbox] = useState(() => initialPage(demo ? demoStore.initial() : []));
-  const [selected, setSelected] = useState<string | null>(demo ? demoPrimary : null);
+  const [selected, setSelected] = useState<string | null>(demo ? demoPrimary : initialCaseId);
   const [detail, setDetail] = useState<Detail | null>(null);
   const [tab, setTab] = useState<DeskTab>("overview");
   const [nav, setNav] = useState<Nav>("inbox");
-  const [mobileCase, setMobileCase] = useState(false);
+  const [mobileCase, setMobileCase] = useState(Boolean(initialCaseId));
   const [filter, setFilter] = useState<Filter>("all");
   const [search, setSearch] = useState("");
   const [dialog, setDialog] = useState<Dialog | null>(null);
@@ -442,6 +443,7 @@ export function Workspace({ mode }: { mode: "demo" | "merchant" }) {
       <div className="sidebar-group"><div className="sidebar-label">WORKSPACE</div>
         <button type="button" aria-label="Case inbox" className={nav === "inbox" ? "rail-active" : ""} onClick={() => { setNav("inbox"); setMobileCase(false); }} aria-current={nav === "inbox" ? "page" : undefined}>
           <Inbox size={18} /> <span>Case inbox</span><ChevronRight className="rail-chevron" size={15} /></button>
+        {!demo && <Link href="/workspace/orders" className="rail-link"><Package size={18} /> <span>Orders</span><ChevronRight className="rail-chevron" size={15} /></Link>}
         <button type="button" aria-label="Review queue" className={nav === "review" ? "rail-active" : ""} onClick={() => { setNav("review"); setMobileCase(false); }} aria-current={nav === "review" ? "page" : undefined}>
           <ClipboardList size={18} /> <span>Review queue</span><ChevronRight className="rail-chevron" size={15} /></button>
       </div>
@@ -464,6 +466,7 @@ export function Workspace({ mode }: { mode: "demo" | "merchant" }) {
       </header>
       <div className="mobile-nav" aria-label="Mobile navigation">
         <Button variant={nav === "inbox" ? "primary" : "ghost"} onClick={() => { setNav("inbox"); setMobileCase(false); }}><Inbox size={16} /> Inbox</Button>
+        {!demo && <Link href="/workspace/orders" className="button button-ghost"><Package size={16} /> Orders</Link>}
         <Button variant={nav === "review" ? "primary" : "ghost"} onClick={() => setNav("review")}><ClipboardList size={16} /> Review queue</Button>
       </div>
       <div className="workspace">
@@ -483,7 +486,7 @@ export function Workspace({ mode }: { mode: "demo" | "merchant" }) {
             <InboxPane cases={inbox.items} selected={selected} select={select} filter={filter} setFilter={setFilter} search={search}
               setSearch={setSearch} more={inbox.offset + CASE_PAGE < inbox.total} onMore={() => loadInbox(inbox.offset + CASE_PAGE)}
               loading={loadingList} onNew={() => setDialog({ kind: "case" })} demo={demo} />
-            <div className="desk-pane">{desk || <Empty title={loadingList ? "Loading case workspace…" : "Select a case"} detail={loadingList ? "Reading your cases from the local backend." : "Open a case from the inbox to see its promises and evidence."} />}</div>
+            <div className="desk-pane">{desk || <Empty title={loadingList ? "Loading case workspace…" : "Select a case"} detail={loadingList ? "Reading your cases from the local backend." : "Open a case from the inbox to see its promises and evidence."} />}{!demo && item && <InvestigationReviewPanel key={item.id} caseId={item.id} request={request} />}</div>
           </div>
           {demo && <div className="demo-tools"><span><FlaskConical size={17} /> Demo controls</span><p>Try the normal refund, or approve first and simulate a refund made outside Resolve.</p>
             <a className="button button-secondary small-button" href="/customer?demo=1" target="_blank" rel="noreferrer">Customer demo</a>

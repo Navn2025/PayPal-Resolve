@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
+import { MerchantSdkKeys } from "./merchant-sdk-keys";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, ArrowUpRight, Eye, EyeOff, FileCheck2, KeyRound, Link2, LogOut, ShieldCheck, Unlink2 } from "lucide-react";
 import { readJson } from "@/lib/http";
@@ -157,6 +158,7 @@ export function MerchantSettings({ notice }: { notice?: string }) {
               </div> : <button type="button" className="site-button site-button-quiet" disabled={busy} onClick={() => setConfirm(true)}><Unlink2 size={17} /> Unlink PayPal</button>)}
             {session.paypal_enabled && <Link className="site-text-link" href="/login?next=settings">Sign in with an access key again <ArrowRight size={15} /></Link>}
           </div>
+          <MerchantSdkKeys />
           <button type="button" className="site-button site-button-quiet" disabled={busy} onClick={() => void action("signout")}><LogOut size={17} /> Sign out</button>
         </> : <p>{message ? "Reload this page to retry." : "Checking your workspace…"}</p>}
       </section>

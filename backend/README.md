@@ -1,5 +1,14 @@
 # Resolve backend
 
+Automatic resolution investigations use a durable evidence revision queue and
+the separate `python -m app.investigation_worker` process. Groq triage and
+OpenRouter recommendations are optional and disabled by default; the default
+strict data policy fails closed for direct Groq. Finished and blocked results
+are private to full merchant credentials. Advisory review has no payment side
+effects. See [configuration, API/SDK, offline tests and synthetic-only live
+evaluation](../docs/AI_INVESTIGATIONS.md). New storage versions are SQLite 025
+and PostgreSQL 015; existing numbered migration SQL/checksums are preserved.
+
 FastAPI backend for recording customer cases, payment references, and refund
 commitments. Cases, refunds, and condition checks persist in SQLite by default
 or PostgreSQL when configured.
@@ -204,7 +213,7 @@ lock shared by Resolve processes connected to the same schema. Both paths
 serialize financial state changes and give reconciliation a consistent read
 snapshot. Lock contention exceeding the wait timeout returns `503`.
 
-Schema version 18 is recorded in SQLite's `user_version`. Startup applies the
+Schema version 20 is recorded in SQLite's `user_version`. Startup applies the
 initial, merchant-ownership, refund-approval, capture-verification, durable
 execution/refund-evidence, provider-identity, case-event/condition-epoch, and
 refund-history/case-lifecycle, shared resolution workspace, customer portal,
@@ -215,14 +224,25 @@ instead of resetting it. The PayPal flow claim column is installed by SQLite
 migration 015 and PostgreSQL migration 004. Buyer Google sign-in and the email
 transport settings add SQLite 016 and PostgreSQL 005. Email notification flags
 are added by SQLite 017 and PostgreSQL 006. Evidence SDK records and check
-snapshots are added by SQLite 018 and PostgreSQL 007. Put future schema
-changes in new migrations.
+snapshots are added by SQLite 018 and PostgreSQL 007. SQLite 019 and
+PostgreSQL 008 add connected app snapshots and scoped commerce credentials.
+SQLite 020 and PostgreSQL 009 preserve those snapshots in the merchant order
+catalog and allow order registration before a case exists.
+Put future schema changes in new migrations.
 
 Old in-memory records are not automatically imported. Databases and `.env` files
 are ignored by Git. Stop the server before copying the file for a local backup.
 Keep the file on local disk; this is not a multi-host or network-filesystem setup.
 
 ## API contract
+
+Use the [commerce integration](../docs/COMMERCE_INTEGRATION.md) to send
+versioned order, payment, product, and optional contact evidence from an
+existing merchant app. Generate SDK keys from the regular workspace’s Settings
+screen after a recent access-key sign-in, or use the merchant CLI. It reuses
+the case's PayPal read path to report
+field-level differences. A commerce-scoped key can sync and refresh
+without access to contact reads, merchant sign-in, or payment execution.
 
 See [buyer sign-in and email](../docs/CUSTOMER_SIGN_IN.md) for Google sign-in,
 the default Resend transport, and the optional Nodemailer SMTP transport.

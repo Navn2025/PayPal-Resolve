@@ -1,5 +1,22 @@
 # Resolve merchant UI
 
+Each merchant case includes a private **Automatic investigation** panel with
+findings, source IDs, missing/contradictory evidence, freshness and the proposed
+next step or abstention. Approve, reject or request evidence using the existing
+merchant session. This advisory review is separate from refund approval and
+submission. Run the separate backend investigation worker, including with
+inference disabled, to produce reviewable results. See the
+[investigation guide](../docs/AI_INVESTIGATIONS.md) and
+`npx playwright test -c playwright.investigations.config.ts` for the isolated
+browser test. `tests/investigations.gateway.mjs` checks the actual session/API
+gateway over local HTTP when a browser cannot be launched.
+
+The regular merchant workspace includes [connected orders](../docs/COMMERCE_INTEGRATION.md#show-all-orders-in-the-merchant-dashboard)
+at `/workspace/orders`. Apps publish to the same merchant through the Evidence
+SDK. Merchants can browse and search orders and open a case from its details.
+Generate and revoke commerce keys in **Settings → SDK keys**; copy the server
+configuration with the key and the web app’s `/api/sdk` URL.
+
 The Next.js app opens with a public landing page. The separate demo has a merchant
 inbox, case detail, promises and evidence, a review queue, and a buyer receipt
 that can be printed or saved as a PDF. A separate

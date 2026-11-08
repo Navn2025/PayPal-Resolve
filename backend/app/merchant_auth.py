@@ -8,10 +8,10 @@ import re
 import secrets
 from typing import Literal
 from urllib.parse import urlencode, urlsplit
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import httpx
-from pydantic import BaseModel, ConfigDict, SecretStr
+from pydantic import BaseModel, ConfigDict, Field, SecretStr
 
 from .errors import StoreError
 from .models import MerchantIdentity
@@ -21,6 +21,7 @@ from .storage import LEGACY_MERCHANT_ID
 SESSION_TTL = timedelta(hours=8)
 FLOW_TTL = timedelta(minutes=10)
 KEY_PROOF_TTL = timedelta(minutes=30)
+COMMERCE_KEY_LIMIT = 25
 SESSION_PATTERN = re.compile(r"rweb_[A-Za-z0-9_-]{43}")
 KEY_PATTERN = re.compile(r"rslv_[A-Za-z0-9_-]{20,120}")
 RANDOM_PATTERN = re.compile(r"[A-Za-z0-9_-]{43}")
@@ -228,6 +229,21 @@ class PayPalResult(BaseModel):
     session: IssuedMerchantSession | None = None
 
 
+class CommerceKeySummary(BaseModel):
+    key_id: UUID
+    created_at: datetime
+
+
+class CommerceKeys(BaseModel):
+    keys: list[CommerceKeySummary]
+    can_manage: bool
+
+
+class IssuedCommerceKey(BaseModel):
+    key_id: UUID
+    api_key: str = Field(repr=False)
+
+
 class MerchantAuth:
     def __init__(self, store, settings):
         self.store = store
@@ -251,7 +267,7 @@ class MerchantAuth:
                LEFT JOIN merchant_api_keys k ON k.id=s.api_key_id AND k.merchant_id=s.merchant_id
                LEFT JOIN merchant_paypal_links l ON l.id=s.paypal_link_id AND l.merchant_id=s.merchant_id
                WHERE s.token_hash=? AND s.expires_at>? AND m.id<>?
-               AND ((k.id IS NOT NULL AND k.revoked_at IS NULL) OR (l.id IS NOT NULL AND l.issuer_key=?))""",
+               AND ((k.id IS NOT NULL AND k.revoked_at IS NULL AND k.scope='full') OR (l.id IS NOT NULL AND l.issuer_key=?))""",
             (
                 _digest(token),
                 _stamp(now),
@@ -319,7 +335,7 @@ class MerchantAuth:
         with self.store.transaction(write=True) as db:
             row = db.execute(
                 """SELECT id,merchant_id FROM merchant_api_keys WHERE token_hash=?
-                   AND revoked_at IS NULL AND merchant_id<>?""",
+                   AND revoked_at IS NULL AND scope='full' AND merchant_id<>?""",
                 (_digest(key), str(LEGACY_MERCHANT_ID)),
             ).fetchone()
             if not row:
@@ -335,17 +351,71 @@ class MerchantAuth:
                     (_digest(token),),
                 )
 
-    def _key_session(self, db, token, now):
+    @staticmethod
+    def _recent_key_session(row, now):
+        return bool(
+            row
+            and row["api_key_id"]
+            and datetime.fromisoformat(row["issued_at"]) + KEY_PROOF_TTL > now
+        )
+
+    def _key_session(self, db, token, now, *, purpose="manage PayPal sign-in"):
         row = self._find(db, token, now)
-        if (
-            not row
-            or not row["api_key_id"]
-            or datetime.fromisoformat(row["issued_at"]) + KEY_PROOF_TTL <= now
-        ):
+        if not self._recent_key_session(row, now):
             raise StoreError(
-                403, "Sign in again with a Resolve access key to manage PayPal sign-in"
+                403, f"Sign in again with a Resolve access key to {purpose}"
             )
         return row
+
+    def commerce_keys(self, token):
+        now = _now()
+        with self.store.transaction() as db:
+            row = self._find(db, token, now)
+            if not row:
+                raise StoreError(401, "Sign in to your merchant workspace")
+            keys = db.execute(
+                """SELECT id,created_at FROM merchant_api_keys
+                   WHERE merchant_id=? AND scope='commerce' AND revoked_at IS NULL
+                   ORDER BY created_at DESC,id DESC""",
+                (row["id"],),
+            ).fetchall()
+            return CommerceKeys(
+                keys=[
+                    CommerceKeySummary(key_id=key["id"], created_at=key["created_at"])
+                    for key in keys
+                ],
+                can_manage=self._recent_key_session(row, now),
+            )
+
+    def issue_commerce_key(self, token):
+        with self.store.transaction(write=True) as db:
+            row = self._key_session(db, token, _now(), purpose="manage SDK keys")
+            count = db.execute(
+                """SELECT count(*) FROM merchant_api_keys
+                   WHERE merchant_id=? AND scope='commerce' AND revoked_at IS NULL""",
+                (row["id"],),
+            ).fetchone()[0]
+            if count >= COMMERCE_KEY_LIMIT:
+                raise StoreError(
+                    409, "Revoke an unused SDK key before generating another"
+                )
+            merchant = MerchantIdentity(
+                id=row["id"], name=row["name"], created_at=row["created_at"]
+            )
+            issued = self.store._issue_key(db, merchant, scope="commerce")
+            return IssuedCommerceKey(key_id=issued.key_id, api_key=issued.api_key)
+
+    def revoke_commerce_key(self, token, key_id):
+        with self.store.transaction(write=True) as db:
+            now = _now()
+            row = self._key_session(db, token, now, purpose="manage SDK keys")
+            result = db.execute(
+                """UPDATE merchant_api_keys SET revoked_at=COALESCE(revoked_at,?)
+                   WHERE id=? AND merchant_id=? AND scope='commerce'""",
+                (_stamp(now), str(key_id), row["id"]),
+            )
+            if result.rowcount == 0:
+                raise StoreError(404, "SDK key not found")
 
     def _provider(self):
         if not self.paypal:

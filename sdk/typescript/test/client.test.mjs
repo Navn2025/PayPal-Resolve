@@ -9,16 +9,16 @@ import { createInterface } from "node:readline";
 import { test } from "node:test";
 import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
-import { ResolveApiError, ResolveClient, ResolveTransportError } from "@resolve-paypal/sdk";
+import { createResolve, ResolveApiError, ResolveClient, ResolveTransportError } from "@resolve-paypal/sdk";
 
 const fixtureKey = "rslv_" + "x".repeat(43);
 
 async function fastApi(t, paypalSimulation = false) {
   const backend = fileURLToPath(new URL("../../../backend/", import.meta.url));
   const fixture = fileURLToPath(new URL("./fixture.py", import.meta.url));
-  const cleanEnv = Object.fromEntries(Object.entries(process.env).filter(([key]) => !/^RESOLVE_/i.test(key)));
+  const cleanEnv = { ...Object.fromEntries(Object.entries(process.env).filter(([key]) => !/^RESOLVE_/i.test(key))), RESOLVE_ISOLATED_TEST: "1" };
   const runtime = spawnSync("uv", ["run", "--no-sync", "python", "-c", "import sys; print(sys.executable)"], {
-    cwd: backend, encoding: "utf-8", env: cleanEnv, timeout: 15_000, windowsHide: true,
+    cwd: backend, encoding: "utf-8", env: cleanEnv, timeout: 25_000, windowsHide: true,
   });
   assert.equal(runtime.status, 0, "Install the backend with uv sync before running the SDK integration test.");
   const scratch = await mkdtemp(join(tmpdir(), "resolve-sdk-"));
@@ -34,21 +34,22 @@ async function fastApi(t, paypalSimulation = false) {
     await rm(scratch, { recursive: true, force: true });
   });
   const firstLine = await Promise.race([
-    once(lines, "line", { signal: AbortSignal.timeout(15_000) }).then(([line]) => line),
+    once(lines, "line", { signal: AbortSignal.timeout(35_000) }).then(([line]) => line),
     stopped.then(() => { throw new Error("The isolated Resolve test server exited."); }),
   ]);
-  const { port, key, otherKey } = JSON.parse(firstLine);
+  const { port, key, otherKey, commerceKey } = JSON.parse(firstLine);
   const baseUrl = `http://127.0.0.1:${port}`;
-  for (let attempts = 0; attempts < 30; attempts++) {
-    const ok = await fetch(baseUrl + "/health", { signal: AbortSignal.timeout(500) })
+  const readyDeadline = performance.now() + 30_000;
+  while (performance.now() < readyDeadline && child.exitCode === null && child.signalCode === null) {
+    const ok = await fetch(baseUrl + "/health", { signal: AbortSignal.timeout(1_000) })
       .then((response) => response.ok).catch(() => false);
-    if (ok) return { baseUrl, key, otherKey };
-    await delay(150);
+    if (ok) return { baseUrl, key, otherKey, commerceKey };
+    await delay(200);
   }
   throw new Error("The isolated Resolve test server did not become healthy.");
 }
 
-test("packaged client runs a case and private buyer link lifecycle against FastAPI", { timeout: 45_000 }, async (t) => {
+test("packaged client runs a case and private buyer link lifecycle against FastAPI", { timeout: 90_000 }, async (t) => {
   const { baseUrl, key, otherKey } = await fastApi(t);
   const client = new ResolveClient({ baseUrl, apiKey: key });
   const other = new ResolveClient({ baseUrl, apiKey: otherKey });
@@ -60,6 +61,13 @@ test("packaged client runs a case and private buyer link lifecycle against FastA
   assert.equal((await other.listCases()).total, 0);
   await assert.rejects(other.getCase(created.id), (error) => error instanceof ResolveApiError && error.status === 404);
   assert.ok(Array.isArray((await client.getCaseTimeline(created.id)).items));
+  const investigations = await client.getInvestigations(created.id);
+  assert.equal(investigations.items[0].state, "queued");
+  await assert.rejects(other.getInvestigations(created.id), { status: 404 });
+  await assert.rejects(client.reviewInvestigation(created.id, created.id, {
+    expected_revision: investigations.items[0].case_revision,
+    evidence_snapshot: "0".repeat(64), decision: "approve",
+  }), { status: 404 });
 
   const link = await client.issueCustomerLink(created.id, { title: "Your return", show_order_reference: true });
   const url = new URL(link.public_url);
@@ -87,7 +95,7 @@ test("packaged client runs a case and private buyer link lifecycle against FastA
 });
 
 test("ORDER-1042: evidence SDK verifies a partial refund without exposing merchant data", {
-  timeout: 60_000,
+  timeout: 90_000,
   skip: process.env.RESOLVE_RUN_SDK_EVIDENCE_SIMULATION !== "1",
 }, async (t) => {
   const { baseUrl, key, otherKey } = await fastApi(t, true);
@@ -256,4 +264,179 @@ test("classifies timeouts, cancellation and invalid responses", async (t) => {
   await assert.rejects(slow.getMerchant(), (error) => error instanceof ResolveTransportError && error.code === "timeout");
   await assert.rejects(wrong.getMerchant({ signal: AbortSignal.abort() }), { code: "aborted" });
   await assert.rejects(wrong.getMerchant(), { code: "invalid_response" });
+});
+
+test("commerce SDK sends only projected fields and reports invalid source queries", { timeout: 90_000 }, async (t) => {
+  const { baseUrl, commerceKey, key } = await fastApi(t);
+  const resolve = new ResolveClient({ baseUrl, apiKey: commerceKey });
+  const merchant = new ResolveClient({ baseUrl, apiKey: key });
+  const order = {
+    source: "direct-api", order_reference: "ORDER-52", revision: 1, password: "dont-send",
+    order_status: "delivered", payment: { status: "completed", currency: "USD", apiSecret: "dont-send" },
+    items: [{ product_id: "P-52", quantity: 1, rawUser: { password_hash: "dont-send" } }],
+    contact: { email: "customer@example.test", password_hash: "dont-send" },
+  };
+  const receipt = await resolve.syncCommerceOrder(order);
+  assert.equal((await resolve.getCommerceOrder(receipt.case_id)).app.items[0].product_id, "P-52");
+  assert.equal((await merchant.getCommerceContact(receipt.case_id)).email, "customer@example.test");
+  await assert.rejects(resolve.getCommerceContact(receipt.case_id), { status: 401 });
+  assert.throws(() => resolve.syncCommerceOrder({ ...order, order_status: { password_hash: "dont-send" } }), {
+    name: "TypeError",
+  });
+  await assert.rejects(resolve.syncCommerceOrder({ ...order, order_status: "changed" }), {
+    status: 409, code: "commerce_conflict",
+  });
+  const missing = resolve.connectPostgres({ async query(sql, values) {
+    assert.match(sql, /o\.order_reference = \$1/);
+    assert.doesNotMatch(sql, /resolve_evidence\.contacts/);
+    assert.deepEqual(values, ["ORDER-52"]);
+    return { rows: [] };
+  } }, { source: "source" });
+  await assert.rejects(missing.sync("ORDER-52"), { code: "order_not_found" });
+  const broken = resolve.connectPostgres({ async query() { throw new Error("dont-send"); } }, { source: "source" });
+  await assert.rejects(broken.sync("ORDER-52"), (error) => {
+    assert.equal(error.code, "database_error");
+    assert.doesNotMatch(String(error), /dont-send/);
+    return true;
+  });
+});
+
+test("commerce SDK reads a real PostgreSQL app and finds PayPal differences without moving money", {
+  timeout: 90_000,
+  skip: process.env.RESOLVE_RUN_SDK_EVIDENCE_SIMULATION !== "1" || !process.env.RESOLVE_COMMERCE_TEST_APP_ADMIN_URL,
+}, async (t) => {
+  const { baseUrl, key, commerceKey, otherKey } = await fastApi(t, true);
+  const { appDatabase } = await import("./app-postgres.mjs");
+  const { owner, reader, readUrl } = await appDatabase(t, process.env.RESOLVE_COMMERCE_TEST_APP_ADMIN_URL);
+  const resolve = new ResolveClient({ baseUrl, apiKey: commerceKey, timeoutMs: 30_000 });
+  const merchant = new ResolveClient({ baseUrl, apiKey: key });
+  const other = new ResolveClient({ baseUrl, apiKey: otherKey });
+  const evidence = resolve.connectPostgres(reader, { source: "merchant-store" });
+  const capture = "SIMHSDKCOMMERCE";
+  const control = async (operation, value) => {
+    const response = await fetch(baseUrl + "/__fixture/paypal/" + operation + "/" + capture, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(value),
+    });
+    assert.equal(response.status, 200);
+    return response.json();
+  };
+  await assert.rejects(reader.query("SELECT password_hash FROM public.users"), { code: "42501" });
+  await assert.rejects(reader.query("UPDATE resolve_evidence.orders SET order_status='edited'"), { code: "42501" });
+  const catalog = [];
+  for await (const imported of evidence.registerAll({ pageSize: 1 })) catalog.push(imported);
+  assert.deepEqual(catalog.map(row => [row.order_reference, row.case_id]), [["STORE-2042", null]]);
+  assert.equal((await merchant.listCases()).total, 0);
+  const report = await evidence.inspect("STORE-2042");
+  const id = report.case_id;
+  assert.equal(report.status, "match");
+  assert.equal(report.app.customer_reference, "USER-42");
+  assert.equal(report.app.items[0].name, "Desk lamp");
+  assert.equal(report.app.items[0].unit_amount, "50.00");
+  assert.equal(report.app.payment.captured_amount, "100.00");
+  await assert.rejects(merchant.getCommerceContact(id), { status: 404 });
+  await assert.rejects(other.getCommerceOrder(id), { status: 404 });
+
+  await control("external", { cents: 2500, status: "COMPLETED" });
+  const changed = await resolve.refreshCommerceOrder(id);
+  assert.equal(changed.status, "mismatch");
+  assert.deepEqual(changed.checks.filter(row => row.status === "mismatch").map(row => [
+    row.field, row.app_value, row.paypal_value,
+  ]), [["payment_status", "completed", "partially_refunded"], ["refunded_amount", "0.00", "25.00"]]);
+  assert.equal((await merchant.getEvidenceBundle(id)).commerce.status, "mismatch");
+
+  const { readFile } = await import("node:fs/promises");
+  const optionalContact = await readFile(new URL("../examples/postgres-contact-view.sql", import.meta.url), "utf8");
+  await owner.query(optionalContact.replace("(order_reference, name, email, phone)", "(order_reference, email)"));
+  await assert.rejects(reader.query("SELECT phone FROM resolve_evidence.contacts"), { code: "42501" });
+  await owner.query("BEGIN; UPDATE public.payments SET status='partially_refunded', refunded_amount=25.00; UPDATE public.orders SET evidence_revision=2; COMMIT");
+  const contacts = resolve.connectPostgres(reader, { source: "merchant-store", contactFields: ["email"] });
+  assert.equal((await contacts.sync("STORE-2042")).case_id, id);
+  const stale = await resolve.getCommerceOrder(id);
+  assert.equal(stale.status, "incomplete");
+  assert.ok(stale.checks.every(item => item.status === "unverified"));
+  assert.equal((await contacts.inspect("STORE-2042")).status, "match");
+  assert.deepEqual(await merchant.getCommerceContact(id), {
+    name: null, email: "buyer@example.test", phone: null,
+  });
+  assert.doesNotMatch(JSON.stringify(await merchant.getEvidenceBundle(id)), /buyer@example\.test|never-export-password/);
+
+  const example = fileURLToPath(new URL("../examples/connect-postgres.mjs", import.meta.url));
+  const exampleResult = JSON.parse(execFileSync(process.execPath, [example, "STORE-2042"], {
+    encoding: "utf-8", timeout: 20_000, windowsHide: true,
+    env: { ...process.env, RESOLVE_API_URL: baseUrl, RESOLVE_API_KEY: commerceKey, APP_EVIDENCE_DATABASE_URL: readUrl },
+  }));
+  assert.equal(exampleResult.status, "match");
+
+  const different = await resolve.syncCommerceOrder({
+    source: "another-store-flow", order_reference: "STORE-WRONG-ORDER", revision: 1,
+    payment: { paypal_order_id: "WRONGORDER", paypal_capture_id: capture,
+      status: "partially_refunded", captured_amount: "99.00", refunded_amount: "25.00" },
+  });
+  const wrongOrder = await resolve.refreshCommerceOrder(different.case_id);
+  assert.equal(wrongOrder.status, "mismatch");
+  assert.deepEqual(wrongOrder.checks.filter(row => row.status === "mismatch").map(row => row.field),
+    ["paypal_order_id", "captured_amount"]);
+  assert.equal(wrongOrder.checks.find(row => row.field === "refunded_amount").status, "unverified");
+  assert.ok(wrongOrder.provider_issues.some(item => item.kind === "paypal_order_reference"));
+
+  await control("evidence-outage", { enabled: true });
+  const unavailable = await resolve.refreshCommerceOrder(id);
+  assert.equal(unavailable.status, "incomplete");
+  assert.ok(unavailable.checks.every(item => item.status === "unverified"));
+  assert.equal((await merchant.getCase(id)).evidence_summary.provider_completed_amount, "25.00");
+  assert.equal((await control("state", {})).refund_posts, 0);
+  await owner.query("INSERT INTO public.payments SELECT * FROM public.payments LIMIT 1");
+  await assert.rejects(contacts.sync("STORE-2042"), { code: "unsupported_order" });
+});
+
+test("publish app orders and resume PostgreSQL backfill without creating cases", { timeout: 90_000 }, async (t) => {
+  const { baseUrl, key, commerceKey } = await fastApi(t);
+  const resolve = new ResolveClient({ baseUrl, apiKey: commerceKey });
+  const merchant = new ResolveClient({ baseUrl, apiKey: key });
+  const refs = ["BATCH-1", "BATCH-2", "BATCH-3"];
+  const pages = [];
+  const source = resolve.connectPostgres({ async query(sql, values) {
+    if (sql.startsWith("SELECT order_reference FROM")) {
+      assert.match(sql, /LIMIT \$2::int/);
+      pages.push(values[0]);
+      return { rows: refs.filter(ref => ref > values[0]).slice(0, Number(values[1])).map(order_reference => ({ order_reference })) };
+    }
+    return { rows: [{ order_reference: values[0], revision: "1", order_status: "created", payments: [], items: [] }] };
+  } }, { source: "warehouse" });
+  const first = await source.register("BATCH-1");
+  assert.equal(first.case_id, null);
+  const imported = [];
+  for await (const row of source.registerAll({ after: first.order_reference, pageSize: 1 })) imported.push(row);
+  assert.deepEqual(pages, ["BATCH-1", "BATCH-2", "BATCH-3"]);
+  assert.deepEqual(imported.map(row => row.order_reference), ["BATCH-2", "BATCH-3"]);
+  assert.equal((await source.register("BATCH-1")).id, first.id);
+  assert.equal((await merchant.listCases()).total, 0);
+  const list = await fetch(baseUrl + "/commerce/orders?source=warehouse", { headers: { Authorization: "Bearer " + key } });
+  assert.equal((await list.json()).total, 3);
+});
+
+test("createResolve reads the copied server environment and syncOrder sends a versioned order", { timeout: 90_000 }, async (t) => {
+  const { baseUrl, key, commerceKey } = await fastApi(t);
+  const values = { RESOLVE_API_URL: baseUrl, RESOLVE_API_KEY: commerceKey, RESOLVE_APP_SOURCE: "easy-store" };
+  const previous = Object.fromEntries(Object.keys(values).map(name => [name, process.env[name]]));
+  let resolve;
+  try {
+    Object.assign(process.env, values);
+    resolve = createResolve();
+  } finally {
+    for (const [name, value] of Object.entries(previous)) {
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+    }
+  }
+  const first = await resolve.syncOrder({ id: "EASY-ORDER-23", status: "paid" });
+  assert.equal(first.case_id, null);
+  assert.equal(first.revision, 1);
+  assert.equal(first.source, "easy-store");
+  const next = await resolve.syncOrder({ id: "EASY-ORDER-23", version: 2, status: "shipped" });
+  assert.equal(first.id, next.id);
+  const catalog = await fetch(baseUrl + "/commerce/orders", { headers: { Authorization: "Bearer " + key } });
+  const { items } = await catalog.json();
+  assert.equal(items[0].order_status, "shipped");
+  await assert.rejects(resolve.syncOrder({ id: "EASY-ORDER-23", status: "paid" }), { status: 409, code: "commerce_conflict" });
 });

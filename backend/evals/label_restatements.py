@@ -21,7 +21,7 @@ sys.path.insert(0, str(BACKEND_DIR))
 
 import groq
 
-from app.ai_extraction import AISettings
+from app.ai_extraction import GROQ_DATA_POLICY, AISettings, current_data_policy
 
 LABELER_MODEL = "qwen/qwen3.8-27b"
 DATASET = BACKEND_DIR / "evals/extraction/generated.jsonl"
@@ -98,6 +98,12 @@ def main():
     args = parser.parse_args()
     if not args.live:
         parser.error("Labelling calls Groq; pass --live to run it")
+    if current_data_policy() != GROQ_DATA_POLICY:
+        parser.error(
+            "Groq calls require RESOLVE_AI_DATA_POLICY=minimized_standard_retention in the "
+            "process environment (app.inference never reads .env). Use it only for "
+            "synthetic data."
+        )
     key = AISettings().groq_api_key
     if key is None:
         parser.error("GROQ_API_KEY is not set")

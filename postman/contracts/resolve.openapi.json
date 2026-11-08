@@ -7903,6 +7903,7 @@
                 "connection_error",
                 "provider_error",
                 "unexpected_error",
+                "data_policy_blocked",
                 "invalid_json",
                 "schema_invalid",
                 "low_confidence"

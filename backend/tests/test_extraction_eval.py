@@ -5,7 +5,7 @@ import groq
 import httpx
 import pytest
 
-from app.ai_extraction import AISettings
+from app.ai_extraction import GROQ_DATA_POLICY, AISettings
 from evals.run_extraction_eval import (
     RecordingClient,
     aggregate,
@@ -126,12 +126,12 @@ def test_runner_retries_rate_limits_and_reports_ablation(tmp_path):
     records_path = tmp_path / "records.jsonl"
     client = RecordingClient(inner, sleep=sleeps.append)
 
-    records = run_eval(ITEMS, client, settings, records_path, progress=lambda _: None)
+    records = run_eval(ITEMS, client, settings, GROQ_DATA_POLICY, records_path, progress=lambda _: None)
     assert sleeps == [3] and len(calls) == 3
     # Stability compares actions, so records must keep them.
     assert {"action", "condition", "supporting_message_ids"} <= set(records[0]["final"][0])
     # Resuming reuses saved records without calling the model again.
-    assert run_eval(ITEMS, client, settings, records_path, progress=lambda _: None) == records
+    assert run_eval(ITEMS, client, settings, GROQ_DATA_POLICY, records_path, progress=lambda _: None) == records
     assert len(calls) == 3
 
     report = compute_report(ITEMS, records, iterations=100)
@@ -284,7 +284,30 @@ def test_daily_token_limit_stops_the_run_instead_of_waiting(tmp_path):
     settings = AISettings(_env_file=None, groq_api_key="test", resolve_ai_model="fake-model")
     records_path = tmp_path / "records.jsonl"
     with pytest.raises(QuotaExhausted):
-        run_eval(ITEMS, RecordingClient(inner, sleep=sleeps.append), settings, records_path, progress=lambda _: None)
+        run_eval(
+            ITEMS, RecordingClient(inner, sleep=sleeps.append), settings, GROQ_DATA_POLICY,
+            records_path, progress=lambda _: None,
+        )
     # No sleeping through the day, and no rate-limited result saved as a model failure.
     assert sleeps == []
     assert not records_path.exists() or records_path.read_text() == ""
+
+
+@pytest.mark.parametrize(
+    "script",
+    ["run_extraction_eval.py", "generate_extraction_chats.py", "label_restatements.py"],
+)
+def test_live_scripts_refuse_groq_without_the_data_policy(monkeypatch, script):
+    import importlib
+    import sys
+
+    monkeypatch.delenv("RESOLVE_AI_DATA_POLICY", raising=False)
+    monkeypatch.setattr(sys, "argv", [script, "--live"])
+    module = importlib.import_module("evals." + script.removesuffix(".py"))
+    created = []
+    monkeypatch.setattr(module.groq, "Groq", lambda **kw: created.append(kw))
+
+    with pytest.raises(SystemExit) as stopped:
+        module.main()
+
+    assert stopped.value.code == 2 and created == []

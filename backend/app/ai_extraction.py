@@ -20,12 +20,15 @@ from pydantic import (
 )
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from .inference import InvestigationSettings
 from .resolution_models import Target
 from .settings import BACKEND_DIR
 
 logger = logging.getLogger(__name__)
 
 MIN_CONFIDENCE = 0.7
+# The only policy under which app.inference allows a direct Groq call.
+GROQ_DATA_POLICY = "minimized_standard_retention"
 MAX_PROPOSALS = 30
 # Kinds come from the recorded promise targets so the two lists cannot drift.
 PROMISE_KINDS = tuple(
@@ -54,6 +57,7 @@ ReviewReason = Literal[
     "connection_error",
     "provider_error",
     "unexpected_error",
+    "data_policy_blocked",
     "invalid_json",
     "schema_invalid",
     "low_confidence",
@@ -94,7 +98,8 @@ class AISettings(BaseSettings):
     groq_api_key: SecretStr | None = None
     # llama-3.3-70b-versatile returned 404 model_not_found for the owner's key.
     resolve_ai_model: str = "openai/gpt-oss-120b"
-    resolve_ai_timeout_seconds: float = Field(20, gt=0, le=120)
+    # Separate from app.inference's RESOLVE_AI_TIMEOUT_SECONDS, which has its own bounds.
+    resolve_extraction_timeout_seconds: float = Field(20, gt=0, le=120)
 
 
 class ChatMessage(BaseModel):
@@ -424,8 +429,20 @@ def _complete(client, model, timeout, case_id, messages):
     return response.choices[0].message.content
 
 
-def extract_promises(case_id, messages, client, settings, source) -> ExtractionResult:
-    """Propose promises; every failure becomes needs_review instead of an exception."""
+def current_data_policy():
+    """The operator's RESOLVE_AI_DATA_POLICY, read as app.inference reads it (never .env)."""
+    return InvestigationSettings().data_policy
+
+
+def extract_promises(
+    case_id, messages, client, settings, source, *, data_policy
+) -> ExtractionResult:
+    """Propose promises; every failure becomes needs_review instead of an exception.
+
+    `data_policy` follows app.inference: Groq cannot enforce zero data retention
+    per request, so the transcript is sent only when the operator has accepted
+    Groq's standard retention. Anything else, including unknown values, blocks.
+    """
     result = ExtractionResult(
         case_id=case_id,
         status="ok",
@@ -445,13 +462,16 @@ def extract_promises(case_id, messages, client, settings, source) -> ExtractionR
     if client is None:
         result.model = None
         return review("not_configured")
+    if data_policy != GROQ_DATA_POLICY:
+        logger.warning("AI promise extraction blocked for case %s by data policy", case_id)
+        return review("data_policy_blocked")
     if not messages:
         return review("no_messages")
     try:
         content = _complete(
             client,
             settings.resolve_ai_model,
-            settings.resolve_ai_timeout_seconds,
+            settings.resolve_extraction_timeout_seconds,
             case_id,
             messages,
         )

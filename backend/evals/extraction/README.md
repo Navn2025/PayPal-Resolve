@@ -20,6 +20,16 @@ No human has verified any label. The generator is a different model family
 (Qwen) from the extractor (`openai/gpt-oss-120b`), but both run on Groq, the
 only provider configured in this project.
 
+## Running live
+
+The generator, restatement labeller and live eval call Groq directly. Under
+`app.inference`'s data policy (see `docs/AI_INVESTIGATIONS.md`) they refuse to
+start unless the process environment sets
+`RESOLVE_AI_DATA_POLICY=minimized_standard_retention`, which accepts Groq's
+documented standard retention. It is never read from `.env`. All data here
+is synthetic; do not point these scripts at real conversations. `--rescore`,
+`--replay` and `--compare` make no provider calls and need no opt-in.
+
 ## Item format
 
 ```json

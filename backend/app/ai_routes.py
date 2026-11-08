@@ -11,6 +11,7 @@ from .ai_extraction import (
     ExtractionRequest,
     ExtractionResult,
     conversation_transcript,
+    current_data_policy,
     extract_promises,
 )
 from .auth import CurrentMerchant, Store
@@ -24,13 +25,17 @@ def get_ai_settings() -> AISettings:
     return AISettings()
 
 
+def get_data_policy() -> str:
+    return current_data_policy()
+
+
 def get_ai_client(settings: Annotated[AISettings, Depends(get_ai_settings)]):
     if settings.groq_api_key is None:
         yield None
         return
     client = groq.Groq(
         api_key=settings.groq_api_key.get_secret_value(),
-        timeout=settings.resolve_ai_timeout_seconds,
+        timeout=settings.resolve_extraction_timeout_seconds,
         max_retries=1,
     )
     try:
@@ -50,6 +55,7 @@ def extract_promise_proposals(
     merchant: CurrentMerchant,
     settings: Annotated[AISettings, Depends(get_ai_settings)],
     client: Annotated[groq.Groq | None, Depends(get_ai_client)],
+    data_policy: Annotated[str, Depends(get_data_policy)],
     payload: ExtractionRequest | None = None,
 ):
     """Propose promises for review from the case's customer conversation, or from
@@ -60,4 +66,6 @@ def extract_promise_proposals(
     else:
         stored = CustomerPortal(store).merchant_messages(case_id, merchant.id)
         messages, source = conversation_transcript(stored), "case_conversation"
-    return extract_promises(case_id, messages, client, settings, source)
+    return extract_promises(
+        case_id, messages, client, settings, source, data_policy=data_policy
+    )

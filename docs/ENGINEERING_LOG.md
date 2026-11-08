@@ -2463,6 +2463,68 @@ r1, inj2 and inj3 records. That needs about 26,000 + 36,000 tokens. Stability
 on the other sets was not requested and is unmeasured. Run 1 is one sample at
 temperature 0. Every label is assistant- or machine-written and unreviewed.
 
+### CHG-039 - Apply the inference data policy to promise extraction
+
+**Date:** 8 November 2026 (Asia/Calcutta).
+
+**Objective:** Align CHG-035 to CHG-038 with the investigation inference layer
+merged from main (CHG-034, `docs/AI_INVESTIGATIONS.md`), whose design takes
+precedence.
+
+**Why not call through `app.inference`:** `JSONProvider.complete()` has a fixed
+investigation system prompt, validates one strict schema for the whole response
+and returns only the parsed object, mapping failures to its own reasons.
+Extraction needs its own instructions, per-item validation with drop reasons,
+and the raw output for the eval ablation. Reusing it would mean changing the
+investigation module, so extraction applies the same data policy instead.
+
+**Files and behavior:**
+
+- `backend/app/ai_extraction.py`: before any provider call, extraction reads
+  `InvestigationSettings().data_policy` (`RESOLVE_AI_DATA_POLICY`, process
+  environment only, never `.env`, as in `app.inference`). Only
+  `minimized_standard_retention` allows the Groq call; the default
+  `zdr_required`, any unknown value and an empty value return `needs_review`
+  with the new reason `data_policy_blocked` and make no call. The policy is a
+  keyword-only argument to `extract_promises`, so every caller states it.
+- `backend/app/ai_routes.py`: a `get_data_policy` dependency supplies it.
+- The timeout setting is renamed from `RESOLVE_AI_TIMEOUT_SECONDS` (CHG-035) to
+  `RESOLVE_EXTRACTION_TIMEOUT_SECONDS`. `app.inference`'s
+  `RESOLVE_AI_TIMEOUT_SECONDS` (bounds 0.1 to 20) is unchanged and no longer
+  shared. **Compatibility:** a deployment that set the old name for extraction
+  must switch to the new one; the old value now only affects investigations.
+- `backend/evals/run_extraction_eval.py --live`, `generate_extraction_chats.py`
+  and `label_restatements.py` refuse to start (exit 2, before any client is
+  created) unless the policy allows Groq. `--rescore`, `--compare` and
+  `--replay` make no provider call; replay passes the allowing policy
+  explicitly, documented in code.
+- `backend/.env.example`, `backend/evals/extraction/README.md` and the runner
+  docstring document the renamed timeout and the environment-only opt-in.
+  OpenAPI regenerated (one added enum value).
+
+**Overlap with main's open work:** item 4 (CHG-034) says commitment extraction
+from free text remains future work. CHG-035 to CHG-038 implement extraction as
+proposals only; terms are still recorded manually, as item 4 says. Item 4 was
+left unchanged at the owner's request; the owner can reconcile the wording.
+
+**Decisions:** DEC-077.
+
+**Validation:** `uv run python -m pytest -q`: 342 passed, 60 skipped. New
+mocked tests: blocked for `zdr_required`, an unknown value and an empty value,
+with no client call; default read from the environment ignoring a `.env` file;
+allowed once the variable is set; the two timeout variables are independent;
+all three live scripts exit without creating a Groq client when the policy is
+unset. All extraction validator tests are unchanged and use fake clients.
+`uvx ruff check` passed on the changed files. No live provider call was made.
+
+**Limits:** Under main's policy the CHG-038 live results were produced before
+this gate existed; they used synthetic chats only. My `RESOLVE_AI_MODEL` and
+`GROQ_API_KEY` are still read from `.env`, while `docs/AI_INVESTIGATIONS.md`
+says all `RESOLVE_AI_` settings never read dotenv; renaming the model setting
+out of that prefix, or reading it like inference, is a follow-up for the owner
+to decide. Extraction has no equivalent of inference's `RESOLVE_AI_ENABLED`
+switch; it is enabled by a configured key plus the data policy.
+
 ## Decision register
 
 ### DEC-001 - Keep FastAPI/Pydantic and the existing uv project
@@ -3169,6 +3231,16 @@ Normalising quotes makes matching robust to cosmetic rewrites, but the
 returned quote is copied from the merchant's message so it stays verbatim
 evidence.
 
+### DEC-077 - Gate extraction on the inference data policy rather than a second setting
+
+Main's inference layer is the project's AI boundary, and its policy that
+direct Groq is blocked unless standard retention is explicitly accepted
+applies to any customer text sent there. Reading the same environment-only
+setting keeps one operator decision for both features and avoids a second,
+divergent switch. Extraction keeps its own provider client because the
+investigation adapter's prompt and schema contract are specific to
+investigations.
+
 ## Open work and boundaries
 
 1. Verify import (if needed), SSL connection, migration startup, and worker
@@ -3194,7 +3266,7 @@ evidence.
 ## Template for the next entry
 
 ```text
-### CHG-039 - Concrete change title
+### CHG-040 - Concrete change title
 Date:
 Objective:
 Files and resulting behavior:

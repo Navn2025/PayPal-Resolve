@@ -1,7 +1,10 @@
 """Score AI promise extraction against labelled chats.
 
-Live Groq calls are opt-in and never part of the default pytest run:
+Live Groq calls are opt-in and never part of the default pytest run. Like
+app.inference, they also require the operator to accept Groq's standard
+retention in the process environment (synthetic data only):
 
+    $env:RESOLVE_AI_DATA_POLICY = "minimized_standard_retention"   # PowerShell
     uv run python evals/run_extraction_eval.py --live
     uv run python evals/run_extraction_eval.py --rescore evals/results/extraction_<date>_records.jsonl
 
@@ -28,10 +31,12 @@ sys.path.insert(0, str(BACKEND_DIR))
 import groq
 
 from app.ai_extraction import (
+    GROQ_DATA_POLICY,
     PROMISE_KINDS,
     AISettings,
     ChatMessage,
     amounts_in,
+    current_data_policy,
     extract_promises,
     locate_quote,
 )
@@ -136,7 +141,7 @@ class ReplayClient:
         return SimpleNamespace(choices=[SimpleNamespace(message=message)])
 
 
-def run_item(item, client, settings):
+def run_item(item, client, settings, data_policy):
     client.last = None
     client.item_id = item["id"]
     result = extract_promises(
@@ -145,6 +150,7 @@ def run_item(item, client, settings):
         client,
         settings,
         "merchant_supplied",
+        data_policy=data_policy,
     )
     call = client.last or {}
     return {
@@ -174,7 +180,7 @@ def run_item(item, client, settings):
     }
 
 
-def run_eval(items, client, settings, records_path=None, progress=print):
+def run_eval(items, client, settings, data_policy, records_path=None, progress=print):
     """Return one record per item, reusing records already in `records_path`."""
     records = {}
     if records_path and Path(records_path).exists():
@@ -192,7 +198,7 @@ def run_eval(items, client, settings, records_path=None, progress=print):
         for number, item in enumerate(items, start=1):
             if item["id"] in records:
                 continue
-            record = run_item(item, client, settings)
+            record = run_item(item, client, settings, data_policy)
             records[item["id"]] = record
             if output:
                 output.write(json.dumps(record, ensure_ascii=False) + "\n")
@@ -850,6 +856,9 @@ def main():
             [i for i in items if i["id"] in {r["id"] for r in baseline}],
             ReplayClient(baseline),
             replay_settings,
+            # Replay sends nothing to a provider; the policy gate applied when the
+            # output was recorded, so it is accepted here to rerun the validators.
+            GROQ_DATA_POLICY,
             progress=lambda _: None,
         )
         mode_note = (
@@ -857,18 +866,26 @@ def main():
             "current validators (no new model calls; latency and tokens are the originals)"
         )
     elif args.live:
+        if current_data_policy() != GROQ_DATA_POLICY:
+            parser.error(
+                "Groq calls require RESOLVE_AI_DATA_POLICY=minimized_standard_retention in the "
+                "process environment (app.inference never reads .env). Use it only for "
+                "synthetic data."
+            )
         if settings.groq_api_key is None:
             parser.error("GROQ_API_KEY is not set")
         inner = groq.Groq(
             api_key=settings.groq_api_key.get_secret_value(),
             max_retries=0,
-            timeout=settings.resolve_ai_timeout_seconds,
+            timeout=settings.resolve_extraction_timeout_seconds,
         )
         args.out_dir.mkdir(parents=True, exist_ok=True)
         suffix = f"_{args.tag}" if args.tag else ""
         records_path = args.out_dir / f"extraction_{date.today().isoformat()}{suffix}_records.jsonl"
         try:
-            records = run_eval(items, RecordingClient(inner), settings, records_path)
+            records = run_eval(
+                items, RecordingClient(inner), settings, GROQ_DATA_POLICY, records_path
+            )
         except QuotaExhausted as stop:
             print(f"Stopped: {stop}. Re-run the same command later to resume.")
             return 2

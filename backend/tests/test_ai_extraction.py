@@ -7,8 +7,8 @@ import groq
 import httpx
 import pytest
 
-from app.ai_extraction import AISettings
-from app.ai_routes import get_ai_client, get_ai_settings
+from app.ai_extraction import GROQ_DATA_POLICY, AISettings
+from app.ai_routes import get_ai_client, get_ai_settings, get_data_policy
 
 KEY = "gsk_test_key_never_logged"
 MESSAGES = [
@@ -73,6 +73,7 @@ def ai(client):
     client.app.dependency_overrides[get_ai_settings] = lambda: AISettings(
         _env_file=None, groq_api_key=KEY
     )
+    client.app.dependency_overrides[get_data_policy] = lambda: GROQ_DATA_POLICY
     client.app.dependency_overrides[get_ai_client] = lambda: SimpleNamespace(
         chat=SimpleNamespace(completions=completions)
     )
@@ -580,3 +581,40 @@ def test_distinct_amounts_in_one_message_are_not_revisions(ai):
         (2000, False),
         (3000, False),
     ]
+
+
+@pytest.mark.parametrize("policy", ["zdr_required", "unknown_policy", ""])
+def test_data_policy_blocks_the_provider_call(client, ai, policy):
+    client.app.dependency_overrides[get_data_policy] = lambda: policy
+
+    body = ai({"proposals": [proposal()]}).json()
+
+    assert body["status"] == "needs_review"
+    assert body["review_reasons"] == ["data_policy_blocked"]
+    assert body["proposals"] == [] and ai.calls == []
+
+
+def test_default_data_policy_is_read_like_inference_and_blocks(client, ai, monkeypatch, tmp_path):
+    # app.inference reads only the process environment, never .env.
+    monkeypatch.delenv("RESOLVE_AI_DATA_POLICY", raising=False)
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".env").write_text("RESOLVE_AI_DATA_POLICY=minimized_standard_retention\n")
+    client.app.dependency_overrides.pop(get_data_policy)
+
+    body = ai({"proposals": [proposal()]}).json()
+
+    assert body["review_reasons"] == ["data_policy_blocked"] and ai.calls == []
+
+    monkeypatch.setenv("RESOLVE_AI_DATA_POLICY", GROQ_DATA_POLICY)
+    assert ai({"proposals": [proposal()]}).json()["status"] == "ok"
+    assert len(ai.calls) == 1
+
+
+def test_extraction_timeout_is_separate_from_inference_timeout(monkeypatch):
+    from app.inference import InvestigationSettings
+
+    monkeypatch.setenv("RESOLVE_AI_TIMEOUT_SECONDS", "5")
+    monkeypatch.setenv("RESOLVE_EXTRACTION_TIMEOUT_SECONDS", "60")
+
+    assert AISettings(_env_file=None).resolve_extraction_timeout_seconds == 60
+    assert InvestigationSettings().timeout_seconds == 5

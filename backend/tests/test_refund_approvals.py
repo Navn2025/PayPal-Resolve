@@ -1,3 +1,4 @@
+from hashlib import sha256
 import sqlite3
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
@@ -10,7 +11,6 @@ from app import approvals
 from app.main import create_app
 from app.models import CaseCreate
 from app.settings import BACKEND_DIR
-from app.storage import SQLiteStore
 
 
 def case_body(condition=None):
@@ -413,20 +413,34 @@ def test_version_two_upgrade_keeps_existing_identity_and_case(tmp_path):
             (BACKEND_DIR / "migrations/002_merchants.sql").read_text()
         )
         connection.execute("PRAGMA user_version = 2")
-    old_store = SQLiteStore(database)
-    issued = old_store.create_merchant("Existing version-two merchant")
     payload = CaseCreate.model_validate(case_body())
     case_id = uuid4()
+    merchant_id = str(uuid4())
+    api_key = "rslv_" + "v" * 43
     with sqlite3.connect(database) as connection:
+        # Seed the historical schema directly; current key issuance requires v19.
+        connection.execute(
+            "INSERT INTO merchants VALUES (?,?,?)",
+            (merchant_id, "Existing version-two merchant", "2026-01-01T00:00:00Z"),
+        )
+        connection.execute(
+            "INSERT INTO merchant_api_keys (id,merchant_id,token_hash,created_at) VALUES (?,?,?,?)",
+            (
+                str(uuid4()),
+                merchant_id,
+                sha256(api_key.encode()).hexdigest(),
+                "2026-01-01T00:00:00Z",
+            ),
+        )
         connection.execute(
             "INSERT INTO captures VALUES (?,?,?,?)",
-            (str(issued.merchant.id), payload.payment.capture_id, 10000, "USD"),
+            (merchant_id, payload.payment.capture_id, 10000, "USD"),
         )
         connection.execute(
             "INSERT INTO cases (id,merchant_id,order_id,complaint,capture_id,commitment_json,status) VALUES (?,?,?,?,?,?,?)",
             (
                 str(case_id),
-                str(issued.merchant.id),
+                merchant_id,
                 payload.order_id,
                 payload.complaint,
                 payload.payment.capture_id,
@@ -435,9 +449,9 @@ def test_version_two_upgrade_keeps_existing_identity_and_case(tmp_path):
             ),
         )
     with TestClient(create_app(database)) as upgraded:
-        upgraded.headers["Authorization"] = f"Bearer {issued.api_key}"
+        upgraded.headers["Authorization"] = f"Bearer {api_key}"
         assert upgraded.get(f"/cases/{case_id}").status_code == 200
         assert upgraded.get(f"/cases/{case_id}/refund-approvals").json() == []
     with sqlite3.connect(database) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 18
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 25
         assert connection.execute("PRAGMA foreign_key_check").fetchall() == []

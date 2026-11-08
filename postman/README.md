@@ -1,5 +1,16 @@
 # Local PayPal capture and refund simulation
 
+Automatic investigations add generated list/review routes to
+`contracts/resolve.openapi.json`. Their isolated evaluation uses the real
+provider adapters with loopback HTTP stand-ins in
+`backend/app/synthetic_investigations.py`, plus a bounded PayPal read simulation
+in `backend/tests/test_investigations.py`. Run
+`uv run python scripts/isolated.py -m pytest tests/test_investigations.py -q`
+from `backend`. This path needs neither Postman authentication nor real provider
+keys. It proves local contracts and guardrails, not live provider/model quality.
+Existing financial simulations below retain their original scope. See
+[model routing and evaluation](../docs/AI_INVESTIGATIONS.md).
+
 The [hosted follow-up simulation](simulations/hosted-followup/hosted-followup.sim.yaml)
 adds Resend and Zendesk to the existing proof adapters. From the repository root:
 
@@ -83,6 +94,23 @@ USD 25 external refund in the PayPal stand-in. The test checks approval and
 confirmation as separate records, retries, buyer privacy, tenant isolation, and
 the behavior when the provider goes down. The mock counters verify that this
 flow did not submit a refund. This does not establish account-backed visibility.
+
+## Commerce integration acceptance test
+
+The same SDK simulation can read a real, disposable merchant app database
+through the example PostgreSQL views. Set `RESOLVE_COMMERCE_TEST_APP_ADMIN_URL`
+to a loopback PostgreSQL cluster reserved for tests. The test creates and removes
+its own database and roles. Run the SDK acceptance command above with that
+additional variable. It asserts that the app role cannot read a password or
+write to a view, detects app vs PayPal refund differences, and observes no
+financial POSTs from the commerce flow.
+
+## Store checkout acceptance test
+
+The [Field Brew example](../examples/checkout-store/README.md#verify-without-a-real-buyer)
+uses this same PayPal simulation to approve a cart in Chromium, capture once,
+sync the app order through the Resolve SDK, and detect a simulated outside
+refund. Both databases are disposable. The approval controls are mock-only.
 
 ## Files and contract boundary
 

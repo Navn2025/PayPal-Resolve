@@ -18,7 +18,10 @@ open cases by external reference, link PayPal records, record merchant evidence,
 and read what was verified and what remains missing. The private buyer link
 shows status without merchant notes or provider identifiers. The SDK uses the
 same merchant API and key, has no runtime dependencies, and is available as a
-local npm archive.
+local npm archive. The [commerce integration](COMMERCE_INTEGRATION.md) adds
+one-order sync from app-owned PostgreSQL views or direct HTTP and compares
+app payment records with current PayPal Sandbox evidence. It uses a dedicated
+key that has no sign-in, contact read, or financial authority.
 
 The [merchant UI](../frontend/README.md) presents the case inbox, evidence
 timeline, approvals, separate Sandbox submission, review queue, and buyer
@@ -50,8 +53,10 @@ verified on an isolated local PostgreSQL instance. A later read-only check of th
 configured PostgreSQL database identified migration checksum mismatches caused
 by edits to already applied scripts. Forward migrations 004 and 006 restore
 compatibility. The backend reported healthy at PostgreSQL 006 after that
-repair. The Evidence SDK adds PostgreSQL 007 and SQLite 018; the new migrations
-and retry behavior were tested against disposable databases.
+repair. The Evidence SDK and commerce integration advance the schema to
+PostgreSQL 009 and SQLite 020. Merchants can now browse synced orders separately
+from their case inbox and open cases as needed. Migrations and concurrent retry behavior were
+tested against disposable databases.
 
 ## Account-backed result
 

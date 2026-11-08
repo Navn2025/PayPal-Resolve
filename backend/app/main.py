@@ -37,6 +37,8 @@ from .paypal import PayPalSandboxClient
 from .executions import RefundExecutionService
 from .workspace_routes import router as workspace_router
 from .resolution_routes import router as resolution_router
+from .commerce_routes import router as commerce_router
+from .investigation_routes import router as investigation_router
 from .customer_routes import router as customer_router
 from .merchant_auth_routes import router as merchant_auth_router
 from .ai_routes import router as ai_router
@@ -371,7 +373,8 @@ def create_app(
     settings: Settings | None = None,
     store: ResolveStore | None = None,
 ) -> FastAPI:
-    configuration = settings if settings is not None else Settings()
+    import os
+    configuration = settings if settings is not None else Settings(_env_file=None) if os.environ.get("RESOLVE_ISOLATED_TEST") == "1" else Settings()
     store = (
         store
         if store is not None
@@ -412,6 +415,8 @@ def create_app(
     application.include_router(customer_router)
     application.include_router(merchant_auth_router)
     application.include_router(resolution_router)
+    application.include_router(commerce_router)
+    application.include_router(investigation_router)
     application.include_router(ai_router)
     return application
 

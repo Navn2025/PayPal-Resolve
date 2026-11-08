@@ -16,6 +16,25 @@ provider write.
 
 ## Integrate Resolve into your app
 
+Resolution cases now automatically queue a private evidence investigation when
+created or updated. A separate worker produces findings or a clear abstention;
+merchants review them in the case workspace. Inference and automatic Sandbox
+reads default to disabled. Investigation review never authorizes a refund.
+See [automatic investigations, model policy and synthetic evaluation](docs/AI_INVESTIGATIONS.md).
+
+Generate an SDK key in **Workspace → Settings → SDK keys** and copy the server
+setup. Use the SDK’s `createResolve().syncOrder(order)` to publish an order.
+To wire it up with an IDE assistant, use the
+[Resolve SDK skill and copy-ready prompt](sdk/typescript/README.md#integrate-with-your-ide-assistant).
+
+Use the [commerce integration](docs/COMMERCE_INTEGRATION.md) if your app already
+takes PayPal payments. Sync a selected order, payment, and product snapshot
+from your server using a direct API call or the SDK's read-only PostgreSQL
+connector. Resolve compares it with PayPal Sandbox and flags missing or
+mismatched records in the merchant's evidence bundle. The merchant **Orders**
+view lists registered orders from connected apps, including orders without a
+support case.
+
 The [Resolve Evidence SDK](sdk/typescript/README.md) lets a merchant's Node.js
 server open a case by its own reference, link PayPal records, and record events
 such as a refund approval. Read what PayPal Sandbox confirmed, what is still
@@ -25,6 +44,10 @@ example.
 Other languages can use the [OpenAPI contract](postman/contracts/resolve.openapi.json).
 
 ## Development Documentation
+
+- [Field Brew Supply: a six-product Sandbox store using the Resolve SDK](examples/checkout-store/README.md)
+
+- [Build status and handoff: completed features, local setup, fixes, and remaining work](docs/BUILD_STATUS.md)
 
 - [Merchant UI: run the demo or connect your local backend](frontend/README.md)
 - [Customer portal: case links, access, and messaging](docs/CUSTOMER_PORTAL.md)

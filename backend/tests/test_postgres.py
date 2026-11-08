@@ -6,6 +6,7 @@ from uuid import uuid4
 
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
+from psycopg import sql
 import pytest
 
 from app.errors import StoreError
@@ -28,6 +29,8 @@ def test_applied_postgres_scripts_keep_their_canonical_checksums():
         5: "f35198f84e02a31e1a364d945b25507e685415c6c8401cfdc41e811f0829a1bc",
         6: "6bd216c8fce4340b220ff04ec5b765bbfe62201c7f378d81f566a0110bea31f5",
         7: "60d75405896d21b771ff8696f085f485acb458b1e89e4171213eaaba37aab91f",
+        8: "39b5d2b196bec1d1b3a7e15462ed5725f2e0b47a007f932d5186e3b998c8f9b0",
+        9: "1cb822a224f21af1f4ddd812c41d2fbed13bf65a330ffc2ed469a496946d0ef9",
     }
     found = {
         int(path.name[:3]): sha256(
@@ -42,6 +45,12 @@ def test_applied_postgres_scripts_keep_their_canonical_checksums():
 
 
 def _rewind_evidence_schema(db):
+    for row in list(db.execute("SELECT p.proname FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname=current_schema() AND p.proname LIKE 'investigate_%'")):
+        db.execute(sql.SQL("DROP FUNCTION {}() CASCADE").format(sql.Identifier(row[0])))
+    for table in ("investigation_reviews", "investigation_audit", "investigations", "investigation_jobs"):
+        db.execute(sql.SQL("DROP TABLE {}").format(sql.Identifier(table)))
+    db.execute("DROP TABLE commerce_orders")
+    db.execute("ALTER TABLE merchant_api_keys DROP COLUMN scope")
     for suffix in ("events", "state", "links", "refs"):
         db.execute("DROP TABLE resolution_evidence_" + suffix)
 
@@ -88,7 +97,7 @@ def test_postgres_003_upgrades_both_paypal_flow_variants(
             )
     with postgres_store.transaction() as db:
         assert (
-            db.execute("SELECT max(version) FROM schema_migrations").fetchone()[0] == 7
+            db.execute("SELECT max(version) FROM schema_migrations").fetchone()[0] == 15
         )
         assert (
             db.execute(
@@ -141,7 +150,7 @@ def test_postgres_005_upgrades_both_notification_variants(
             assert client.get("/health").status_code == 200
     with postgres_store.transaction() as db:
         assert (
-            db.execute("SELECT max(version) FROM schema_migrations").fetchone()[0] == 7
+            db.execute("SELECT max(version) FROM schema_migrations").fetchone()[0] == 15
         )
         assert (
             db.execute(

@@ -25,11 +25,23 @@ def get_current_merchant(
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer)],
     store: Store,
 ) -> MerchantIdentity:
+    return _merchant(request, credentials, store)
+
+
+def get_commerce_merchant(
+    request: Request,
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer)],
+    store: Store,
+) -> MerchantIdentity:
+    return _merchant(request, credentials, store, allow_commerce=True)
+
+
+def _merchant(request, credentials, store, *, allow_commerce=False):
     token = credentials.credentials if credentials else ""
     merchant = (
         MerchantAuth(store, request.app.state.settings).merchant(token)
         if token.startswith("rweb_")
-        else store.authenticate(token)
+        else store.authenticate(token, allow_commerce=allow_commerce)
         if token
         else None
     )
@@ -43,3 +55,4 @@ def get_current_merchant(
 
 
 CurrentMerchant = Annotated[MerchantIdentity, Depends(get_current_merchant)]
+CurrentCommerceMerchant = Annotated[MerchantIdentity, Depends(get_commerce_merchant)]

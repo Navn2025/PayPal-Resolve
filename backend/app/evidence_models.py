@@ -8,6 +8,7 @@ from uuid import UUID
 
 from pydantic import AwareDatetime, BaseModel, Field, field_validator, model_validator
 
+from .commerce_models import CommerceReport
 from .models import Money, NonNegativeMoney
 from .resolution_models import (
     Input,
@@ -115,6 +116,7 @@ class EvidenceRefreshResult(BaseModel):
 
 
 class EvidenceSummary(BaseModel):
+    last_check_started_at: datetime | None = None
     last_checked_at: datetime | None = None
     last_verified_at: datetime | None = None
     order_history_verified: bool = False
@@ -138,3 +140,4 @@ class EvidenceCaseView(ResolutionView):
 class EvidenceBundle(ResolutionBundle):
     case: EvidenceCaseView
     linked_records: list[LinkedEvidenceRecord]
+    commerce: CommerceReport | None = None

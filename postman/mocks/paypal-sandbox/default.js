@@ -5,6 +5,9 @@ const refundsByRequest = new Map();
 const refundsById = new Map();
 const captureStats = new Map();
 const evidenceOutages = new Set();
+const shopOrders = new Map();
+const shopByRequest = new Map();
+const shopByCapture = new Map();
 function stats(id) {
   if (!captureStats.has(id)) captureStats.set(id, { refund_posts: 0, refund_creations: 0, request_ids: [], refund_ids: [] });
   return captureStats.get(id);
@@ -20,10 +23,13 @@ const used = (capture, statuses) => captureRefunds(capture)
   .filter(refund => statuses.includes(refund.status))
   .reduce((cents, refund) => cents + Math.round(Number(refund.amount.value) * 100), 0);
 function captureDetails(id) {
+  const sale = shopByCapture.get(id);
+  const gross = sale?.cents || 10000;
   const completed = used(id, ['COMPLETED']);
   return {
-    id, status: completed === 10000 ? 'REFUNDED' : completed > 0 ? 'PARTIALLY_REFUNDED' : 'COMPLETED',
-    amount: money(10000), payee: { merchant_id: 'SIMSELLER001' }
+    id, status: completed === gross ? 'REFUNDED' : completed > 0 ? 'PARTIALLY_REFUNDED' : 'COMPLETED',
+    amount: money(gross), payee: { merchant_id: 'SIMSELLER001' },
+    ...(sale ? { supplementary_data: { related_ids: { order_id: sale.id } } } : {}),
   };
 }
 function newRefund(capture, id, cents, status, customId) {
@@ -105,6 +111,81 @@ http.createServer((req, res) => {
       verification_status: body.webhook_id === 'SIMWEBHOOK001' &&
         body.transmission_sig === 'c2lnbmVk' && body.webhook_event?.id ? 'SUCCESS' : 'FAILURE'
     });
+  }
+  // Orders created by the standalone store share the same capture/refund reads
+  // as the Resolve client. These controls belong only to this stand-in.
+  function shopView(order) {
+    return {
+      id: order.id,
+      status: order.status,
+      purchase_units: [{
+        reference_id: order.reference, payee: { merchant_id: 'SIMSELLER001' }, amount: money(order.cents),
+        ...(order.captureId ? { payments: {
+          captures: [captureDetails(order.captureId)], refunds: captureRefunds(order.captureId),
+        } } : {}),
+      }],
+      links: [{ rel: 'payer-action', href: 'https://www.sandbox.paypal.com/checkoutnow?token=' + order.id, method: 'GET' }],
+    };
+  }
+  if (req.method === 'POST' && path === '/v2/checkout/orders') {
+    const key = req.headers['paypal-request-id'];
+    const body = req.body || {};
+    const unit = body.purchase_units?.[0];
+    const urls = body.payment_source?.paypal?.experience_context;
+    if (!/^[0-9a-f-]{36}$/i.test(key || '') || req.headers.prefer !== 'return=representation' ||
+        body.intent !== 'CAPTURE' || body.purchase_units?.length !== 1 ||
+        unit?.payee?.merchant_id !== 'SIMSELLER001' || unit?.amount?.currency_code !== 'USD' ||
+        !/^\d+\.\d{2}$/.test(unit.amount.value) || !unit.reference_id ||
+        !urls?.return_url?.startsWith('http://127.0.0.1:') || urls.shipping_preference !== 'NO_SHIPPING') {
+      return json(res, 400, { error: 'Invalid demo order representation' });
+    }
+    const previous = shopByRequest.get(key);
+    if (previous) return json(res, previous.request === JSON.stringify(body) ? 200 : 422,
+      previous.request === JSON.stringify(body) ? shopView(previous) : { error: 'Request ID conflict' });
+    const id = 'SIMSTORE' + crypto.randomBytes(6).toString('hex').toUpperCase();
+    const order = {
+      id, cents: Math.round(Number(unit.amount.value) * 100), reference: unit.reference_id,
+      returnUrl: urls.return_url, status: 'PAYER_ACTION_REQUIRED', request: JSON.stringify(body),
+      capturePosts: 0, captureCreations: 0,
+    };
+    shopOrders.set(id, order);
+    shopByRequest.set(key, order);
+    return json(res, 201, shopView(order));
+  }
+  const shopControl = path.match(/^\/__resolve_test\/shop\/(approve|state)\/(SIMSTORE[A-Z0-9]+)$/);
+  if (shopControl) {
+    const order = shopOrders.get(shopControl[2]);
+    if (!order) return json(res, 404, { error: 'Unknown demo order' });
+    if (req.method === 'POST' && shopControl[1] === 'approve') {
+      if (order.status === 'PAYER_ACTION_REQUIRED') order.status = 'APPROVED';
+      const back = new URL(order.returnUrl);
+      back.searchParams.set('token', order.id);
+      return json(res, 200, { return_url: back.href });
+    }
+    if (req.method === 'GET' && shopControl[1] === 'state') return json(res, 200, {
+      status: order.status, capture_id: order.captureId || null,
+      capture_posts: order.capturePosts, capture_creations: order.captureCreations,
+    });
+  }
+  const checkout = path.match(/^\/v2\/checkout\/orders\/(SIMSTORE[A-Z0-9]+)(\/capture)?$/);
+  if (checkout) {
+    const order = shopOrders.get(checkout[1]);
+    if (!order) return json(res, 404, { error: 'Unknown demo order' });
+    if (req.method === 'GET' && !checkout[2]) return json(res, 200, shopView(order));
+    if (req.method === 'POST' && checkout[2]) {
+      order.capturePosts++;
+      const key = req.headers['paypal-request-id'];
+      if (!/^[0-9a-f-]{36}$/i.test(key || '') || req.headers.prefer !== 'return=representation')
+        return json(res, 400, { error: 'Missing capture request identity' });
+      if (order.captureId && order.captureKey === key) return json(res, 200, shopView(order));
+      if (order.status !== 'APPROVED') return json(res, 422, { error: 'Not approved' });
+      order.status = 'COMPLETED';
+      order.captureId = 'SIMHSTORE' + crypto.randomBytes(6).toString('hex').toUpperCase();
+      order.captureKey = key;
+      order.captureCreations++;
+      shopByCapture.set(order.captureId, order);
+      return json(res, 201, shopView(order));
+    }
   }
   const orderGet = path.match(/^\/v2\/checkout\/orders\/SIMORDER(SIMH[A-Za-z0-9]+)$/);
   if (req.method === 'GET' && orderGet) {

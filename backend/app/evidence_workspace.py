@@ -9,6 +9,7 @@ from uuid import uuid4
 from pydantic import BaseModel
 
 from .case_workspace import CaseWorkspace, now_text
+from .commerce_compare import commerce_report
 from .errors import StoreError
 from .evidence_models import (
     EvidenceBundle,
@@ -80,7 +81,7 @@ def _totals(facts):
 
 
 def evidence_summary(db, case):
-    _, current = _state(db, case)
+    started, current = _state(db, case)
     facts = current.facts if current else []
     approval = _approval(db, case)
     capture, completed, pending = _totals(facts)
@@ -102,6 +103,7 @@ def evidence_summary(db, case):
             )
         )
     return EvidenceSummary(
+        last_check_started_at=started,
         last_checked_at=current.check.checked_at if current else None,
         last_verified_at=max((fact.checked_at for fact in facts), default=None),
         order_history_verified=bool(current and current.check.order_history_verified),
@@ -184,68 +186,66 @@ class EvidenceWorkspace:
     def link(self, case_id, merchant_id, payload):
         with self.store.transaction(write=True) as db:
             case = self.workspace._case(db, case_id, merchant_id)
-            links = self._links(db, case)
-            for link in links:
-                if link.kind == payload.kind and link.reference == payload.reference:
-                    if link.source != payload.source:
-                        raise StoreError(
-                            409, "The linked record already has a different source"
-                        )
-                    return link
-            if payload.kind in PRIMARY and any(
-                link.kind == payload.kind for link in links
-            ):
-                raise StoreError(
-                    409, "The case already has a different PayPal order or capture"
-                )
-            if len(links) >= 32 or (
-                payload.kind == "paypal_refund"
-                and sum(link.kind == "paypal_refund" for link in links) >= 10
-            ):
-                raise StoreError(409, "The case has reached its linked record limit")
-            legacy = self.workspace._legacy(db, case)
-            if legacy and (
-                (
-                    payload.kind == "paypal_capture"
-                    and payload.reference != legacy.payment.capture_id
-                )
-                or (
-                    payload.kind == "paypal_order"
-                    and payload.reference != legacy.order_id
-                )
-            ):
-                raise StoreError(
-                    409, "The reference conflicts with the existing Resolve payment"
-                )
-            _, current = _state(db, case)
-            if (
-                payload.kind in PRIMARY
-                and current
-                and any(
-                    fact.kind == payload.kind and fact.reference != payload.reference
-                    for fact in current.facts
-                )
-            ):
-                raise StoreError(
-                    409, "The reference conflicts with already verified PayPal evidence"
-                )
-            identifier, now = str(uuid4()), now_text()
-            db.execute(
-                """INSERT INTO resolution_evidence_links (id,resolution_id,merchant_id,kind,reference,source,linked_at)
-                   VALUES (?,?,?,?,?,?,?)""",
-                (
-                    identifier,
-                    case["id"],
-                    case["merchant_id"],
-                    payload.kind,
-                    payload.reference,
-                    payload.source,
-                    now,
-                ),
+            return self._link(db, case, payload)
+
+    def _link(self, db, case, payload, *, reuse_association=False):
+        links = self._links(db, case)
+        for link in links:
+            if link.kind == payload.kind and link.reference == payload.reference:
+                if link.source != payload.source and not reuse_association:
+                    raise StoreError(
+                        409, "The linked record already has a different source"
+                    )
+                return link
+        if payload.kind in PRIMARY and any(link.kind == payload.kind for link in links):
+            raise StoreError(
+                409, "The case already has a different PayPal order or capture"
             )
-            return LinkedEvidenceRecord(
-                **payload.model_dump(), id=identifier, linked_at=now
+        if len(links) >= 32 or (
+            payload.kind == "paypal_refund"
+            and sum(link.kind == "paypal_refund" for link in links) >= 10
+        ):
+            raise StoreError(409, "The case has reached its linked record limit")
+        legacy = self.workspace._legacy(db, case)
+        if legacy and (
+            (
+                payload.kind == "paypal_capture"
+                and payload.reference != legacy.payment.capture_id
             )
+            or (payload.kind == "paypal_order" and payload.reference != legacy.order_id)
+        ):
+            raise StoreError(
+                409, "The reference conflicts with the existing Resolve payment"
+            )
+        _, current = _state(db, case)
+        if (
+            payload.kind in PRIMARY
+            and current
+            and any(
+                fact.kind == payload.kind and fact.reference != payload.reference
+                for fact in current.facts
+            )
+        ):
+            raise StoreError(
+                409, "The reference conflicts with already verified PayPal evidence"
+            )
+        identifier, now = str(uuid4()), now_text()
+        db.execute(
+            """INSERT INTO resolution_evidence_links (id,resolution_id,merchant_id,kind,reference,source,linked_at)
+               VALUES (?,?,?,?,?,?,?)""",
+            (
+                identifier,
+                case["id"],
+                case["merchant_id"],
+                payload.kind,
+                payload.reference,
+                payload.source,
+                now,
+            ),
+        )
+        return LinkedEvidenceRecord(
+            **payload.model_dump(), id=identifier, linked_at=now
+        )
 
     def _event(self, db, case, origin, source, key, digest, data):
         identity = (case["id"], case["merchant_id"], origin, source, key)
@@ -433,6 +433,7 @@ class EvidenceWorkspace:
             case = self.workspace._case(db, case_id, merchant_id)
             view = self._view(db, case)
             links = self._links(db, case)
+            commerce = commerce_report(db, case, view.evidence_summary)
             timeline = self.workspace._timeline(db, case, limit, offset)
         timeline = self.workspace._refund_timeline(
             timeline, view.refund_case_id, merchant_id, limit, offset
@@ -440,6 +441,7 @@ class EvidenceWorkspace:
         return EvidenceBundle(
             case=view,
             linked_records=links,
+            commerce=commerce,
             timeline=timeline,
             refund_attachments=CaseWorkspace(self.store).attachments(
                 view.refund_case_id, merchant_id

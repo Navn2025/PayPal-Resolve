@@ -1,6 +1,7 @@
 """Private responses for the merchant browser login and PayPal callback."""
 
 from typing import Annotated
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.exceptions import RequestValidationError
@@ -12,6 +13,8 @@ from pydantic import BaseModel
 from .auth import Store, bearer
 from .errors import StoreError
 from .merchant_auth import (
+    CommerceKeys,
+    IssuedCommerceKey,
     IssuedMerchantSession,
     MerchantAuth,
     MerchantKeyInput,
@@ -119,3 +122,32 @@ def finish_paypal(
 def unlink_paypal(request: Request, store: Store, credential: Credential):
     service(request, store).unlink(value(credential))
     return {"paypal_linked": False}
+
+
+@router.get("/commerce-keys", response_model=CommerceKeys)
+def list_commerce_keys(request: Request, store: Store, credential: Credential):
+    """List active SDK key IDs and creation times for the browser session."""
+    return service(request, store).commerce_keys(value(credential))
+
+
+@router.post(
+    "/commerce-keys",
+    status_code=201,
+    response_model=IssuedCommerceKey,
+    responses={403: {"description": "Recent full access-key browser sign-in required"}},
+)
+def issue_commerce_key(request: Request, store: Store, credential: Credential):
+    """Create a commerce-only SDK key and return its secret once."""
+    return service(request, store).issue_commerce_key(value(credential))
+
+
+@router.delete(
+    "/commerce-keys/{key_id}",
+    responses={403: {"description": "Recent full access-key browser sign-in required"}},
+)
+def revoke_commerce_key(
+    key_id: UUID, request: Request, store: Store, credential: Credential
+):
+    """Revoke one of this merchant's commerce-only keys."""
+    service(request, store).revoke_commerce_key(value(credential), key_id)
+    return {"revoked": True}

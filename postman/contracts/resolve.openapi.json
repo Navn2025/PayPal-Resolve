@@ -3657,6 +3657,111 @@
         ]
       }
     },
+    "/merchant-auth/commerce-keys": {
+      "get": {
+        "tags": [
+          "Merchant browser authentication"
+        ],
+        "summary": "List Commerce Keys",
+        "description": "List active SDK key IDs and creation times for the browser session.",
+        "operationId": "list_commerce_keys_merchant_auth_commerce_keys_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommerceKeys"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Merchant browser authentication"
+        ],
+        "summary": "Issue Commerce Key",
+        "description": "Create a commerce-only SDK key and return its secret once.",
+        "operationId": "issue_commerce_key_merchant_auth_commerce_keys_post",
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IssuedCommerceKey"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Recent full access-key browser sign-in required"
+          }
+        },
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ]
+      }
+    },
+    "/merchant-auth/commerce-keys/{key_id}": {
+      "delete": {
+        "tags": [
+          "Merchant browser authentication"
+        ],
+        "summary": "Revoke Commerce Key",
+        "description": "Revoke one of this merchant's commerce-only keys.",
+        "operationId": "revoke_commerce_key_merchant_auth_commerce_keys__key_id__delete",
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "key_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Key Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "403": {
+            "description": "Recent full access-key browser sign-in required"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/resolution-cases": {
       "post": {
         "tags": [
@@ -4536,6 +4641,545 @@
         }
       }
     },
+    "/commerce/orders/sync": {
+      "post": {
+        "tags": [
+          "Commerce evidence"
+        ],
+        "summary": "Sync Commerce Order",
+        "description": "Create or reuse a case and atomically save the latest app order snapshot.",
+        "operationId": "sync_commerce_order_commerce_orders_sync_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommerceSyncInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommerceSyncResult"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Stale/conflicting revision, case, or PayPal reference"
+          },
+          "413": {
+            "description": "Snapshot exceeds 32 KiB"
+          },
+          "422": {
+            "description": "Invalid request; details never echo submitted data"
+          }
+        },
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ]
+      }
+    },
+    "/commerce/orders/register": {
+      "post": {
+        "tags": [
+          "Commerce evidence"
+        ],
+        "summary": "Register Commerce Order",
+        "description": "Save or update an order for the dashboard without opening a new case.",
+        "operationId": "register_commerce_order_commerce_orders_register_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommerceRegisterInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommerceOrderReceipt"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Stale or conflicting order revision or PayPal reference"
+          },
+          "413": {
+            "description": "Snapshot exceeds 32 KiB"
+          },
+          "422": {
+            "description": "Invalid request; details never echo submitted data"
+          }
+        },
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ]
+      }
+    },
+    "/commerce/orders": {
+      "get": {
+        "tags": [
+          "Commerce evidence"
+        ],
+        "summary": "List Commerce Orders",
+        "description": "Browse app orders for the authenticated merchant without calling PayPal.",
+        "operationId": "list_commerce_orders_commerce_orders_get",
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 160,
+              "default": "",
+              "title": "Q"
+            }
+          },
+          {
+            "name": "source",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 64,
+              "pattern": "^(?:[A-Za-z0-9][A-Za-z0-9_.-]{0,63})?$",
+              "default": "",
+              "title": "Source"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 25,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommerceOrdersPage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/commerce/orders/{order_id}": {
+      "get": {
+        "tags": [
+          "Commerce evidence"
+        ],
+        "summary": "Get Registered Order",
+        "description": "Read the private order snapshot without any shared contact details.",
+        "operationId": "get_registered_order_commerce_orders__order_id__get",
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "order_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Order Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommerceOrderDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/commerce/orders/{order_id}/case": {
+      "post": {
+        "tags": [
+          "Commerce evidence"
+        ],
+        "summary": "Open Commerce Case",
+        "description": "Open or reuse a resolution case and attach the registered order evidence.",
+        "operationId": "open_commerce_case_commerce_orders__order_id__case_post",
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "order_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Order Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommerceOrderReceipt"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/resolution-cases/{case_id}/commerce": {
+      "get": {
+        "tags": [
+          "Commerce evidence"
+        ],
+        "summary": "Get Commerce Order",
+        "description": "Compare the app order with the most recent applicable PayPal check.",
+        "operationId": "get_commerce_order_resolution_cases__case_id__commerce_get",
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommerceReport"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/resolution-cases/{case_id}/commerce/refresh": {
+      "post": {
+        "tags": [
+          "Commerce evidence"
+        ],
+        "summary": "Refresh Commerce Order",
+        "description": "Read linked PayPal Sandbox evidence and compare. Never mutate payments.",
+        "operationId": "refresh_commerce_order_resolution_cases__case_id__commerce_refresh_post",
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommerceReport"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/resolution-cases/{case_id}/commerce/contact": {
+      "get": {
+        "tags": [
+          "Commerce evidence"
+        ],
+        "summary": "Get Commerce Contact",
+        "description": "Read explicitly shared app contact information with full merchant access.",
+        "operationId": "get_commerce_contact_resolution_cases__case_id__commerce_contact_get",
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommerceContact"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/resolution-cases/{case_id}/investigations": {
+      "get": {
+        "tags": [
+          "Private investigations"
+        ],
+        "summary": "Investigations",
+        "operationId": "investigations_resolution_cases__case_id__investigations_get",
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvestigationPage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/resolution-cases/{case_id}/investigations/{investigation_id}/review": {
+      "post": {
+        "tags": [
+          "Private investigations"
+        ],
+        "summary": "Review Investigation",
+        "operationId": "review_investigation_resolution_cases__case_id__investigations__investigation_id__review_post",
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Case Id"
+            }
+          },
+          {
+            "name": "investigation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Investigation Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InvestigationReview"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewReceipt"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/resolution-cases/{case_id}/ai/extract-promises": {
       "post": {
         "tags": [
@@ -5111,6 +5755,1054 @@
         ],
         "title": "ChatMessage"
       },
+      "CommerceContact": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 254,
+                "pattern": "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\+?[0-9][0-9 ()-]{5,24}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "CommerceContact"
+      },
+      "CommerceFieldCheck": {
+        "properties": {
+          "field": {
+            "type": "string",
+            "enum": [
+              "paypal_order_id",
+              "paypal_capture_id",
+              "currency",
+              "payment_status",
+              "captured_amount",
+              "refunded_amount"
+            ],
+            "title": "Field"
+          },
+          "app_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "App Value"
+          },
+          "paypal_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paypal Value"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "match",
+              "mismatch",
+              "missing_app",
+              "unverified"
+            ],
+            "title": "Status"
+          },
+          "checked_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checked At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "field",
+          "app_value",
+          "paypal_value",
+          "status"
+        ],
+        "title": "CommerceFieldCheck"
+      },
+      "CommerceItem-Input": {
+        "properties": {
+          "product_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,159}$",
+            "title": "Product Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "sku": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sku"
+          },
+          "quantity": {
+            "type": "integer",
+            "maximum": 1000000.0,
+            "minimum": 1.0,
+            "title": "Quantity"
+          },
+          "unit_amount": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Amount"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "product_id",
+          "quantity"
+        ],
+        "title": "CommerceItem"
+      },
+      "CommerceItem-Output": {
+        "properties": {
+          "product_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,159}$",
+            "title": "Product Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "sku": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sku"
+          },
+          "quantity": {
+            "type": "integer",
+            "maximum": 1000000.0,
+            "minimum": 1.0,
+            "title": "Quantity"
+          },
+          "unit_amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Amount"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "product_id",
+          "quantity"
+        ],
+        "title": "CommerceItem"
+      },
+      "CommerceKeySummary": {
+        "properties": {
+          "key_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Key Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key_id",
+          "created_at"
+        ],
+        "title": "CommerceKeySummary"
+      },
+      "CommerceKeys": {
+        "properties": {
+          "keys": {
+            "items": {
+              "$ref": "#/components/schemas/CommerceKeySummary"
+            },
+            "type": "array",
+            "title": "Keys"
+          },
+          "can_manage": {
+            "type": "boolean",
+            "title": "Can Manage"
+          }
+        },
+        "type": "object",
+        "required": [
+          "keys",
+          "can_manage"
+        ],
+        "title": "CommerceKeys"
+      },
+      "CommerceOrderDetail": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "case_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Case Id"
+          },
+          "source": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$",
+            "title": "Source"
+          },
+          "order_reference": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,159}$",
+            "title": "Order Reference"
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          },
+          "synced_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Synced At"
+          },
+          "app": {
+            "$ref": "#/components/schemas/CommerceSnapshot"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "case_id",
+          "source",
+          "order_reference",
+          "revision",
+          "synced_at",
+          "app"
+        ],
+        "title": "CommerceOrderDetail"
+      },
+      "CommerceOrderReceipt": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "case_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Case Id"
+          },
+          "source": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$",
+            "title": "Source"
+          },
+          "order_reference": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,159}$",
+            "title": "Order Reference"
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          },
+          "synced_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Synced At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "case_id",
+          "source",
+          "order_reference",
+          "revision",
+          "synced_at"
+        ],
+        "title": "CommerceOrderReceipt"
+      },
+      "CommerceOrderSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "case_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Case Id"
+          },
+          "source": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$",
+            "title": "Source"
+          },
+          "order_reference": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,159}$",
+            "title": "Order Reference"
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          },
+          "synced_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Synced At"
+          },
+          "order_status": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order Status"
+          },
+          "payment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CommercePayment-Output"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "line_count": {
+            "type": "integer",
+            "title": "Line Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "case_id",
+          "source",
+          "order_reference",
+          "revision",
+          "synced_at",
+          "order_status",
+          "payment",
+          "line_count"
+        ],
+        "title": "CommerceOrderSummary"
+      },
+      "CommerceOrdersPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CommerceOrderSummary"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "CommerceOrdersPage"
+      },
+      "CommercePayment-Input": {
+        "properties": {
+          "paypal_order_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9]{1,64}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paypal Order Id"
+          },
+          "paypal_capture_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9]{1,64}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paypal Capture Id"
+          },
+          "currency": {
+            "type": "string",
+            "const": "USD",
+            "title": "Currency",
+            "default": "USD"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "pending",
+                  "completed",
+                  "partially_refunded",
+                  "refunded",
+                  "failed"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "captured_amount": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Captured Amount"
+          },
+          "refunded_amount": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refunded Amount"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "CommercePayment"
+      },
+      "CommercePayment-Output": {
+        "properties": {
+          "paypal_order_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9]{1,64}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paypal Order Id"
+          },
+          "paypal_capture_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9]{1,64}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paypal Capture Id"
+          },
+          "currency": {
+            "type": "string",
+            "const": "USD",
+            "title": "Currency",
+            "default": "USD"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "pending",
+                  "completed",
+                  "partially_refunded",
+                  "refunded",
+                  "failed"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "captured_amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Captured Amount"
+          },
+          "refunded_amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refunded Amount"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "CommercePayment"
+      },
+      "CommerceProviderIssue": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "missing",
+              "unsupported",
+              "unavailable",
+              "mismatch"
+            ],
+            "title": "Status"
+          },
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "status",
+          "detail"
+        ],
+        "title": "CommerceProviderIssue"
+      },
+      "CommerceRegisterInput": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$",
+            "title": "Source"
+          },
+          "order_reference": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,159}$",
+            "title": "Order Reference"
+          },
+          "revision": {
+            "type": "integer",
+            "maximum": 9007199254740991.0,
+            "minimum": 1.0,
+            "title": "Revision"
+          },
+          "order_status": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order Status"
+          },
+          "customer_reference": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,159}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer Reference"
+          },
+          "payment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CommercePayment-Input"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CommerceItem-Input"
+            },
+            "type": "array",
+            "maxItems": 50,
+            "title": "Items"
+          },
+          "contact": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CommerceContact"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "source",
+          "order_reference",
+          "revision"
+        ],
+        "title": "CommerceRegisterInput"
+      },
+      "CommerceReport": {
+        "properties": {
+          "case_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Case Id"
+          },
+          "app": {
+            "$ref": "#/components/schemas/CommerceSnapshot"
+          },
+          "synced_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Synced At"
+          },
+          "app_source": {
+            "type": "string",
+            "const": "merchant_reported",
+            "title": "App Source",
+            "default": "merchant_reported"
+          },
+          "provider_source": {
+            "type": "string",
+            "const": "paypal_sandbox",
+            "title": "Provider Source",
+            "default": "paypal_sandbox"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "match",
+              "mismatch",
+              "incomplete"
+            ],
+            "title": "Status"
+          },
+          "checks": {
+            "items": {
+              "$ref": "#/components/schemas/CommerceFieldCheck"
+            },
+            "type": "array",
+            "title": "Checks"
+          },
+          "last_checked_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Checked At"
+          },
+          "provider_issues": {
+            "items": {
+              "$ref": "#/components/schemas/CommerceProviderIssue"
+            },
+            "type": "array",
+            "title": "Provider Issues"
+          }
+        },
+        "type": "object",
+        "required": [
+          "case_id",
+          "app",
+          "synced_at",
+          "status",
+          "checks"
+        ],
+        "title": "CommerceReport"
+      },
+      "CommerceSnapshot": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$",
+            "title": "Source"
+          },
+          "order_reference": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,159}$",
+            "title": "Order Reference"
+          },
+          "revision": {
+            "type": "integer",
+            "maximum": 9007199254740991.0,
+            "minimum": 1.0,
+            "title": "Revision"
+          },
+          "order_status": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order Status"
+          },
+          "customer_reference": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,159}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer Reference"
+          },
+          "payment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CommercePayment-Output"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CommerceItem-Output"
+            },
+            "type": "array",
+            "maxItems": 50,
+            "title": "Items"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "source",
+          "order_reference",
+          "revision"
+        ],
+        "title": "CommerceSnapshot"
+      },
+      "CommerceSyncInput": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$",
+            "title": "Source"
+          },
+          "order_reference": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,159}$",
+            "title": "Order Reference"
+          },
+          "revision": {
+            "type": "integer",
+            "maximum": 9007199254740991.0,
+            "minimum": 1.0,
+            "title": "Revision"
+          },
+          "order_status": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order Status"
+          },
+          "customer_reference": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,159}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer Reference"
+          },
+          "payment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CommercePayment-Input"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CommerceItem-Input"
+            },
+            "type": "array",
+            "maxItems": 50,
+            "title": "Items"
+          },
+          "contact": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CommerceContact"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "case_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Case Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "source",
+          "order_reference",
+          "revision"
+        ],
+        "title": "CommerceSyncInput"
+      },
+      "CommerceSyncResult": {
+        "properties": {
+          "case_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Case Id"
+          },
+          "source": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$",
+            "title": "Source"
+          },
+          "order_reference": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,159}$",
+            "title": "Order Reference"
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          },
+          "synced_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Synced At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "case_id",
+          "source",
+          "order_reference",
+          "revision",
+          "synced_at"
+        ],
+        "title": "CommerceSyncResult"
+      },
       "CommitmentUpdate": {
         "properties": {
           "state_fingerprint": {
@@ -5564,6 +7256,16 @@
             },
             "type": "array",
             "title": "Linked Records"
+          },
+          "commerce": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CommerceReport"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -5985,6 +7687,18 @@
       },
       "EvidenceSummary": {
         "properties": {
+          "last_check_started_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Check Started At"
+          },
           "last_checked_at": {
             "anyOf": [
               {
@@ -6242,6 +7956,75 @@
         ],
         "title": "ExtractionResult"
       },
+      "Finding": {
+        "properties": {
+          "evidence_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Evidence Id"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "provider_fact",
+              "merchant_claim",
+              "system"
+            ],
+            "title": "Source"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "verified_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verified At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "evidence_id",
+          "source",
+          "kind",
+          "status"
+        ],
+        "title": "Finding"
+      },
       "GoogleFinish": {
         "properties": {
           "state": {
@@ -6484,6 +8267,256 @@
         ],
         "title": "IntakeView"
       },
+      "InvestigationPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/InvestigationView"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "InvestigationPage"
+      },
+      "InvestigationResult": {
+        "properties": {
+          "issue_type": {
+            "type": "string",
+            "enum": [
+              "refund",
+              "unknown"
+            ],
+            "title": "Issue Type"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "confirmed_full_refund",
+              "partial_refund",
+              "pending_refund",
+              "approval_unconfirmed",
+              "contradictory",
+              "stale",
+              "missing"
+            ],
+            "title": "Status"
+          },
+          "findings": {
+            "items": {
+              "$ref": "#/components/schemas/Finding"
+            },
+            "type": "array",
+            "title": "Findings"
+          },
+          "contradictions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Contradictions"
+          },
+          "missing_evidence": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Missing Evidence"
+          },
+          "next_step": {
+            "type": "string",
+            "enum": [
+              "review",
+              "request_evidence",
+              "wait_provider",
+              "no_action",
+              "abstain"
+            ],
+            "title": "Next Step"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          },
+          "validation_failures": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Validation Failures"
+          },
+          "last_verified_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Verified At"
+          },
+          "evidence_fresh_until": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Fresh Until"
+          },
+          "evidence_snapshot": {
+            "type": "string",
+            "title": "Evidence Snapshot"
+          },
+          "case_revision": {
+            "type": "integer",
+            "title": "Case Revision"
+          },
+          "model_calls": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Model Calls"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "issue_type",
+          "status",
+          "findings",
+          "contradictions",
+          "missing_evidence",
+          "next_step",
+          "reason",
+          "evidence_snapshot",
+          "case_revision"
+        ],
+        "title": "InvestigationResult"
+      },
+      "InvestigationReview": {
+        "properties": {
+          "expected_revision": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Expected Revision"
+          },
+          "evidence_snapshot": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Evidence Snapshot"
+          },
+          "decision": {
+            "type": "string",
+            "enum": [
+              "approve",
+              "reject",
+              "request_evidence"
+            ],
+            "title": "Decision"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "expected_revision",
+          "evidence_snapshot",
+          "decision"
+        ],
+        "title": "InvestigationReview"
+      },
+      "InvestigationView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "case_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Case Id"
+          },
+          "case_revision": {
+            "type": "integer",
+            "title": "Case Revision"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "running",
+              "finished",
+              "blocked"
+            ],
+            "title": "State"
+          },
+          "stale": {
+            "type": "boolean",
+            "title": "Stale"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/InvestigationResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "review": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReviewReceipt"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "case_id",
+          "case_revision",
+          "state",
+          "stale",
+          "created_at"
+        ],
+        "title": "InvestigationView"
+      },
       "InviteCreate": {
         "properties": {
           "order_reference": {
@@ -6555,6 +8588,25 @@
           "expires_at"
         ],
         "title": "InviteIssued"
+      },
+      "IssuedCommerceKey": {
+        "properties": {
+          "key_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Key Id"
+          },
+          "api_key": {
+            "type": "string",
+            "title": "Api Key"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key_id",
+          "api_key"
+        ],
+        "title": "IssuedCommerceKey"
       },
       "IssuedLink": {
         "properties": {
@@ -9978,6 +12030,60 @@
           "offset"
         ],
         "title": "ReviewPage"
+      },
+      "ReviewReceipt": {
+        "properties": {
+          "expected_revision": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Expected Revision"
+          },
+          "evidence_snapshot": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Evidence Snapshot"
+          },
+          "decision": {
+            "type": "string",
+            "enum": [
+              "approve",
+              "reject",
+              "request_evidence"
+            ],
+            "title": "Decision"
+          },
+          "reviewer_merchant_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Reviewer Merchant Id"
+          },
+          "reviewer_identity": {
+            "type": "string",
+            "title": "Reviewer Identity"
+          },
+          "reviewed_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Reviewed At"
+          },
+          "authorizes_payment": {
+            "type": "boolean",
+            "const": false,
+            "title": "Authorizes Payment",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "expected_revision",
+          "evidence_snapshot",
+          "decision",
+          "reviewer_merchant_id",
+          "reviewer_identity",
+          "reviewed_at"
+        ],
+        "title": "ReviewReceipt"
       },
       "StoreCreditOrExchangeTarget-Input": {
         "properties": {

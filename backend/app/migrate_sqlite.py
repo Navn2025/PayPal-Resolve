@@ -131,12 +131,21 @@ def _import(snapshot, target):
                         "PostgreSQL target is not empty; use a fresh Resolve database"
                     )
             db.execute("SET CONSTRAINTS ALL DEFERRED")
+            # Import persisted queue revisions exactly; source evidence inserts must
+            # not enqueue again while restoring an already verified snapshot.
+            investigation_triggers = list(db.execute("""SELECT c.relname,t.tgname FROM pg_trigger t
+                JOIN pg_class c ON c.oid=t.tgrelid JOIN pg_namespace n ON n.oid=c.relnamespace
+                WHERE n.nspname=? AND NOT t.tgisinternal AND t.tgname LIKE 'investigate_%'""", (target.schema,)))
+            for table, trigger in investigation_triggers:
+                db.execute(sql.SQL("ALTER TABLE {} DISABLE TRIGGER {}").format(sql.Identifier(table), sql.Identifier(trigger)))
             db.execute("DELETE FROM merchants WHERE id=?", (str(LEGACY_MERCHANT_ID),))
             counts = {
                 table: _copy_table(source, db.raw, table, metadata[table][0])
                 for table in tables
             }
             db.execute("SET CONSTRAINTS ALL IMMEDIATE")
+            for table, trigger in investigation_triggers:
+                db.execute(sql.SQL("ALTER TABLE {} ENABLE TRIGGER {}").format(sql.Identifier(table), sql.Identifier(trigger)))
             identities = db.execute(
                 """SELECT table_name,column_name FROM information_schema.columns
                    WHERE table_schema=? AND is_identity='YES'""",

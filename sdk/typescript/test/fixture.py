@@ -38,6 +38,13 @@ def main():
     store.initialize()
     primary = store.create_merchant("SDK test workspace")
     other = store.create_merchant("Isolated workspace")
+    commerce = store.issue_key(primary.merchant.id, scope="commerce")
+    if "--investigations" in sys.argv:
+        from app.investigation_worker import run_once
+        from app.resolution_workspace import ResolutionWorkspace
+        from app.resolution_models import ResolutionCreate
+        ResolutionWorkspace(store).create(primary.merchant.id, ResolutionCreate(title="Automatic synthetic investigation"))
+        run_once(store)
     if simulated:
         settings = app.state.settings
         settings.paypal_resolve_merchant_id = primary.merchant.id
@@ -88,12 +95,16 @@ def main():
         listener.bind(("127.0.0.1", 0))
         port = listener.getsockname()[1]
         # Pipe fixture keys to the test harness, never to the test report.
-        print(
-            json.dumps(
-                {"port": port, "key": primary.api_key, "otherKey": other.api_key}
-            ),
-            flush=True,
-        )
+        descriptor = {
+                    "port": port,
+                    "key": primary.api_key,
+                    "otherKey": other.api_key,
+                    "commerceKey": commerce.api_key,
+                }
+        if "--descriptor" in sys.argv:
+            Path(sys.argv[sys.argv.index("--descriptor") + 1]).write_text(json.dumps(descriptor))
+        else:
+            print(json.dumps(descriptor), flush=True)
         uvicorn.Server(uvicorn.Config(app, log_level="warning", access_log=False)).run(
             sockets=[listener]
         )

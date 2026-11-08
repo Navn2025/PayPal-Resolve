@@ -98,7 +98,7 @@ def collect_paypal(
     if order_id and related_order and related_order != order_id:
         issues.append(
             issue(
-                "paypal_order",
+                "paypal_order_reference",
                 "The linked order differs from the capture’s related order.",
                 reference=order_id,
                 status="mismatch",

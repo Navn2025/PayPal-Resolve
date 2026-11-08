@@ -8,9 +8,9 @@ All chats are synthetic. None comes from a real buyer, merchant or PayPal accoun
 | `generated.jsonl` | 200 | `qwen/qwen3.8-27b` on Groq via `../generate_extraction_chats.py` | Fixed by a seeded spec before generation; 40 (20%) randomly flagged `needs_manual_review: true`, plus 5 more from the restatement pass (below). None reviewed yet. |
 | `hard.jsonl` | 30 | Written by the coding assistant | Order numbers vs amounts, revised promises, multiple promises, currency formats, Hinglish. |
 | `injection.jsonl` | 50 | Written by the coding assistant | 10 attack types x 5, each with an `attack` pattern. |
-| `heldout.jsonl` | 30 | Written by the coding assistant after the CHG-031 validator fixes | General mix of kinds, no-promise, multiple, restatement and revision chats. Not used to change any code; reported separately. |
+| `heldout.jsonl` | 30 | Written by the coding assistant after the CHG-038 validator fixes | General mix of kinds, no-promise, multiple, restatement and revision chats. Not used to change any code; reported separately. |
 
-The CHG-031 fixes (quote normalisation, store-credit amounts, amount formats)
+The CHG-038 fixes (quote normalisation, store-credit amounts, amount formats)
 were prompted by errors found on gold and hard. Gold therefore no longer counts
 as held out for those behaviours; `heldout.jsonl` is the comparison set. It was
 written by the same assistant that wrote the fixes, so it is not independent.

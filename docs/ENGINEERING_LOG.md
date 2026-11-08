@@ -72,33 +72,59 @@ real customer data.
   records, add merchant evidence, read PayPal Sandbox facts and gaps, browse a
   cursor-paginated timeline, and share a private buyer link. The SDK uses
   generated OpenAPI types and has no runtime dependencies.
+- Commerce integration in Evidence SDK 0.3.0: app-owned PostgreSQL view reads or
+  direct HTTP ingestion, retry-safe order snapshots, and field-level comparisons
+  against PayPal Sandbox. Scoped commerce keys cannot sign in, access contacts,
+  or execute refunds. Contact data is optional and excluded from case exports.
+- Field Brew Supply example: six-product store with a separate order database,
+  PayPal Sandbox approval/capture, and a receipt that uses the Evidence SDK to
+  show the same order's Resolve comparison. Local browser simulation covers a
+  capture replay and a simulated outside refund.
+- Merchant Orders view: app orders can be registered independently of cases,
+  searched by store or PayPal reference, and opened as resolution cases on demand.
+  SDK 0.4.0 supports individual registration and a resumable PostgreSQL backfill.
+- Merchant Settings issues and revokes scoped SDK keys. The key is shown once
+  with copyable server configuration. SDK 0.5.0 adds createResolve and
+  syncOrder, keeping the existing detailed SDK methods compatible.
 - Optional Groq promise proposals from a case's customer conversation (or a
   supplied transcript), checked in
   code against verbatim merchant quotes. Proposals are returned for review and
-  never recorded; failures return `needs_review` (CHG-028). Identical
-  restatements merge; changed terms are flagged `possible_revision` (CHG-030).
-- Opt-in eval harness over 360 synthetic labelled chats (CHG-029 to CHG-031).
-  Latest live run on synthetic data (CHG-031, gold/hard/injection/held-out):
+  never recorded; failures return `needs_review` (CHG-035). Identical
+  restatements merge; changed terms are flagged `possible_revision` (CHG-037).
+- Opt-in eval harness over 360 synthetic labelled chats (CHG-036 to CHG-038).
+  Latest live run on synthetic data (CHG-038, gold/hard/injection/held-out):
   precision 0.951, recall 0.992, 0/50 injections, no executed violations;
   held-out 0.966 / 1.000. Repeat-run injection stability is still pending.
-- SQLite migrations through 018 and PostgreSQL migrations through 007.
+- SQLite migrations through 025 and PostgreSQL migrations through 015.
   Transactions protect retries and evidence snapshots on either database.
+  CHG-034 adds automatic
+  revision-bound investigation jobs, private structured results and merchant
+  advisory review. Groq/OpenRouter inference and automatic Sandbox reads default
+  to disabled; strict ZDR policy also blocks direct Groq. No real model quality
+  or deployment is established by the synthetic evaluation.
 - Default database: `backend/data/resolve.sqlite3`; `RESOLVE_DATABASE_PATH`
   overrides the file and `RESOLVE_DATABASE_URL` selects PostgreSQL. The
   importer verifies a read-only SQLite snapshot before committing to an
   empty PostgreSQL schema. Databases and local environment files are ignored by Git.
-- Evidence SDK validation: **252 default tests passed** (59 opt-in skipped),
-  **15 targeted PostgreSQL tests passed**, and **4 Node tests plus 40 PayPal
-  regression tests passed** with local provider simulation. The merchant sign-in
-  milestone separately passed 3 backend tests with the PayPal simulation and
-  14 browser tests.
+- Commerce validation: **256 default tests passed** (59 opt-in skipped),
+  **19 targeted PostgreSQL tests passed**, and **6 Node tests** passed against
+  FastAPI and simulated PayPal, including a real disposable app database.
+  **51 backend provider regression tests** and **2 Google simulation tests**
+  also passed. Earlier browser validation remains in the milestone entries.
+- CHG-034 validation: full isolated backend **292 passed**, 59 opt-in skipped;
+  latest investigation suite **34 passed** on SQLite and on disposable local
+  PostgreSQL. Native merchant session/gateway review and new SDK methods passed
+  over local HTTP. The 13-label offline evaluator reports 100% pipeline scores
+  with its deterministic gates passing; this is simulated evidence, not a real
+  model benchmark. Browser launch and a legacy PostgreSQL lock-timing check remain
+  host-limited; see the final CHG-034 validation below.
 - Actual Sandbox OAuth/capture checks passed, the capture was saved through
   authenticated case routes, and one USD 1.00 full refund completed through the
   new executor, independently read as COMPLETED with capture REFUNDED and
   reconciliation fulfilled. Refund writes default to disabled. No production
   financial request, order/capture creation, or account-backed PayPal
-  browser login was performed. Live AI calls were limited to the CHG-028
-  diagnostic and sample, and the CHG-029/CHG-030 eval runs on synthetic chats. Complete history/general eligibility remain
+  browser login was performed. Live AI calls were limited to the CHG-035
+  diagnostic and sample, and the CHG-036 to CHG-038 eval runs on synthetic chats. Complete history/general eligibility remain
   unverified; overall verification stays false.
 - No commits or pushes were made by the assistant for the changes recorded here.
 
@@ -1807,7 +1833,282 @@ externally issued partial refund. The simulation does not establish complete
 merchant-wide history. No PayPal account was used for this change, and the
 package was not published.
 
-### CHG-028 - Propose promises from merchant chat messages with Groq
+### CHG-028 - Document the build handoff and remaining verification
+
+**Date:** 7 November 2026 (Asia/Calcutta).
+
+**Objective:** Give the owner one current reference for completed features,
+local configuration, shipped fixes, hosted work, and unimplemented scope.
+
+**Changes and reason:** Add `docs/BUILD_STATUS.md` and link it from the root
+README. Record feature boundaries by actor and provider, the SDK release and
+database versions, and prioritized next actions with completion criteria.
+Keep historical test results in this log; separate documented test evidence
+from current local liveness and from configured-but-unproven services.
+
+**Validation:** Reviewed the source, current Git snapshot, setup guides, and
+milestone results through CHG-027. Checked local environment variable presence,
+selected flags, and origin types without printing credentials or their values.
+Local HTTP checks returned 200 for the API health and buyer capability endpoints
+and the UI landing, login, demo, and buyer entry pages. Checked Markdown file
+links and Git whitespace. Application code, configuration, data, and schema
+did not change. No full regression suite, hosted validation, provider calls,
+refunds, or emails were run for this documentation change.
+
+### CHG-029 - Connect merchant app orders and compare them with PayPal
+
+**Date:** 7 November 2026 (Asia/Calcutta).
+
+**Objective:** Let an app that already accepts PayPal share the minimum evidence
+for one selected order, then let support see which payment facts match PayPal
+and which need investigation. Keep all evidence deterministic for later AI work.
+
+**Files and behavior:**
+
+- `backend/app/commerce_models.py`, `commerce_routes.py`,
+  `commerce_workspace.py` and `commerce_compare.py` implement scoped HTTP ingestion,
+  read and refresh, and full-merchant-only contact access. A current identical
+  revision returns the same receipt; conflicting revisions, stale updates, and
+  changed case/payment identities return 409. Existing cases can be attached
+  atomically. Unknown request fields are rejected without echoing submitted
+  data, and snapshots are limited to 32 KiB and 50 items.
+- `evidence_workspace.py`, `evidence_models.py` and `evidence_paypal.py` reuse the
+  existing merchant case, provider lookup, and private bundle. Commerce compares
+  order/capture references, currency, status, captured amount, and completed
+  refunds. An app revision requires a PayPal check that started after its sync.
+  An outage or incomplete history does not turn missing proof into a zero
+  refund; earlier verified facts remain available as historical evidence.
+- Forward migrations `019_commerce_evidence.sql` (SQLite) and
+  `008_commerce_evidence.sql` (PostgreSQL) add the snapshots and key scope.
+  `storage.py`, `auth.py`, `manage.py`, and `merchant_auth.py` preserve existing
+  full keys and add a revocable commerce scope. It cannot sign in, issue buyer
+  links, read contacts, or access the financial routes.
+- `sdk/typescript/src/commerce.ts` and `index.ts` add the direct API methods and a
+  PostgreSQL adapter. The adapter uses one parameterized, bounded query through
+  app-owned read views. The package's SQL templates and runnable example map
+  orders, payments, products, and optional customer contacts. The SDK strips
+  unrelated properties before serialization. `pg` is an SDK development fixture
+  dependency; the library itself still has no runtime dependencies.
+- Exported FastAPI OpenAPI and regenerated SDK types. Updated the quickstart,
+  the status handoff, README, backend guide, and Postman simulation context.
+  DEC-068 and DEC-069 record why Resolve uses app-side projections and explicit
+  check times instead of direct database access and automatic reconciliation.
+
+**Validation:**
+
+- Default pytest suite: 256 passed and 59 opt-in skipped. Isolated PostgreSQL:
+  19 targeted tests passed for commerce, SDK evidence, and migrations. An
+  initial run found that a historical version-2 fixture used today's merchant
+  writer before the scope column existed. The fixture now seeds its historical
+  schema explicitly and verifies that the same original key works after upgrade.
+- The PayPal read simulation exercised the real Node SDK and FastAPI with a
+  disposable PostgreSQL app. The tests compare an app's USD 100 capture against
+  a simulated USD 25 external partial refund, verify correction after sync,
+  check wrong references and amounts, and preserve earlier proof after outage.
+  The restricted role could not read the password column or write to a view.
+  The simulation fixture counted zero financial POSTs in the commerce flow.
+- Broader Postman regressions: 51 backend tests with 382 mocked requests for
+  PayPal refunds, webhooks, remedy evidence, merchant login, and follow-up;
+  2 Google tests with 28 mocked requests. Both runs had zero pass-through.
+  The updated OpenAPI generated a local Postman mock. Hosted Postman discovery
+  was not used because the CLI is signed out; existing local simulations were
+  reused.
+- The 0.3.0 npm archive installed in a fresh project, compiled a real
+  pg.Pool consumer against the public declarations, and contained the
+  SQL view templates and runnable example. The SDK fixture now waits
+  for actual readiness on a slower machine; two startup timeouts
+  during a parallel verification run did not reach the checkout test. The
+  final serial run passed all 6 SDK tests, with 51 mocked requests and zero
+  pass-through.
+
+**Boundaries:** Explicit case-level sync, one USD PayPal Sandbox capture, and a
+configured seller read connection. The integration does not scan app tables,
+onboard arbitrary PayPal sellers, mutate payments, deliver a customer message
+based on a contact field, or add AI. Account-backed external refund visibility
+and deployment remain to verify. No commit or publication was performed.
+
+### CHG-030 - Exercise the Evidence SDK from a standalone Sandbox shop
+
+**Date:** 7 November 2026 (Asia/Calcutta).
+
+**Objective:** Build a small merchant app that takes a PayPal Sandbox payment
+and uses the existing SDK as an external integration. Make both the matching
+payment facts and a disagreement visible on the order receipt.
+
+**Files and behavior:**
+
+- `examples/checkout-store/public/` contains the Field Brew Supply storefront
+  and six product illustrations. The cart handles quantities and the receipt
+  displays the payment, Resolve case, and current comparison separately.
+- `src/catalog.mjs`, `src/paypal.mjs` and `src/server.mjs` provide the independent
+  Node and SQLite app. Server-owned prices, a session-scoped receipt, and
+  persisted PayPal request IDs prevent a browser from choosing prices or
+  reusing a different customer's order. The server reads the provider order
+  before capturing, verifies the seller, order reference, capture, and USD
+  amount, and stores the capture before calling the SDK. Retries use the same
+  order and case; a failed Resolve check does not undo the payment.
+- `scripts/local_sandbox.py` reuses only the Sandbox credentials for a
+  separate local Resolve database and issues a commerce key for that demo.
+  The app calls `syncCommerceOrder` and `refreshCommerceOrder` without buyer
+  contact information. The main Resolve API, schema and SDK contract are
+  unchanged.
+- The PayPal stand-in now models checkout create, approve, capture, and
+  payment reads for this sample. The two browser tests use the real Node app,
+  SDK and FastAPI. The example README explains both the local launcher and
+  pointing the store at an existing Resolve merchant.
+
+**Decision:** DEC-070 keeps the store outside the Resolve workspace and uses
+the direct SDK path. This checks the SDK integration from a merchant app
+that owns its orders, rather than bypassing it with internal Resolve routes.
+
+**Validation:**
+
+- Chromium via the installed Edge channel: 2 tests passed in the Postman
+  simulation with 19 mocked requests and no pass-through. The mobile store
+  rendered six products and correct cart totals. A USD 22.00 checkout produced
+  one capture and one matching case after repeated requests; a separate
+  browser could not read or capture that receipt. A simulated USD 5.00 refund
+  changed the receipt to a mismatch without another capture or refund POST.
+  The initial browser run did not have the Playwright-pinned browser binary.
+  The existing PayPal read, history, and refund-execution simulations also
+  passed all 40 tests with 277 mocked requests and zero pass-through.
+- The real Sandbox seller app created an unapproved USD 8.00 order through the
+  shop server. The response contained a valid Sandbox approval URL. No real
+  buyer sign-in, approval, capture, or SDK verification of that new order was
+  performed. A Windows shutdown warning in that smoke run led to keeping
+  the listener open until the isolated API thread shuts down.
+- Used PayPal Orders v2 documentation and public endpoint discovery.
+  Reused the checked-in local Postman stand-in; workspace lookup and
+  publication were not needed. Viewed the rendered desktop screenshot.
+  The in-app browser preview host was unavailable, so checkout verification
+  used the browser test. No commit or deployment was performed.
+
+**Boundaries:** Local Sandbox only; the shop does not handle shipping,
+inventory, live payments, account creation, or refund execution.
+
+### CHG-031 - Show synced app orders in the merchant dashboard
+
+**Date:** 7–8 November 2026 (Asia/Calcutta).
+
+**Objective:** Let a merchant see all orders that their apps sync to the
+workspace, including unpaid orders and orders that do not need a case.
+
+**Changes:**
+
+- Forward migrations `020_merchant_orders.sql` and `009_merchant_orders.sql`
+  preserve existing snapshots, revisions, case IDs, and optional contact data
+  while assigning catalog IDs and allowing future orders without a case.
+  Existing snapshots use their case ID as their initial catalog ID.
+- The commerce API adds `POST /commerce/orders/register` for integration
+  keys and merchant-only list, detail, and open-case endpoints. Search and
+  pagination are scoped to the authenticated merchant. List and detail
+  omit shared contacts. An order case is attached idempotently with the
+  existing evidence links; registration and case opening never call PayPal.
+- The regular workspace adds **Orders** with search, source filters,
+  pagination, app line items and payment details, and an action to open
+  a case. The case workspace accepts a case link so merchants can go
+  straight from an order to its case. PayPal evidence can be checked on
+  demand once there is a case.
+- SDK 0.4.0 adds `registerCommerceOrder()`, `register()`, and a bounded
+  `registerAll()` PostgreSQL backfill with a checkpoint example. The older
+  `syncCommerceOrder()` flow still creates or reuses a case and returns the
+  same response shape. Updated the OpenAPI and integration/setup guides.
+
+**Decision:** DEC-071 separates the order catalog from cases without
+duplicating app snapshots or changing existing case consumers. The merchant's
+app publishes only the rows its server can read. A scoped integration key
+cannot browse the whole catalog or open cases through the merchant route.
+
+**Validation:**
+
+- Default pytest: 258 passed, 59 opt-in skipped. Isolated PostgreSQL: 16
+  passed in the commerce and migration suites. Tests cover tenant isolation,
+  registration retries, case opening races, and preserving old case-linked
+  orders.
+- Playwright: 1 test passed against the real local Next.js and FastAPI
+  fixtures, from registration through search, detail, and the case deep
+  link and mobile navigation. Frontend TypeScript check passed. SDK build and Node tests exercised
+  the public methods and resumable backfill. The full SDK simulation passed
+  seven tests with 51 mocked requests and zero pass-through, including the
+  backfill against real disposable PostgreSQL views. The Field Brew
+  compatibility run passed both browser tests with 19 mocked requests.
+  Generated a local Postman mock from the updated OpenAPI and packaged
+  the 0.4.0 npm archive.
+
+**Boundaries:** Resolve lists what each app publishes to this merchant, not
+all merchant data visible in PayPal. App updates must keep revision and source
+identity stable. The isolated shop demo is a separate workspace; this change
+does not transfer its payment to the owner's regular merchant account.
+
+### CHG-032 - Let merchants generate SDK keys and sync in one short call
+
+**Date:** 8 November 2026 (Asia/Calcutta).
+
+**Objective:** Remove CLI key generation and repeated configuration from the
+usual developer setup. Let a merchant generate the integration key from their
+own workspace and copy the correct connection settings.
+
+**Changes:**
+
+- `merchant_auth.py` and `merchant_auth_routes.py` add merchant-session-only
+  SDK key listing, creation, and revocation. Listing returns active key IDs
+  and timestamps; creation returns the secret once. The existing hash-only
+  storage and commerce scope are reused. Generating or revoking a key uses
+  the existing 30-minute full access-key sign-in proof. There is no schema
+  migration or change to full access keys.
+- The Settings panel shows **Generate SDK key** and **Copy SDK setup** and
+  confirms revocation. The copied server environment uses the signed-in web
+  app's `/api/sdk` base path. The bearer-only gateway forwards registration,
+  case-first sync, and evidence reads/refresh to the configured backend. It
+  does not forward browser cookies or permit key management, merchant
+  catalog reads, or payment actions. Orders links to the setup panel.
+- SDK 0.5.0 adds `createResolve()` for environment defaults and `syncOrder()`
+  with a stable source and first version 1. Later changes use the same order
+  ID and a higher version. Existing SDK operations remain available; the
+  PostgreSQL helper can now use the configured source without another
+  options object. Regenerated the OpenAPI contract and packaged the SDK.
+
+**Decision:** DEC-072 reuses the existing merchant proof and key scope. The
+web gateway removes the need to expose a separate FastAPI URL for ordinary
+integrations and keeps the merchant UI and integration permissions separate.
+
+**Validation:** 259 backend tests passed (59 opt-in skipped), and the key
+lifecycle passed on disposable PostgreSQL. Two browser tests passed against isolated Next.js and
+FastAPI, including key generation, one-time display, bearer-only order sync,
+and rejection after revocation. Six default Node SDK tests passed (two
+provider opt-in tests skipped), including server environment defaults and
+versioned update. The OpenAPI generated a local Postman mock. No provider
+requests, real keys, or payments were needed for these tests.
+
+**Boundary:** These are workspace-scoped commerce keys. Use a different
+stable source for each app. The SDK gateway is intentionally narrower than
+the direct FastAPI interface. The package archive is local; no commit or
+publication was performed.
+
+### CHG-033 - Make the Resolve SDK integration available as an IDE skill
+
+**Date:** 8 November 2026 (Asia/Calcutta).
+
+**Objective:** Let a developer hand their IDE assistant a reusable workflow for
+publishing orders to their Resolve workspace with minimal server-side code.
+
+**Changes:** Added `sdk/typescript/skills/resolve-sdk-integration/SKILL.md` with
+preview installation, merchant SDK key setup, versioned order sync, optional
+PayPal comparison and backfill, and a synthetic-order check. The SDK README
+contains a paste-ready prompt, linked from the root README. The skill can be
+copied as one file without bringing the Resolve repository into the merchant app.
+
+**Decision:** Reuse the scoped key and server defaults from DEC-072. Have the IDE
+map fields from the app's existing order flow instead of provisioning broad
+database access or replacing checkout. The skill ships as documentation
+alongside the SDK; no package, API, or database behavior changed.
+
+**Validation:** The skill-creator `quick_validate.py` passed, and SDK
+`npm test` passed six local tests, including environment setup, versioned sync,
+and backfill. Two opt-in provider tests were skipped. No live checkout or
+merchant workspace was used. The SDK preview archive is still supplied locally.
+
+### CHG-035 - Propose promises from merchant chat messages with Groq
 
 **Date:** 8 November 2026 (Asia/Calcutta).
 
@@ -1859,7 +2160,7 @@ create a promise, approve a refund, or reach PayPal.
   `pyproject.toml` and `uv.lock`.
 - `postman/contracts/resolve.openapi.json` regenerated; the diff is additive.
 
-**Decisions and compatibility:** DEC-068. No migration, schema, or existing
+**Decisions and compatibility:** DEC-073. No migration, schema, or existing
 route changed. The SDK types were not regenerated and do not expose the route.
 
 **Alternatives/tradeoffs:** Buyer messages are sent to the model as context
@@ -1928,11 +2229,11 @@ describe the endpoint yet. Next: a labelled transcript set to measure precision
 and recall, then a UI step where the merchant accepts a proposal into the
 existing `POST /resolution-cases/{case_id}/promises` route.
 
-### CHG-029 - Evaluate AI promise extraction on labelled synthetic chats
+### CHG-036 - Evaluate AI promise extraction on labelled synthetic chats
 
 **Date:** 8 November 2026 (Asia/Calcutta).
 
-**Objective:** Measure CHG-028's extraction quality and injection resistance
+**Objective:** Measure CHG-035's extraction quality and injection resistance
 with labelled data instead of a single example, and separate what the model
 does from what the code validators add.
 
@@ -1964,7 +2265,7 @@ does from what the code validators add.
   arithmetic, pairing, bootstrap edge cases, the runner's rate-limit retry and
   resume, the report files, and that the checked-in datasets are well formed.
 
-**Decisions:** DEC-069. No application code or API changed in this entry.
+**Decisions:** DEC-074. No application code or API changed in this entry.
 
 **Validation:**
 
@@ -1986,7 +2287,7 @@ does from what the code validators add.
 - Earlier live calls the same day: two rate-limit header checks and two Qwen
   option checks. Generation used at least 200 Qwen calls; retries were not
   logged, so the exact count is unknown.
-- Mocked tests passed (3 at this point); full suite results are under CHG-030.
+- Mocked tests passed (3 at this point); full suite results are under CHG-037.
 
 **Limits:** Synthetic, assistant- or machine-written labels with no human
 review; a single run at temperature 0, so run-to-run variance is unmeasured; 50
@@ -1994,7 +2295,7 @@ injection items cannot establish a low attack rate. The 0.7 confidence
 threshold was never exercised (no low-confidence output). Gold findings were
 reported, not fixed, to keep gold held out.
 
-### CHG-030 - Handle restated promises in extraction and grading
+### CHG-037 - Handle restated promises in extraction and grading
 
 **Date:** 8 November 2026 (Asia/Calcutta).
 
@@ -2036,14 +2337,14 @@ only its final version is expected.
 - `backend/evals/extraction/README.md` documents the restatement rule, the
   labelling pass and a Limits section.
 
-**Decisions:** DEC-070.
+**Decisions:** DEC-075.
 
-**Validation (live model output from CHG-029, replayed, synthetic data):**
+**Validation (live model output from CHG-036, replayed, synthetic data):**
 
 | Stage | Overall P | Generated P | Overall R |
 |---|---|---|---|
-| CHG-029 extractor, strict labels | 0.832 | 0.793 | 0.907 |
-| CHG-029 extractor, restatement labels | 0.898 | 0.882 | 0.907 |
+| CHG-036 extractor, strict labels | 0.832 | 0.793 | 0.907 |
+| CHG-036 extractor, restatement labels | 0.898 | 0.882 | 0.907 |
 | Merge extractor, restatement labels | 0.898 | 0.882 | 0.907 |
 
 - The label fix accounts for the whole precision gain: 23 generated
@@ -2071,14 +2372,14 @@ like a missed restatement). Exact condition matching rarely merges real
 restatements; a looser match or an `action` field would trade false merges for
 fewer flags, and should be chosen on non-gold data.
 
-### CHG-031 - Fix eval-found validator gaps; add held-out set and repeat-run harness
+### CHG-038 - Fix eval-found validator gaps; add held-out set and repeat-run harness
 
 **Date:** 8 November 2026 (Asia/Calcutta). **Status:** complete except the
 injection stability measurement. Code, tests and the full-set live run 1 are
 done; the two extra injection runs were cut short by Groq's daily token limit
 (14 of 100 chats ran).
 
-**Objective:** Close the validator gaps found in CHG-029/CHG-030 without tuning
+**Objective:** Close the validator gaps found in CHG-036/CHG-037 without tuning
 on gold, report what the model does alone vs what the system returns, and
 measure run-to-run disagreement.
 
@@ -2099,7 +2400,7 @@ measure run-to-run disagreement.
 - Restatements merge on kind + amount + compatible action (missing action does
   not conflict); a reworded or missing condition no longer prevents a merge.
   `possible_revision` is set only when a later same-kind proposal changes the
-  amount or action. This supersedes the condition rule in CHG-030/DEC-070.
+  amount or action. This supersedes the condition rule in CHG-037/DEC-075.
 - `ExtractionResult.adjustments` lists kept proposals the validators changed.
   OpenAPI regenerated (fields added; two field descriptions reworded).
 
@@ -2113,7 +2414,7 @@ output; `--tag` names live records per run; `--compare` reports disagreement
 across runs. A Groq `tokens per day` 429 now stops the run resumably instead of
 retrying.
 
-**Decisions:** DEC-071.
+**Decisions:** DEC-076.
 
 **Validation:**
 
@@ -2121,7 +2422,7 @@ retrying.
   quote normalisation and its limit, store-credit amount removal, the new
   amount formats and order-number rejection, action revision vs merge, records
   keeping `action`, agent-vs-system counts, stability counting, and stopping on
-  TPD. One CHG-030 test was updated because the condition rule changed by
+  TPD. One CHG-037 test was updated because the condition rule changed by
   request. `uvx ruff check` on the changed files passed.
 - Live run 1 (synthetic data, `openai/gpt-oss-120b`, restatement-aware
   grading; `extraction_2026-11-08_r1.*`): 160 chats. The first 8 were made in
@@ -2146,7 +2447,7 @@ retrying.
 - All 6 false positives are superseded earlier statements in revision chats
   (hard-007 to hard-011, held-030), which the README rule expects to be left
   out. `possible_revision` fired 5 times, each on the correct final proposal; the
-  sixth (hard-008) changes kind, which is not flagged by design. CHG-030's
+  sixth (hard-008) changes kind, which is not flagged by design. CHG-037's
   replay had 23 flags, 18 of them reworded restatements. The one missed promise
   is the return in hard-013.
 - Injection stability (preliminary): the second injection run stopped at the
@@ -2783,7 +3084,53 @@ not erase proof or suggest that a new verification succeeded. Scope history to
 one USD capture and the supported order shape; unsupported or missing data
 remains visible to support staff.
 
-### DEC-068 - Treat model output as unverified proposals checked in code
+### DEC-068 - Read only a merchant's explicit evidence projection
+
+Keep the database connection in the merchant's app and grant a dedicated
+reader SELECT on the evidence views, with optional column grants for contact
+details. Accept the same normalized payload over HTTP for other app stacks.
+A generic database crawler or stored merchant database credentials would
+require broad schema permissions and increase the chance of collecting
+passwords or unrelated customer records. Limit intake to one selected order
+and keep contacts out of buyer views, evidence exports, and session decisions.
+
+### DEC-069 - Compare app revisions with independent provider observations
+
+Store one latest app revision and a private audit event, reusing the existing
+PayPal evidence timeline rather than adding another refund ledger. Keep app
+state and provider facts labeled separately. Require a check that started
+after the current snapshot, and only compare completed refund totals when the
+order history reconciles. Give app servers a scoped credential so a sync key
+cannot act as a merchant session or authorize money movement.
+
+### DEC-070 - Verify SDK checkout from an independent shop
+
+Give the shop its own order storage and use the same package and scoped API
+credential an external app would use. PayPal handles buyer approval on its
+Sandbox site. The app keeps capture status and evidence status separate, and
+runs the Resolve comparison only after a verified completed capture. This
+keeps checkout retriable when Resolve is unavailable and avoids teaching the
+example to depend on internal Resolve storage or buyer credentials.
+
+### DEC-071 - Keep routine orders out of the case inbox
+
+Store one latest app snapshot per merchant, source, and order reference.
+A case link is optional, so backfill and ongoing order updates do not create
+case noise. Create or reuse the link in one transaction when the merchant
+chooses to investigate, and keep the older case-first API compatible.
+Use server-side, merchant-owned backfill instead of requesting direct access
+to the whole app database from Resolve.
+
+### DEC-072 - Give merchants a copy-ready, scoped SDK setup
+
+Generate only commerce keys after recent proof of a full merchant access key.
+Keep the secret out of key lists, caches, and persistent browser storage.
+Use a small bearer-only gateway on the merchant web origin so an app server
+can use the copied settings without needing access to Resolve's internal
+backend address. Keep existing direct API clients compatible and give new
+integrations one short order call.
+
+### DEC-073 - Treat model output as unverified proposals checked in code
 
 The model only suggests; deterministic checks decide what is returned and
 nothing is written. A proposal must cite a merchant message, quote it verbatim,
@@ -2793,7 +3140,7 @@ provider or parsing failure becomes a `needs_review` result instead of an
 error, so the merchant always falls back to manual entry. Recording a promise
 remains the existing merchant-authored route.
 
-### DEC-069 - Fix eval labels before generation and score model and validators apart
+### DEC-074 - Fix eval labels before generation and score model and validators apart
 
 Labels for generated chats come from a seeded spec, not from what a model says
 it wrote, and the generator is a different model family from the extractor so
@@ -2802,7 +3149,7 @@ production function with a recording client, so the reported numbers are what
 the API returns, while the raw output shows what the validators add or cost.
 Rate limits stop and resume the run instead of being counted as failures.
 
-### DEC-070 - Merge identical restatements; surface changed terms as possible revisions
+### DEC-075 - Merge identical restatements; surface changed terms as possible revisions
 
 A restatement with identical terms is the same promise, so it is merged and
 its turns kept as support. Any change of amount or condition is left for the
@@ -2812,9 +3159,9 @@ version is the promise. Grading accepts labelled restatements and reports
 copies as duplicates, with strict grading always shown beside it so label
 changes cannot silently inflate precision.
 
-### DEC-071 - Merge on what a promise does; normalise quotes only for matching
+### DEC-076 - Merge on what a promise does; normalise quotes only for matching
 
-Supersedes the condition part of DEC-070: eval data showed restatements
+Supersedes the condition part of DEC-075: eval data showed restatements
 reword conditions far more often than merchants revise them, so condition
 wording created noise without catching revisions. Amount and the target's own
 `action` literal decide whether a later statement changes the promise.
@@ -2831,19 +3178,23 @@ evidence.
    amount semantics. Browser roles and partner onboarding remain future work.
 3. Register an HTTPS Sandbox webhook, verify a signed account delivery, and
    provision a hosted worker when deploying.
-4. Finish the two remaining CHG-031 injection runs when Groq's daily token
+4. Automatic structured evidence investigations and review are implemented in
+   CHG-034. Commitment extraction from free text remains future work; commitment
+   terms are still manually entered. Enable inference only after synthetic live
+   evaluation and data-policy verification.
+5. Finish the two remaining CHG-038 injection runs when Groq's daily token
    budget allows (about 62,000 tokens), human-review the AI eval labels (45
    flagged generated chats first), and add a merchant accept step. Recorded
    promises remain manually entered.
-5. Extend production audit/retention and database-side history pagination. New
+6. Extend production audit/retention and database-side history pagination. New
    manual changes have durable events; legacy untimestamped changes remain gaps.
-6. Verify both hosted interfaces over HTTPS and complete a genuine PayPal
+7. Verify both hosted interfaces over HTTPS and complete a genuine PayPal
    Sandbox login before enabling it for merchants. Live login requires PayPal review.
 
 ## Template for the next entry
 
 ```text
-### CHG-032 - Concrete change title
+### CHG-039 - Concrete change title
 Date:
 Objective:
 Files and resulting behavior:
@@ -2853,3 +3204,206 @@ Compatibility or data changes:
 Validation actually performed (command, result, evidence limits):
 Known limitations and follow-up:
 ```
+
+### CHG-034 - Automatic evidence investigations and private human review
+
+**Date:** 2026-11-08 (Asia/Calcutta).
+
+**Objective:** Automatically investigate resolution cases and changed evidence,
+provide a grounded, reviewable result or explicit abstention, and keep human
+advisory review separate from payment authorization.
+
+**Audit and plan:** Read the repository instructions/log and inspected FastAPI,
+SDK methods/routes, evidence state, merchant/buyer identities, timeline,
+commerce, provider readers, worker patterns and explicit refund approvals.
+Existing uncommitted commerce/authentication/frontend/SDK changes were retained.
+The audit and pre-implementation plan are in `docs/AI_INVESTIGATIONS.md`.
+Existing usable infrastructure: owned resolution cases/evidence, exact refund
+reconciliation, authentication, source events, separate approval/execution and
+transactional worker storage. Automatic model investigation/review was missing;
+free-text extraction, account-backed connector coverage and hosted operation
+remain incomplete.
+
+**Files and resulting behavior:**
+
+- `backend/app/investigation_models.py`, `inference.py`, `investigations.py`,
+  `investigation_refresh.py`, `investigation_routes.py`, `investigation_worker.py`
+  add strict bounded structured adapters, source-ID validation, deterministic
+  factual findings, abstention, safe linked reads, revision/lease handling and
+  private merchant list/review routes. No execution operation is representable.
+  `main.py` registers routes and supports isolated tests without dotenv reads.
+- SQLite 021–025 and PostgreSQL 010–015 add durable jobs, results, decisions,
+  safe audit events and transactional enqueue triggers. Creation and relevant
+  evidence/commerce/customer/financial/provider changes enqueue the latest
+  revision; shared captures update all owned cases. Duplicate evidence retries
+  do not create work. `storage.py`/`postgres.py` register the forward migrations.
+  Existing numbered migration SQL and stored checksums were not edited.
+- **Explicit correction:** The first new investigation migration referred to
+  `commerce_order_snapshots`, removed by the earlier commerce migration.
+  Retained that migration unchanged. `investigation_prerequisite.sql` creates
+  an empty compatibility table immediately before it; 022/011 removes it and
+  installs the current-table trigger, atomically. 023/012 and 024/013 extend
+  invalidation to independently verified and financial states; 014 makes import
+  constraints deferrable; 025/015 audit enqueue/revision transitions.
+- `migrate_sqlite.py` suspends only investigation triggers during verified
+  restore, flushes deferred constraints before re-enabling, and verifies all
+  copied values. This prevents restored events changing copied queue revisions.
+  Old-schema fixtures/version assertions in auth, persistence, PayPal, approval
+  and PostgreSQL tests now include the new schema and rewind only disposable
+  investigation objects. No owner database was accessed or migrated.
+- `frontend/components/investigation-review.tsx`, `workspace.tsx`, gateway
+  allowlist and CSS add findings/source IDs, timestamps, missing/contradictory
+  evidence, proposal/abstention, state polling, prior revisions and human
+  approve/reject/request-evidence actions. Reviews record merchant plus a
+  credential/session pseudonym, timestamp, decision, revision and snapshot;
+  stale/conflicting decisions return 409. Buyers/commerce keys cannot access
+  these routes. API receipts explicitly say `authorizes_payment=false`.
+- SDK `src/index.ts` adds `getInvestigations`/`reviewInvestigation`; OpenAPI and
+  generated types/build are refreshed. Full merchant keys/direct API are
+  required; scoped commerce gateway permissions are unchanged. SDK fixtures and
+  external tests exercise the ordinary methods against synthetic FastAPI.
+- `backend/evaluation/investigations.json`, `synthetic_investigations.py`,
+  `test_investigations.py`, `scripts/evaluate_investigations.py` and
+  `scripts/isolated.py` supply labeled synthetic evaluation, real loopback HTTP
+  stand-ins, deterministic release gates, disposable storage and a separate
+  opt-in live synthetic evaluator. Root/backend/frontend/SDK/Postman READMEs
+  and the investigation guide document actual behavior and remaining evidence.
+  `.gitignore` excludes workspace-local synthetic service artifacts.
+- Frontend isolated fixture/config, source-copy runner, browser and native
+  gateway tests avoid dotenv/build caches. The in-process fallback uses worker
+  threads only in the disposable copy, preserving application configuration.
+
+**Choices and tradeoffs:** Reuse the existing serialized write transaction
+boundary (DEC-057), case ownership and evidence separation (DEC-066) and scoped
+SDK permissions (DEC-072). Database enqueue triggers cover SDK, merchant,
+customer and worker writes without adding inference to requests or requiring
+an external broker. A revision hash plus lease token prevents stale publication
+and stale review on both databases. A single read cannot prove complete history;
+freshness failures preserve previous facts and their actual verification time.
+Free text, contacts, payment identifiers and provider bodies stay outside model
+input. The model selects structured decisions; factual wording/amounts are built
+by the server. This deliberately defers broad free-text extraction and non-refund
+investigation instead of accepting unverifiable model narrative.
+
+**Model/data policy:** Public official catalogs/docs confirm Groq
+`openai/gpt-oss-20b`/`120b` strict schemas and OpenRouter Sonnet 4.5 Anthropic
+route parameters; 20B is the cheap fast triage candidate, Sonnet the selective
+deeper candidate. OpenRouter 4.1 Mini is a cheaper evaluation alternative.
+Exact IDs, prices, routing/privacy references, advertised throughput/rate limits
+and comparison limits are cited in the guide. No grounding/abstention/latency
+superiority was inferred from vendor marketing. OpenRouter requests require
+approved routes, no fallbacks, parameter support, no collection and ZDR.
+Direct Groq has no request-level ZDR enforcement; the default strict policy
+therefore blocks it. An explicitly selected minimized-standard-retention policy
+is required for that documented split. No local flag pretends to verify an
+organization's retention controls. Credentials are server-only and environment
+injected; this worker/evaluator never loads the existing `.env`.
+
+**Validation so far:** Full isolated SQLite suite: 291 passed, 59 opt-in skipped.
+The investigation suite: 32 passed on SQLite and 32 on a newly initialized local
+PostgreSQL 18 cluster, with no hosted connection. PostgreSQL migration/import
+suite: 9 passed, one timing/contended-writer test excluded after it hung on an
+advisory lock in this restricted host; cancellation returned false. That run was
+stopped without touching owner services. Latest enqueue-audit migration and
+strict-output changes are receiving final checks; final results are appended
+below. Real inference, account-backed PayPal, production data and hosted storage
+were never used. No commit, push, deploy or money movement occurred.
+
+**Remaining evidence:** Run browser/visual verification on a host that can launch
+Playwright/Chromium, rerun the PostgreSQL contention timing check with normal
+process signaling, then opt into fixed synthetic live model evaluation using
+new evaluation-only keys. Verify eligible privacy routes/account quotas and
+quality before enabling merchant inference. Deployment and workers remain
+operator work; broad commitment extraction is still planned.
+
+**Final model selection (supersedes the provisional model choice above):** The
+final public catalog check confirmed `anthropic/claude-sonnet-5.5` on the exact
+`anthropic` route with structured outputs, response format, output-token limits
+and reasoning effort. Its listed input/output prices are USD 2/10 per million,
+below 4.5's USD 3/15. The final default is therefore Sonnet 5.5 with low reasoning
+effort, retaining 4.5 as an approved comparison baseline. Groq remains
+`openai/gpt-oss-20b` with low effort. This revises the provisional cost/capability
+choice without claiming measured quality or changing the provider split/privacy
+policy. The guide links the exact official endpoint catalogs and API docs.
+
+**Final checks and corrections:**
+
+- From `backend`: `.venv/Scripts/python.exe scripts/isolated.py -m pytest -q
+  --tb=short -p no:cacheprovider` passed **292 tests**, with **59 opt-in skips**.
+  After adding the existing-history regression, the latest targeted
+  `tests/test_investigations.py` passed **34 tests**. The final history-expiry
+  approval rejection assertion passed separately on both databases.
+- The corresponding PostgreSQL investigation suite passed on the fresh local
+  PostgreSQL 18 cluster, and the migration/import suite passed **9 tests** with
+  its unrelated contention timing test excluded. Queue/review concurrency,
+  source validation, tenant scope, forged citations, failed/pending/partial
+  refunds, automatic refresh/requeue, crash budgets and source IDs were tested.
+- One intermediate full run failed its HTTP-read fixture assertion: the OAuth
+  stand-in did not consume the POST body and used a two-second client bound.
+  The fixture now consumes the request and uses the worker's eight-second read
+  bound; the subsequent full run passed. This was a simulation fixture failure,
+  not a reported real PayPal result. A separate test caught and fixed UUID/string
+  merchant mismatch in the authorized read boundary. Invalid stored source data
+  now produces a reviewable block rather than stranding a worker lease.
+- Existing verified legacy payment history is now reused without an irrelevant
+  SDK-refresh gap. Its five-minute validity caps investigation freshness, with
+  a clock-advanced regression proving advisory approval expires too.
+- `scripts/isolated.py scripts/evaluate_investigations.py` ran all **13 labels**
+  through real adapters/worker and loopback HTTP stand-ins. Factual accuracy,
+  citation validity, correct abstention and next-step quality each scored **1.0**
+  for the pipeline. Raw deeper assessments are separate (eight comparable
+  samples). Tenant denial, no financial approvals/actions, valid accepted
+  citations and blocking forged citations all passed. These are deterministic/
+  simulated checks, not model quality or latency measurements. The last report
+  is `.local/ai-evaluation/run-0c47d6b2eaee4331905566f8c6115a1f/report.json`.
+- `uv run --no-sync python scripts/isolated.py scripts/export_openapi.py`
+  regenerated the contract from `backend`; `npm run build` from `sdk/typescript`
+  regenerated types and compiled successfully. The isolated wrapper was required
+  to avoid the pre-existing eager global app's dotenv read. uv's default cache
+  was denied, so validation used `.local/uv-cache` or the existing venv executable.
+- `npm run check` in `frontend` passed. `node --test
+  --experimental-test-isolation=none tests/investigations.gateway.mjs` passed
+  against the actual Next/FastAPI test services: session authentication, CSRF,
+  private responses, advisory review, stale rejection, immutability across
+  sessions and no refund approvals/executions. The in-process Next fallback
+  switched compiler workers to threads in its disposable source copy only.
+- SDK `node --test --experimental-test-isolation=none
+  test/investigations.external.mjs` passed **2 integration tests** against its
+  separate synthetic FastAPI fixture. **2 existing redirect/error/timeout tests**
+  also passed without child processes. The normal `npm test` integration runner
+  was blocked by this host's Node `spawn EPERM`; it was not claimed as passing.
+- Playwright's normal and external-server attempts could not spawn their test
+  worker. The browser-control host was unavailable; fresh-profile Chromium also
+  failed at its native IPC launch. The browser test is checked in, but no visual
+  QA pass is claimed. Public Orbit discovery was unavailable and Postman was not
+  on PATH; official documentation and self-contained loopback HTTP simulations
+  supplied the contracts/validation instead. No remote Postman operation ran.
+- Ruff formatting and `ruff check --select F` passed for new Python files;
+  `git diff --check` passed. Existing CRLF conversion notices are not failures.
+  No dependencies were added to the application; Ruff was a local validation tool.
+
+No evaluation-only live command was run, no real `.env` values were opened or
+reused, and no production/account-backed inference or payment request was made.
+Validation accessed only new local SQLite databases and the fresh local cluster.
+The optional live evaluator accepts only fixed labeled synthetic cases and
+separately named evaluation keys; it records route, usage, latency and estimated
+known token cost. Run it before selecting/enabling merchant inference. All
+changes remain in the working tree; nothing was committed, pushed or deployed.
+
+**Final combined PostgreSQL result:** The latest isolated run of
+`tests/test_investigations.py tests/test_postgres.py -k "not contended_writer"`
+completed with **43 passed, 1 deselected**. This includes the 34 investigation
+tests and 9 migration/import/regression checks against the disposable cluster.
+The final existing-history freshness/approval-expiry assertion also passed
+individually on SQLite and PostgreSQL. The final model-default offline evaluation
+uses Sonnet 5.5 in its simulated request payloads; its scoring remains explicitly
+simulated. No model quality measurements were made.
+
+**Service cleanup limitation:** Stopped the exact Node/Python disposable UI and
+SDK fixture processes created for this run. The local PostgreSQL postmaster at
+PID 35204 remains on `127.0.0.1:56439`: `pg_ctl ... -m fast -w -t 10 stop`
+returned "Operation not permitted" and process-tree termination returned
+"Access denied" in this managed host. No owner service was targeted. From a
+normal terminal, stop only this synthetic cluster with
+`& 'C:/Program Files/PostgreSQL/18/bin/pg_ctl.exe' -D 'C:/Users/navne/Desktop/paypal-resolve/.local/pg-ai/data' -m fast -w stop`.
+The `.local` report/databases remain local review evidence and are ignored by Git.

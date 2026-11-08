@@ -1,10 +1,36 @@
 # Resolve Evidence SDK for Node.js
 
+Private investigations: `getInvestigations(caseId)` returns queued/running state
+and completed or blocked results. `reviewInvestigation(caseId,id,{expected_revision,
+evidence_snapshot,decision})` records `approve`, `reject` or `request_evidence`.
+The receipt always has `authorizes_payment: false`; stale snapshots return 409.
+These methods require a **full merchant key and direct FastAPI URL**. Scoped
+commerce keys and the `/api/sdk` gateway do not expose investigation review.
+See [automatic investigations](../../docs/AI_INVESTIGATIONS.md).
+
 `@resolve-paypal/sdk` calls the Resolve API from your server. It lets a support
 agent see what happened, what evidence supports it, and what is still missing.
-It can also issue a private status link for the buyer.
-It needs an existing Resolve API and merchant access key. Node.js 22.12+
-and TypeScript types are supported. The package has no runtime dependencies.
+It can also issue a private status link for the buyer. It needs a running Resolve
+API and the appropriate merchant key for the workflow. Node.js 22.12+ and
+TypeScript types are supported. The package has no runtime dependencies.
+
+## Integrate with your IDE assistant
+
+Copy the [resolve-sdk-integration skill](skills/resolve-sdk-integration/SKILL.md)
+into your app's skill folder, keeping it at `resolve-sdk-integration/SKILL.md`,
+or attach the file to your IDE chat. Give the IDE the path to the SDK preview
+archive if the SDK is not installed in your app yet. Then paste:
+
+```text
+Use the resolve-sdk-integration skill to connect this app to my Resolve workspace.
+Find where the server saves orders or payment updates and add the smallest
+server-side sync so orders appear in Workspace → Orders. Reuse my existing
+checkout and keep the SDK key in the server environment. Show me which settings
+to add and how to verify one test order.
+```
+
+Copy the real settings from **Workspace → Settings → SDK keys** to your server
+environment outside the IDE chat.
 
 ## Install this preview
 
@@ -17,11 +43,65 @@ npm pack
 ```
 
 In your own application's backend, install the resulting
-`resolve-paypal-sdk-0.2.0.tgz`:
+`resolve-paypal-sdk-0.5.0.tgz`:
 
 ```powershell
-npm install path/to/resolve-paypal-sdk-0.2.0.tgz
+npm install path/to/resolve-paypal-sdk-0.5.0.tgz
 ```
+
+## Quick start from the merchant dashboard
+
+Sign in with your Resolve access key, then open **Settings → SDK keys**.
+Select **Generate SDK key**, then **Copy SDK setup**. Paste the configuration
+into your app server's environment. It includes the SDK gateway URL and the
+new key; keep it out of browser code and Git.
+
+From your server (for a standalone Node script, load the file with `node --env-file=.env your-script.mjs`):
+
+```ts
+import { createResolve } from "@resolve-paypal/sdk";
+
+await createResolve().syncOrder({ id: "ORDER-123", status: "paid" });
+```
+
+That registers revision 1 in **Workspace → Orders**. For updates, pass the
+order's next version, for example `version: 2`. Keep the same order ID and
+app source. `payment` and `items` are optional; include them if you need PayPal
+comparison or line items. For more than one app, give each a stable
+`RESOLVE_APP_SOURCE`. The copied key only works for commerce actions. To
+replace it, generate a new key, update your app, then revoke the old one.
+
+If you already have a PostgreSQL reader pool, use
+`createResolve().connectPostgres(pool).register(orderId)` or
+`.registerAll()` for an initial import. The full [integration guide](../../docs/COMMERCE_INTEGRATION.md)
+shows the database views and how to resume a backfill.
+
+## Connect an app that already accepts PayPal
+
+For the full setup, use the [commerce integration guide](../../docs/COMMERCE_INTEGRATION.md).
+With the read-only [PostgreSQL views](examples/postgres-views.sql) and a dedicated
+commerce API key, the SDK can sync one order and check PayPal in one call:
+
+```ts
+const evidence = resolve.connectPostgres(readOnlyPool, { source: "my-store" });
+const report = await evidence.inspect("STORE-2042");
+```
+
+Use `syncCommerceOrder()` directly for other databases or ORMs,
+`getCommerceOrder()` to read the latest comparison without calling PayPal,
+and `refreshCommerceOrder()` to check again. Contacts are opt-in and full
+merchant access is required to read them via `getCommerceContact()`.
+The commerce key cannot call the general case or buyer-link methods below;
+those retain their existing full merchant credentials.
+
+[Run the PostgreSQL example](examples/connect-postgres.mjs) after installing
+`pg` in your app. The SDK itself has no runtime dependencies.
+
+To show routine orders in the dashboard, use `registerCommerceOrder(snapshot)`,
+`evidence.register(orderReference)`, or the paginated `evidence.registerAll()`
+backfill. These methods do not create a case for an order that doesn't have
+one. The full [order dashboard workflow](../../docs/COMMERCE_INTEGRATION.md#show-all-orders-in-the-merchant-dashboard)
+includes a resumable example and the endpoint contract.
 
 ## Add Resolve to your backend
 

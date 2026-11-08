@@ -41,6 +41,7 @@ from .commerce_routes import router as commerce_router
 from .investigation_routes import router as investigation_router
 from .customer_routes import router as customer_router
 from .merchant_auth_routes import router as merchant_auth_router
+from .ai_routes import router as ai_router
 
 
 router = APIRouter()
@@ -416,6 +417,7 @@ def create_app(
     application.include_router(resolution_router)
     application.include_router(commerce_router)
     application.include_router(investigation_router)
+    application.include_router(ai_router)
     return application
 
 

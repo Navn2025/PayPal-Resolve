@@ -7,6 +7,8 @@ turn the labeller reports as changing the terms is not added; the chat is
 flagged for manual review instead, because under the README's revision rule
 the label itself may need to move.
 
+    $env:RESOLVE_AI_DATA_POLICY = "minimized_standard_retention"   # PowerShell
+    $env:RESOLVE_AI_GROQ_KEY = "<key from your secret store>"
     uv run python evals/label_restatements.py --live
 """
 
@@ -21,7 +23,7 @@ sys.path.insert(0, str(BACKEND_DIR))
 
 import groq
 
-from app.ai_extraction import GROQ_DATA_POLICY, AISettings, current_data_policy
+from app.ai_extraction import GROQ_DATA_POLICY, ExtractionSettings, current_data_policy
 
 LABELER_MODEL = "qwen/qwen3.8-27b"
 DATASET = BACKEND_DIR / "evals/extraction/generated.jsonl"
@@ -104,9 +106,9 @@ def main():
             "process environment (app.inference never reads .env). Use it only for "
             "synthetic data."
         )
-    key = AISettings().groq_api_key
+    key = ExtractionSettings().groq_key
     if key is None:
-        parser.error("GROQ_API_KEY is not set")
+        parser.error("RESOLVE_AI_GROQ_KEY is not set in the process environment")
     client = groq.Groq(api_key=key.get_secret_value(), max_retries=2, timeout=60)
     items = [json.loads(line) for line in DATASET.read_text(encoding="utf-8").splitlines() if line]
     for item in items:

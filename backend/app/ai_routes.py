@@ -7,9 +7,9 @@ import groq
 from fastapi import APIRouter, Depends
 
 from .ai_extraction import (
-    AISettings,
     ExtractionRequest,
     ExtractionResult,
+    ExtractionSettings,
     conversation_transcript,
     current_data_policy,
     extract_promises,
@@ -21,21 +21,21 @@ from .resolution_workspace import ResolutionWorkspace
 router = APIRouter(prefix="/resolution-cases", tags=["AI promise extraction"])
 
 
-def get_ai_settings() -> AISettings:
-    return AISettings()
+def get_ai_settings() -> ExtractionSettings:
+    return ExtractionSettings()
 
 
 def get_data_policy() -> str:
     return current_data_policy()
 
 
-def get_ai_client(settings: Annotated[AISettings, Depends(get_ai_settings)]):
-    if settings.groq_api_key is None:
+def get_ai_client(settings: Annotated[ExtractionSettings, Depends(get_ai_settings)]):
+    if not settings.enabled or settings.groq_key is None:
         yield None
         return
     client = groq.Groq(
-        api_key=settings.groq_api_key.get_secret_value(),
-        timeout=settings.resolve_extraction_timeout_seconds,
+        api_key=settings.groq_key.get_secret_value(),
+        timeout=settings.timeout_seconds,
         max_retries=1,
     )
     try:
@@ -53,7 +53,7 @@ def extract_promise_proposals(
     case_id: UUID,
     store: Store,
     merchant: CurrentMerchant,
-    settings: Annotated[AISettings, Depends(get_ai_settings)],
+    settings: Annotated[ExtractionSettings, Depends(get_ai_settings)],
     client: Annotated[groq.Groq | None, Depends(get_ai_client)],
     data_policy: Annotated[str, Depends(get_data_policy)],
     payload: ExtractionRequest | None = None,

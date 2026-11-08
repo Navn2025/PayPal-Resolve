@@ -22,13 +22,28 @@ only provider configured in this project.
 
 ## Running live
 
-The generator, restatement labeller and live eval call Groq directly. Under
-`app.inference`'s data policy (see `docs/AI_INVESTIGATIONS.md`) they refuse to
-start unless the process environment sets
-`RESOLVE_AI_DATA_POLICY=minimized_standard_retention`, which accepts Groq's
-documented standard retention. It is never read from `.env`. All data here
-is synthetic; do not point these scripts at real conversations. `--rescore`,
-`--replay` and `--compare` make no provider calls and need no opt-in.
+The generator, restatement labeller and live eval call Groq directly. Like
+`app.inference` (see `docs/AI_INVESTIGATIONS.md`), they read settings from the
+process environment only, never `.env`, and refuse to start unless:
+
+- `RESOLVE_AI_DATA_POLICY=minimized_standard_retention` accepts Groq's
+  documented standard retention (the default blocks direct Groq);
+- `RESOLVE_AI_GROQ_KEY` holds the Groq key, the same variable inference uses;
+- for the live eval only, `RESOLVE_EXTRACTION_ENABLED=true`.
+
+In PowerShell, for the current session only:
+
+```powershell
+$env:RESOLVE_EXTRACTION_ENABLED = "true"
+$env:RESOLVE_AI_DATA_POLICY = "minimized_standard_retention"   # synthetic data only
+$env:RESOLVE_AI_GROQ_KEY = "<key from your secret store>"      # never commit or paste it
+# Optional: $env:RESOLVE_EXTRACTION_MODEL = "openai/gpt-oss-120b"
+uv run python evals/run_extraction_eval.py --live --datasets injection --tag inj2
+```
+
+All data here is synthetic; do not point these scripts at real conversations.
+`--rescore`, `--replay` and `--compare` make no provider calls and need none of
+these variables.
 
 ## Item format
 

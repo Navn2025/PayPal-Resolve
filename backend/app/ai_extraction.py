@@ -22,7 +22,6 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from .inference import InvestigationSettings
 from .resolution_models import Target
-from .settings import BACKEND_DIR
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +56,7 @@ ReviewReason = Literal[
     "connection_error",
     "provider_error",
     "unexpected_error",
+    "extraction_disabled",
     "data_policy_blocked",
     "invalid_json",
     "schema_invalid",
@@ -87,19 +87,25 @@ QUOTE_MARKS = str.maketrans(
 )
 
 
-class AISettings(BaseSettings):
+class ExtractionSettings(BaseSettings):
+    """Read like app.inference's settings: process environment only, never .env."""
+
     model_config = SettingsConfigDict(
-        env_file=BACKEND_DIR / ".env",
-        env_file_encoding="utf-8",
+        env_prefix="RESOLVE_EXTRACTION_",
+        env_file=None,
         extra="ignore",
         hide_input_in_errors=True,
+        populate_by_name=True,
     )
 
-    groq_api_key: SecretStr | None = None
+    enabled: bool = False
+    # The provider key is app.inference's RESOLVE_AI_GROQ_KEY, so one secret
+    # serves both features and is configured in one place.
+    groq_key: SecretStr | None = Field(default=None, validation_alias="RESOLVE_AI_GROQ_KEY")
     # llama-3.3-70b-versatile returned 404 model_not_found for the owner's key.
-    resolve_ai_model: str = "openai/gpt-oss-120b"
+    model: str = "openai/gpt-oss-120b"
     # Separate from app.inference's RESOLVE_AI_TIMEOUT_SECONDS, which has its own bounds.
-    resolve_extraction_timeout_seconds: float = Field(20, gt=0, le=120)
+    timeout_seconds: float = Field(20, gt=0, le=120)
 
 
 class ChatMessage(BaseModel):
@@ -246,8 +252,8 @@ def _failure_reason(error):
 
 def _log_failure(case_id, error, reason, settings):
     message = str(error)
-    if settings.groq_api_key:
-        message = message.replace(settings.groq_api_key.get_secret_value(), "[redacted]")
+    if settings.groq_key:
+        message = message.replace(settings.groq_key.get_secret_value(), "[redacted]")
     logger.warning(
         "AI promise extraction failed for case %s: reason=%s type=%s status=%s message=%s",
         case_id,
@@ -448,7 +454,7 @@ def extract_promises(
         status="ok",
         source=source,
         review_reasons=[],
-        model=settings.resolve_ai_model,
+        model=settings.model,
         proposals=[],
         dropped=[],
     )
@@ -459,6 +465,9 @@ def extract_promises(
         result.status = "needs_review"
         return result
 
+    if not settings.enabled:
+        result.model = None
+        return review("extraction_disabled")
     if client is None:
         result.model = None
         return review("not_configured")
@@ -470,8 +479,8 @@ def extract_promises(
     try:
         content = _complete(
             client,
-            settings.resolve_ai_model,
-            settings.resolve_extraction_timeout_seconds,
+            settings.model,
+            settings.timeout_seconds,
             case_id,
             messages,
         )

@@ -5,7 +5,7 @@ import groq
 import httpx
 import pytest
 
-from app.ai_extraction import GROQ_DATA_POLICY, AISettings
+from app.ai_extraction import GROQ_DATA_POLICY, ExtractionSettings
 from evals.run_extraction_eval import (
     RecordingClient,
     aggregate,
@@ -122,7 +122,7 @@ def test_runner_retries_rate_limits_and_reports_ablation(tmp_path):
         )
 
     inner = SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=create)))
-    settings = AISettings(_env_file=None, groq_api_key="test", resolve_ai_model="fake-model")
+    settings = ExtractionSettings(enabled=True, groq_key="test", model="fake-model")
     records_path = tmp_path / "records.jsonl"
     client = RecordingClient(inner, sleep=sleeps.append)
 
@@ -281,7 +281,7 @@ def test_daily_token_limit_stops_the_run_instead_of_waiting(tmp_path):
 
     inner = SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=create)))
     sleeps = []
-    settings = AISettings(_env_file=None, groq_api_key="test", resolve_ai_model="fake-model")
+    settings = ExtractionSettings(enabled=True, groq_key="test", model="fake-model")
     records_path = tmp_path / "records.jsonl"
     with pytest.raises(QuotaExhausted):
         run_eval(
@@ -309,5 +309,23 @@ def test_live_scripts_refuse_groq_without_the_data_policy(monkeypatch, script):
 
     with pytest.raises(SystemExit) as stopped:
         module.main()
+
+    assert stopped.value.code == 2 and created == []
+
+
+def test_live_eval_refuses_when_extraction_is_disabled(monkeypatch):
+    import sys
+
+    from evals import run_extraction_eval
+
+    monkeypatch.setenv("RESOLVE_AI_DATA_POLICY", GROQ_DATA_POLICY)
+    monkeypatch.setenv("RESOLVE_AI_GROQ_KEY", "test")
+    monkeypatch.delenv("RESOLVE_EXTRACTION_ENABLED", raising=False)
+    monkeypatch.setattr(sys, "argv", ["run_extraction_eval.py", "--live"])
+    created = []
+    monkeypatch.setattr(run_extraction_eval.groq, "Groq", lambda **kw: created.append(kw))
+
+    with pytest.raises(SystemExit) as stopped:
+        run_extraction_eval.main()
 
     assert stopped.value.code == 2 and created == []

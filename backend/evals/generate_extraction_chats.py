@@ -6,6 +6,8 @@ The generator model only writes the prose, and the script rejects chats whose
 text does not carry the spec (wrong sender, missing amount, extra turns).
 The generator is deliberately a different model family from the extractor.
 
+    $env:RESOLVE_AI_DATA_POLICY = "minimized_standard_retention"   # PowerShell
+    $env:RESOLVE_AI_GROQ_KEY = "<key from your secret store>"
     uv run python evals/generate_extraction_chats.py --live
 """
 
@@ -21,7 +23,7 @@ sys.path.insert(0, str(BACKEND_DIR))
 
 import groq
 
-from app.ai_extraction import GROQ_DATA_POLICY, AISettings, current_data_policy
+from app.ai_extraction import GROQ_DATA_POLICY, ExtractionSettings, current_data_policy
 
 GENERATOR_MODEL = "qwen/qwen3.8-27b"
 OUTPUT = BACKEND_DIR / "evals/extraction/generated.jsonl"
@@ -211,9 +213,9 @@ def main():
             "process environment (app.inference never reads .env). Use it only for "
             "synthetic data."
         )
-    key = AISettings().groq_api_key
+    key = ExtractionSettings().groq_key
     if key is None:
-        parser.error("GROQ_API_KEY is not set")
+        parser.error("RESOLVE_AI_GROQ_KEY is not set in the process environment")
     rng = random.Random(args.seed)
     client = groq.Groq(api_key=key.get_secret_value(), max_retries=2, timeout=60)
 

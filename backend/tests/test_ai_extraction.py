@@ -7,7 +7,7 @@ import groq
 import httpx
 import pytest
 
-from app.ai_extraction import GROQ_DATA_POLICY, AISettings
+from app.ai_extraction import GROQ_DATA_POLICY, ExtractionSettings
 from app.ai_routes import get_ai_client, get_ai_settings, get_data_policy
 
 KEY = "gsk_test_key_never_logged"
@@ -70,8 +70,8 @@ def sent_transcript(request):
 def ai(client):
     """Return a function that installs a fake Groq outcome and requests extraction."""
     completions = FakeCompletions({"proposals": []})
-    client.app.dependency_overrides[get_ai_settings] = lambda: AISettings(
-        _env_file=None, groq_api_key=KEY
+    client.app.dependency_overrides[get_ai_settings] = lambda: ExtractionSettings(
+        enabled=True, groq_key=KEY
     )
     client.app.dependency_overrides[get_data_policy] = lambda: GROQ_DATA_POLICY
     client.app.dependency_overrides[get_ai_client] = lambda: SimpleNamespace(
@@ -616,5 +616,52 @@ def test_extraction_timeout_is_separate_from_inference_timeout(monkeypatch):
     monkeypatch.setenv("RESOLVE_AI_TIMEOUT_SECONDS", "5")
     monkeypatch.setenv("RESOLVE_EXTRACTION_TIMEOUT_SECONDS", "60")
 
-    assert AISettings(_env_file=None).resolve_extraction_timeout_seconds == 60
+    assert ExtractionSettings().timeout_seconds == 60
     assert InvestigationSettings().timeout_seconds == 5
+
+
+def test_disabled_extraction_needs_review_before_any_other_check(client, ai):
+    client.app.dependency_overrides[get_ai_settings] = lambda: ExtractionSettings(groq_key=KEY)
+    client.app.dependency_overrides[get_data_policy] = lambda: "zdr_required"
+
+    body = ai({"proposals": [proposal()]}).json()
+
+    assert body["status"] == "needs_review"
+    assert body["review_reasons"] == ["extraction_disabled"]
+    assert body["model"] is None and ai.calls == []
+
+
+def test_settings_are_read_from_the_environment_only(monkeypatch, tmp_path):
+    for name in ("RESOLVE_EXTRACTION_ENABLED", "RESOLVE_EXTRACTION_MODEL", "RESOLVE_AI_GROQ_KEY"):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".env").write_text(
+        "RESOLVE_EXTRACTION_ENABLED=true\nRESOLVE_AI_GROQ_KEY=from-dotenv\nGROQ_API_KEY=old\n"
+    )
+
+    defaults = ExtractionSettings()
+    assert (defaults.enabled, defaults.groq_key, defaults.model) == (
+        False, None, "openai/gpt-oss-120b",
+    )
+
+    monkeypatch.setenv("RESOLVE_EXTRACTION_ENABLED", "true")
+    monkeypatch.setenv("RESOLVE_EXTRACTION_MODEL", "openai/gpt-oss-20b")
+    monkeypatch.setenv("RESOLVE_AI_GROQ_KEY", "from-environment")
+    configured = ExtractionSettings()
+    assert configured.enabled and configured.model == "openai/gpt-oss-20b"
+    assert configured.groq_key.get_secret_value() == "from-environment"
+
+    from app.inference import InvestigationSettings
+
+    # One provider key, read the same way by both features.
+    assert InvestigationSettings().groq_key.get_secret_value() == "from-environment"
+
+
+def test_disabled_extraction_creates_no_provider_client(monkeypatch):
+    from app import ai_routes
+
+    created = []
+    monkeypatch.setattr(ai_routes.groq, "Groq", lambda **kw: created.append(kw))
+    dependency = ai_routes.get_ai_client(ExtractionSettings(groq_key=KEY))
+
+    assert next(dependency) is None and created == []

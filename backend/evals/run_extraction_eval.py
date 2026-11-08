@@ -1,10 +1,12 @@
 """Score AI promise extraction against labelled chats.
 
 Live Groq calls are opt-in and never part of the default pytest run. Like
-app.inference, they also require the operator to accept Groq's standard
-retention in the process environment (synthetic data only):
+app.inference, settings come from the process environment only (never .env).
+In PowerShell, for synthetic data only:
 
-    $env:RESOLVE_AI_DATA_POLICY = "minimized_standard_retention"   # PowerShell
+    $env:RESOLVE_EXTRACTION_ENABLED = "true"
+    $env:RESOLVE_AI_DATA_POLICY = "minimized_standard_retention"
+    $env:RESOLVE_AI_GROQ_KEY = "<key from your secret store>"
     uv run python evals/run_extraction_eval.py --live
     uv run python evals/run_extraction_eval.py --rescore evals/results/extraction_<date>_records.jsonl
 
@@ -33,8 +35,8 @@ import groq
 from app.ai_extraction import (
     GROQ_DATA_POLICY,
     PROMISE_KINDS,
-    AISettings,
     ChatMessage,
+    ExtractionSettings,
     amounts_in,
     current_data_policy,
     extract_promises,
@@ -157,7 +159,7 @@ def run_item(item, client, settings, data_policy):
         "id": item["id"],
         "dataset": item["dataset"],
         "category": item["category"],
-        "model": settings.resolve_ai_model,
+        "model": settings.model,
         "status": result.status,
         "review_reasons": result.review_reasons,
         "error": call.get("error"),
@@ -187,7 +189,7 @@ def run_eval(items, client, settings, data_policy, records_path=None, progress=p
         for line in Path(records_path).read_text(encoding="utf-8").splitlines():
             if line.strip():
                 record = json.loads(line)
-                if record["model"] == settings.resolve_ai_model:
+                if record["model"] == settings.model:
                     records[record["id"]] = record
     with ExitStack() as stack:
         output = (
@@ -804,7 +806,7 @@ def describe(items, records, model):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    parser.add_argument("--live", action="store_true", help="Call Groq with GROQ_API_KEY")
+    parser.add_argument("--live", action="store_true", help="Call Groq (needs the environment opt-ins below)")
     parser.add_argument("--rescore", type=Path, help="Score an existing records file")
     parser.add_argument(
         "--replay", type=Path, help="Re-run current validators on a records file's model output"
@@ -823,7 +825,7 @@ def main():
     items = []
     for name in args.datasets:
         items += load([name])[: args.limit]
-    settings = AISettings()
+    settings = ExtractionSettings()
     wanted = {item["id"] for item in items}
 
     def read_records(path):
@@ -846,12 +848,14 @@ def main():
         return 0
     if args.rescore:
         records = read_records(args.rescore)
-        model = records[0]["model"] if records else settings.resolve_ai_model
+        model = records[0]["model"] if records else settings.model
         mode_note = f"recorded live model output from `{args.rescore.name}`, rescored"
     elif args.replay:
         baseline = read_records(args.replay)
-        model = baseline[0]["model"] if baseline else settings.resolve_ai_model
-        replay_settings = settings.model_copy(update={"resolve_ai_model": model})
+        model = baseline[0]["model"] if baseline else settings.model
+        # Replay makes no provider call, so it runs whether or not extraction is
+        # enabled for live use.
+        replay_settings = settings.model_copy(update={"model": model, "enabled": True})
         records = run_eval(
             [i for i in items if i["id"] in {r["id"] for r in baseline}],
             ReplayClient(baseline),
@@ -872,12 +876,14 @@ def main():
                 "process environment (app.inference never reads .env). Use it only for "
                 "synthetic data."
             )
-        if settings.groq_api_key is None:
-            parser.error("GROQ_API_KEY is not set")
+        if not settings.enabled:
+            parser.error("Set RESOLVE_EXTRACTION_ENABLED=true in the process environment")
+        if settings.groq_key is None:
+            parser.error("RESOLVE_AI_GROQ_KEY is not set in the process environment")
         inner = groq.Groq(
-            api_key=settings.groq_api_key.get_secret_value(),
+            api_key=settings.groq_key.get_secret_value(),
             max_retries=0,
-            timeout=settings.resolve_extraction_timeout_seconds,
+            timeout=settings.timeout_seconds,
         )
         args.out_dir.mkdir(parents=True, exist_ok=True)
         suffix = f"_{args.tag}" if args.tag else ""
@@ -889,7 +895,7 @@ def main():
         except QuotaExhausted as stop:
             print(f"Stopped: {stop}. Re-run the same command later to resume.")
             return 2
-        model = settings.resolve_ai_model
+        model = settings.model
     else:
         parser.error("Pass --live to call Groq, or --rescore/--replay RECORDS")
     meta = describe(items, records, model)

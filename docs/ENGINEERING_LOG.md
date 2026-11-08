@@ -2525,6 +2525,52 @@ out of that prefix, or reading it like inference, is a follow-up for the owner
 to decide. Extraction has no equivalent of inference's `RESOLVE_AI_ENABLED`
 switch; it is enabled by a configured key plus the data policy.
 
+### CHG-040 - Read extraction settings like inference and add an enable switch
+
+**Date:** 9 November 2026 (Asia/Calcutta).
+
+**Objective:** Resolve the two CHG-039 follow-ups by matching the settings
+conventions in `docs/AI_INVESTIGATIONS.md`: AI settings come from the process
+environment only, never `.env`, and inference stays off until enabled.
+
+**Files and behavior:**
+
+- `backend/app/ai_extraction.py`: `AISettings` is replaced by
+  `ExtractionSettings` (`RESOLVE_EXTRACTION_` prefix, `env_file=None`, like
+  `InvestigationSettings`). `RESOLVE_EXTRACTION_ENABLED` (default false),
+  `RESOLVE_EXTRACTION_MODEL` (default `openai/gpt-oss-120b`) and
+  `RESOLVE_EXTRACTION_TIMEOUT_SECONDS` (default 20). The Groq key is
+  inference's `RESOLVE_AI_GROQ_KEY`, read from the environment by both
+  features. When disabled, extraction returns `needs_review` with the new
+  reason `extraction_disabled` before any other check, and makes no call.
+- `backend/app/ai_routes.py`: no Groq client is created while disabled.
+- Eval runner, generator and labeller read the same settings; `--live` also
+  requires `RESOLVE_EXTRACTION_ENABLED=true`. Replay sets enabled internally
+  because it makes no provider call.
+- `backend/.env.example` lists the environment-only variables in comments
+  instead of `.env` values; the eval README and script docstrings give the
+  PowerShell lines. OpenAPI regenerated (one added enum value).
+
+**Compatibility:** `GROQ_API_KEY` and `RESOLVE_AI_MODEL` (CHG-035) are no
+longer read, from `.env` or the environment. A local `.env` that still holds
+`GROQ_API_KEY` is ignored: set `RESOLVE_AI_GROQ_KEY`,
+`RESOLVE_EXTRACTION_ENABLED` and `RESOLVE_AI_DATA_POLICY` in the process
+environment instead. With nothing set, extraction is off (`extraction_disabled`).
+
+**Decisions:** DEC-078.
+
+**Validation:** `uv run python -m pytest -q`: 346 passed, 60 skipped. New mocked
+tests: disabled returns `extraction_disabled` ahead of the data policy and
+missing client checks, with no call; defaults are off and a `.env` file is
+ignored, including `GROQ_API_KEY`; environment values are read and the key
+matches what `InvestigationSettings` reads; a disabled route creates no client;
+the live eval exits before creating a client when disabled. `uvx ruff check`
+passed on changed files. No live provider call was made.
+
+**Limits:** Extraction does not check inference's approved Groq model list;
+`RESOLVE_EXTRACTION_MODEL` accepts any model ID. Sharing one key means
+revoking it disables both features together.
+
 ## Decision register
 
 ### DEC-001 - Keep FastAPI/Pydantic and the existing uv project
@@ -3241,6 +3287,15 @@ divergent switch. Extraction keeps its own provider client because the
 investigation adapter's prompt and schema contract are specific to
 investigations.
 
+### DEC-078 - Configure extraction through the environment, off by default
+
+Follow the inference convention so an operator configures both AI features the
+same way: in the process secret store, never a checked-in or local dotenv
+file, and with nothing enabled until explicitly switched on. Reuse
+`RESOLVE_AI_GROQ_KEY` rather than a second Groq secret, so key rotation and
+revocation happen in one place. Keep extraction's own enable switch, model and
+timeout, because the features can be operated independently.
+
 ## Open work and boundaries
 
 1. Verify import (if needed), SSL connection, migration startup, and worker
@@ -3266,7 +3321,7 @@ investigations.
 ## Template for the next entry
 
 ```text
-### CHG-040 - Concrete change title
+### CHG-041 - Concrete change title
 Date:
 Objective:
 Files and resulting behavior:

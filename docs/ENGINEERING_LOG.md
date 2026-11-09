@@ -2653,6 +2653,73 @@ has not been exercised live.
 **Process note:** this work began with `main` checked out, where extraction
 does not exist. The clean working tree was switched back to `feat/ai-part`.
 
+### CHG-042 - Show promise suggestions in the merchant workspace
+
+**Date:** 9 November 2026 (Asia/Calcutta).
+
+**Objective:** Let a merchant run promise extraction (CHG-035 to CHG-041) from a
+case and turn a suggestion into a promise through the existing, human-confirmed
+promise form.
+
+**Files and behavior:**
+
+- `frontend/components/promise-extraction.tsx` (new): `PromiseExtractionPanel`,
+  styled like `InvestigationReviewPanel` and mounted beside it in
+  `workspace.tsx` for connected merchants only (not in demo mode).
+  - "Extract promises from conversation" calls
+    `POST /resolution-cases/{id}/ai/extract-promises` through the existing
+    request helper (the case's stored conversation).
+  - Each proposal card shows kind, amount, action, condition, deadline, the
+    exact quote highlighted with its source message ID, and badges for
+    `possible_revision`, restatements (`supporting_message_ids`) and low
+    confidence. The summary line shows "cached, 0 tokens" on a cache hit,
+    otherwise the token count.
+  - `needs_review` reasons and dropped items are shown in plain English
+    (for example `extraction_disabled` -> "AI extraction is turned off on this
+    server", `budget_exceeded` -> "Today's AI budget is used up"). Unknown
+    codes fall back to a readable form of the code.
+  - Copy: "Suggestions only. Nothing is saved or paid until you confirm."
+  - "Use this proposal" opens the existing `PromiseForm` pre-filled; "Dismiss"
+    hides the card until the next extraction.
+- `frontend/components/forms.tsx`: `PromiseForm` gains an optional `draft` prop
+  (exported `PromiseDraft`) for initial remedy, action, refund amount, promise
+  text, source note and reference. It is ignored when editing, so existing
+  callers are unchanged. A suggestion's deadline is free text, so it goes into
+  the source note rather than the due-date field. Saving still uses
+  `savePromise` and the existing `POST /resolution-cases/{id}/promises`.
+- `frontend/components/workspace.tsx`: mounts the panel and passes the draft to
+  the promise dialog. `frontend/app/globals.css`: panel-scoped styles only.
+- `frontend/tests/promise-extraction.spec.ts` (new): Playwright with the extract
+  call mocked by `page.route` and everything else on the fixture backend.
+
+**Decisions:** DEC-080. No backend, API or schema change.
+
+**Validation:**
+
+- `npm run check` (`tsc --noEmit`; the frontend has no separate lint script):
+  passed.
+- New Playwright test passed. It covers: absent in demo mode; copy; cached
+  label; highlighted quote and source message; restatement, revision, amount,
+  action, condition and deadline display; dismiss; plain-English dropped item;
+  pre-filled form values; saving produces exactly one POST to the promise
+  route and none to refund, approval, execution or extraction routes; the
+  promise appears in the case; plain-English `extraction_disabled` and
+  `budget_exceeded`; the panel and cards fit a 390px viewport.
+- Full default Playwright suite with local Chrome via the existing
+  `PLAYWRIGHT_CHROMIUM_EXECUTABLE` hook (Playwright's own browser is not
+  installed here): 13 passed, 5 skipped, 1 failed. The failure is
+  `investigations.spec.ts` line 17 (page width 410 vs 390 at mobile width),
+  and it fails identically with this change stashed: the connected top bar
+  ("Sign out") already overflows at 390px. That test is normally run under
+  `playwright.investigations.config.ts`, which was not run.
+- Backend `uv run python -m pytest -q`: 360 passed, 60 skipped (unchanged).
+
+**Limits:** The top-bar overflow at 390px predates this change and was left
+for the owner. The panel does not remember dismissed cards or used proposals
+after a new extraction. A refund suggestion on a case with no linked payment
+opens the form with "Refund" selected; the backend rejects the save with its
+existing message. No live AI call was made.
+
 ## Decision register
 
 ### DEC-001 - Keep FastAPI/Pydantic and the existing uv project
@@ -3388,6 +3455,14 @@ and a daily per-merchant budget that fails closed to manual review. State is
 kept in memory as the owner chose, trading durability for no schema or
 storage change.
 
+### DEC-080 - Turn suggestions into promises only through the existing form
+
+The UI never writes a suggestion directly. A proposal only pre-fills the same
+`PromiseForm` a merchant uses by hand, so every saved promise passes the
+existing validation and is confirmed by a person, and the promise route stays
+the only write path. Extending the form with an optional draft avoids a second
+form that could drift from it.
+
 ## Open work and boundaries
 
 1. Verify import (if needed), SSL connection, migration startup, and worker
@@ -3413,7 +3488,7 @@ storage change.
 ## Template for the next entry
 
 ```text
-### CHG-042 - Concrete change title
+### CHG-043 - Concrete change title
 Date:
 Objective:
 Files and resulting behavior:

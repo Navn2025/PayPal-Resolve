@@ -138,16 +138,21 @@ function localDateValue(iso?: string | null) {
   return new Date(d.getTime() - d.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
 }
 
-export function PromiseForm({ item, edit, linkedPayment, onClose, onSave }: {
-  item: CaseView; edit?: PromiseView; linkedPayment?: LegacyCase | null;
+/** Initial values for a new promise, e.g. from an AI suggestion. Ignored when editing. */
+export type PromiseDraft = { kind: Remedy; action?: string; amount?: string; promise: string; source_note: string; source_reference: string };
+
+export function PromiseForm({ item, edit, draft: suggested, linkedPayment, onClose, onSave }: {
+  item: CaseView; edit?: PromiseView; draft?: PromiseDraft; linkedPayment?: LegacyCase | null;
   onClose: () => void; onSave: (terms: Terms, edit?: PromiseView) => Promise<void>;
 }) {
+  const draft = edit ? undefined : suggested;
   const { busy, error, submit } = useSubmission();
-  const [kind, setKind] = useState<Remedy>(edit?.terms.target.kind ?? (item.refund_case_id && !item.promises.some((p) => p.terms.target.kind === "refund") ? "refund" : "return"));
-  const [choice, setChoice] = useState(String(edit?.terms.target.action ?? edit?.terms.target.milestone ?? ""));
+  const [kind, setKind] = useState<Remedy>(edit?.terms.target.kind ?? draft?.kind ?? (item.refund_case_id && !item.promises.some((p) => p.terms.target.kind === "refund") ? "refund" : "return"));
+  const [choice, setChoice] = useState(String(edit?.terms.target.action ?? edit?.terms.target.milestone ?? draft?.action ?? ""));
   const eligible = edit ? item.promises.slice(0, item.promises.findIndex((p) => p.id === edit.id)) : item.promises;
   const fields = specs(kind, choice);
-  return <Modal title={edit ? "Revise promise" : "Record a promise"} description={edit ? "The previous version stays in the timeline. Review the evidence again after changing the terms." : "Record what was agreed and how the result should be checked."}
+  return <Modal title={edit ? "Revise promise" : "Record a promise"} description={edit ? "The previous version stays in the timeline. Review the evidence again after changing the terms."
+    : draft ? "Pre-filled from an AI suggestion. Check every field against the conversation before recording." : "Record what was agreed and how the result should be checked."}
     onClose={onClose} busy={busy}>
     <form onSubmit={(event) => submit(event, async (data) => {
       const target: Target = { kind };
@@ -173,21 +178,22 @@ export function PromiseForm({ item, edit, linkedPayment, onClose, onSave }: {
         {field("Remedy", <select value={kind} onChange={(event) => { setKind(event.target.value as Remedy); setChoice(""); }} disabled={!!edit}>
           {Object.entries(remedyLabels).map(([key, label]) => <option key={key} value={key} disabled={(key === "refund" || key === "dispute_handoff") && !item.refund_case_id}>{label}</option>)}
         </select>)}
-        {field("Promise to the customer", <textarea name="promise" required rows={2} maxLength={3000} autoFocus defaultValue={edit?.terms.promise} />)}
+        {field("Promise to the customer", <textarea name="promise" required rows={2} maxLength={3000} autoFocus defaultValue={edit?.terms.promise ?? draft?.promise} />)}
         <div className="field-grid" key={kind}>
           {fields.map((spec) => {
             const target = edit?.terms.target;
             const existing = target?.[spec.key] ?? (target?.tracking as Record<string, string> | undefined)?.[spec.key];
-            const initial = String(existing ?? (kind === "refund" && spec.key === "amount" ? linkedPayment?.commitment?.amount ?? "" : ""));
+            const suggestedAmount = kind === draft?.kind && spec.key === "amount" && kind === "refund" ? draft.amount : undefined;
+            const initial = String(existing ?? suggestedAmount ?? (kind === "refund" && spec.key === "amount" ? linkedPayment?.commitment?.amount ?? "" : ""));
             return <div key={spec.key}>{field(spec.label, spec.options
               ? <select name={spec.key} value={choice || spec.options[0][0]} onChange={(event) => setChoice(event.target.value)}>{spec.options.map(([val, name]) => <option value={val} key={val}>{name}</option>)}</select>
               : <input name={spec.key} defaultValue={initial} placeholder={spec.hint} required={!spec.optional}
                 pattern={spec.money ? "[0-9]+(\\.[0-9]{1,2})?" : undefined} inputMode={spec.money ? "decimal" : undefined} maxLength={160} />)}</div>;
           })}
         </div>
-        {field("Source evidence", <textarea name="source_note" required rows={2} maxLength={3000} defaultValue={edit?.terms.source_note} placeholder="Quote or describe the recorded agreement." />)}
+        {field("Source evidence", <textarea name="source_note" required rows={2} maxLength={3000} defaultValue={edit?.terms.source_note ?? draft?.source_note} placeholder="Quote or describe the recorded agreement." />)}
         <div className="field-grid">
-          {field("Source reference (optional)", <input name="reference" maxLength={160} defaultValue={edit?.terms.source_reference ?? ""} placeholder="Support ticket or receipt ID" />)}
+          {field("Source reference (optional)", <input name="reference" maxLength={160} defaultValue={edit?.terms.source_reference ?? draft?.source_reference ?? ""} placeholder="Support ticket or receipt ID" />)}
           {field("Due date (optional)", <input type="datetime-local" name="due_at" defaultValue={localDateValue(edit?.terms.due_at)} />)}
         </div>
         {eligible.length > 0 && <fieldset className="prerequisites"><legend>Prerequisites (optional)</legend>

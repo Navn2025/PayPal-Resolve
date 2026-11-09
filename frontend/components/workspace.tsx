@@ -12,13 +12,14 @@ import { workflowLabels, type Operations, type Workflow } from "@/lib/customer";
 import { Badge, Brand, Button, Empty, Notice, remedyIcons } from "./ui";
 import { CaseDesk, type DeskTab } from "./case-desk";
 import { InvestigationReviewPanel } from "./investigation-review";
-import { CaseForm, ConnectForm, EvidenceForm, LocalGuide, PromiseForm, RefundForm, ReviewForm } from "./forms";
+import { PromiseExtractionPanel } from "./promise-extraction";
+import { CaseForm, ConnectForm, EvidenceForm, LocalGuide, PromiseForm, RefundForm, ReviewForm, type PromiseDraft } from "./forms";
 import { InviteForm, OperationsForm, PaymentLinkForm } from "./merchant-triage";
 
 const CASE_PAGE = 12, EVENT_PAGE = 30;
 type Filter = "all" | Outcome | Workflow | "unread";
 type Nav = "inbox" | "review";
-type Dialog = { kind: "connect" | "case" | "guide" | "invite" } | { kind: "payment-link"; item: CaseView } | { kind: "operations"; id: string; fields: Operations } | { kind: "promise"; edit?: PromiseView }
+type Dialog = { kind: "connect" | "case" | "guide" | "invite" } | { kind: "payment-link"; item: CaseView } | { kind: "operations"; id: string; fields: Operations } | { kind: "promise"; edit?: PromiseView; draft?: PromiseDraft }
   | { kind: "evidence"; promise: PromiseView } | { kind: "approve"; basis: Reconciliation }
   | { kind: "execute"; approval: Approval } | { kind: "review"; item: Review };
 type Detail = {
@@ -486,7 +487,8 @@ export function Workspace({ mode, initialCaseId = null }: { mode: "demo" | "merc
             <InboxPane cases={inbox.items} selected={selected} select={select} filter={filter} setFilter={setFilter} search={search}
               setSearch={setSearch} more={inbox.offset + CASE_PAGE < inbox.total} onMore={() => loadInbox(inbox.offset + CASE_PAGE)}
               loading={loadingList} onNew={() => setDialog({ kind: "case" })} demo={demo} />
-            <div className="desk-pane">{desk || <Empty title={loadingList ? "Loading case workspace…" : "Select a case"} detail={loadingList ? "Reading your cases from the local backend." : "Open a case from the inbox to see its promises and evidence."} />}{!demo && item && <InvestigationReviewPanel key={item.id} caseId={item.id} request={request} />}</div>
+            <div className="desk-pane">{desk || <Empty title={loadingList ? "Loading case workspace…" : "Select a case"} detail={loadingList ? "Reading your cases from the local backend." : "Open a case from the inbox to see its promises and evidence."} />}{!demo && item && <InvestigationReviewPanel key={item.id} caseId={item.id} request={request} />}
+              {!demo && item && <PromiseExtractionPanel key={"extract-" + item.id} caseId={item.id} request={request} onUse={(draft) => setDialog({ kind: "promise", draft })} />}</div>
           </div>
           {demo && <div className="demo-tools"><span><FlaskConical size={17} /> Demo controls</span><p>Try the normal refund, or approve first and simulate a refund made outside Resolve.</p>
             <a className="button button-secondary small-button" href="/customer?demo=1" target="_blank" rel="noreferrer">Customer demo</a>
@@ -516,7 +518,7 @@ export function Workspace({ mode, initialCaseId = null }: { mode: "demo" | "merc
         } else throw failure;
       }
     }} />}
-    {dialog?.kind === "promise" && item && <PromiseForm item={item} edit={dialog.edit} linkedPayment={current?.payment} onClose={closeDialog} onSave={savePromise} />}
+    {dialog?.kind === "promise" && item && <PromiseForm item={item} edit={dialog.edit} draft={dialog.draft} linkedPayment={current?.payment} onClose={closeDialog} onSave={savePromise} />}
     {dialog?.kind === "evidence" && <EvidenceForm promise={dialog.promise} onClose={closeDialog} onSave={(data) => saveEvidence(dialog.promise, data)} />}
     {dialog?.kind === "approve" && <RefundForm amount={dialog.basis.recommended_refund_amount} demo={demo}
       onClose={closeDialog} onApprove={(note, requested) => approveRefund(dialog.basis, note, requested)} onExecute={executeRefund} />}

@@ -546,4 +546,6 @@ cite { display: block; margin-top: 4px; font-size: 10px; font-style: normal; col
 .proposal-quote mark { background: #fff3c4; padding: 1px 2px; border-radius: 3px; }
 .proposal-quote footer { color: var(--muted); font-size: 12px; margin-top: 4px; }
 .proposal-dropped { margin-top: 10px; }
+.injection-flags { margin: 10px 0; }
+.injection-flags p { margin: 6px 0; }
 .investigation-panel .review-actions { flex-wrap: wrap; gap: 8px; }

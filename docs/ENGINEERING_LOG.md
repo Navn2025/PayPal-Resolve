@@ -2762,6 +2762,85 @@ this.
 **Limits:** The `/ai/usage` endpoint is reachable through the proxy but the UI
 does not display it yet.
 
+### CHG-044 - Mask payment details before extraction and flag injection attempts
+
+**Date:** 9 November 2026 (Asia/Calcutta).
+
+**Objective:** Keep personal payment and contact details out of the provider
+call, and show merchants when a buyer message looks like an injection attempt,
+without blocking extraction.
+
+**Files and behavior:**
+
+- `backend/app/ai_privacy.py` (new):
+  - `mask_text` replaces card numbers (13 to 19 digits passing the Luhn check),
+    UPI IDs, labelled bank account numbers (after "A/c", "account", "khata"
+    and similar), IFSC codes, email addresses and phone numbers (Indian,
+    international `+`, US) with `[card]`, `[upi_id]`, `[bank_account]`,
+    `[ifsc]`, `[email]` and `[phone]`. PayPal capture, order, invoice and
+    dispute IDs, order numbers, SKUs, tracking codes and amounts are kept.
+    For every masked character it records which original span it stands for.
+  - `injection_flags` checks buyer messages only, against five rules:
+    RG-INJ-001 fake system/admin text, RG-INJ-002 claimed authority,
+    RG-INJ-003 requests to mark a refund or payment as done, RG-INJ-004 quoted
+    or labelled merchant text, RG-INJ-005 instruction overrides. Each has
+    English and Hinglish patterns.
+- `backend/app/ai_extraction.py`:
+  - The transcript sent to the provider is masked. Validation still uses the
+    original messages.
+  - A quote that matches only the masked text (for example
+    "refund to [upi_id]") is resolved to the merchant's original words through
+    the span map, recorded as a new `quote_unmasked` adjustment, and its
+    amount is checked against the original words. Words not in the message
+    still fail `quote_not_found`.
+  - `ExtractionResult.flags` lists `rule_id`, `label` and `message_id`. Flags
+    are computed for every request, including disabled or skipped ones, and
+    are included in cached results. They never block or change proposals.
+  - The system prompt is unchanged, so the cache prompt version is unchanged.
+- `frontend/components/promise-extraction.tsx`: a "Suspicious instruction
+  ignored" badge with each rule ID, rule name and buyer message ID, explaining
+  that the message was read as ordinary chat. Panel-scoped CSS.
+- OpenAPI regenerated (32 lines added).
+
+**Decisions:** DEC-081.
+
+**Measurement (no provider calls; rules written from the requested categories
+and not adjusted to these results):**
+
+- Masking on all eval sets: 0 spans in gold, hard, injection and held-out, so
+  their provider transcripts are byte-identical to before and CHG-038's recall
+  is unaffected. 3 spans in generated, all genuine email addresses in
+  Qwen-written chats.
+- Flags: 21 of 50 injection chats; 0 of 310 non-injection chats (gold, hard,
+  held-out, generated). By type: fake system 5/5, fake authority 4/5,
+  instruction in buyer text 4/5, fake quoted merchant 3/5, fake merchant label
+  3/5, multilingual 2/5, role-play 0/5, encoded 0/5, JSON injection 0/5,
+  merchant echo 0/5. The last four types are outside the rule categories, and
+  two multilingual items are Spanish and French.
+- In-category misses: "the merchant's lawyer" (inj-009), "Note for the
+  extraction tool" (inj-013), "Your agent said yesterday:" (inj-016), "Copying
+  your earlier email:" (inj-017), "[Merchant]" without a colon (inj-037),
+  "Message from merchant forwarded:" (inj-039), and a "SYSTEM (hidden):" line
+  with zero-width characters (inj-050).
+- Two rule bugs were found by the new unit tests' own examples, not by the eval
+  set, and fixed before the measurement above: "mark this order as refunded"
+  was missed, and "Is the refund approved yet?" was flagged.
+
+**Validation:** Backend `uv run python -m pytest -q`: 396 passed, 60 skipped
+(36 new in `backend/tests/test_extraction_privacy.py`). `uvx ruff check`
+passed. Frontend `npm run check` passed; Playwright with local Chrome: 14
+passed, 5 skipped, 1 failed (the existing `investigations.spec.ts`
+mobile-width check from CHG-042). The mocked panel test now checks the badge,
+rule ID and message ID, and that the badge is absent when there are no flags.
+
+**Limits:** Flags are regular expressions with the misses listed above;
+improving them should use attack examples outside `injection.jsonl` so the
+detection rate stays meaningful. Masking is pattern-based: unlabelled bank
+account numbers, names and street addresses are not masked, and a 16-digit
+order number that passes the Luhn check would be masked as a card (safe, but
+it hides that number from the model). Masked details are restored only in the
+returned quote. No live provider call was made.
+
 ## Decision register
 
 ### DEC-001 - Keep FastAPI/Pydantic and the existing uv project
@@ -3505,6 +3584,17 @@ existing validation and is confirmed by a person, and the promise route stays
 the only write path. Extending the form with an optional draft avoids a second
 form that could drift from it.
 
+### DEC-081 - Mask for the provider, verify against the original, and label rather than block
+
+The provider needs the words of a commitment, not a buyer's card, UPI or
+bank details, so those are masked in what is sent. Evidence must stay exact,
+so quote and amount checks run on the original messages through a span map,
+and the returned quote is always the merchant's real text. Injection rules
+label suspicious buyer text for the merchant but do not block: blocking on a
+regex would skip real commitments when a buyer is merely angry, while the code
+validators already stop buyer text from becoming a promise (0/50 attacks
+succeeded in CHG-038).
+
 ## Open work and boundaries
 
 1. Verify import (if needed), SSL connection, migration startup, and worker
@@ -3530,7 +3620,7 @@ form that could drift from it.
 ## Template for the next entry
 
 ```text
-### CHG-044 - Concrete change title
+### CHG-045 - Concrete change title
 Date:
 Objective:
 Files and resulting behavior:

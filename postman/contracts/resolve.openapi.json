@@ -5346,6 +5346,7 @@
             "type": "string",
             "enum": [
               "quote_normalized",
+              "quote_unmasked",
               "amount_removed",
               "action_removed"
             ],
@@ -7979,6 +7980,14 @@
             "description": "Provider tokens used by this request; 0 on a cache hit.",
             "default": 0
           },
+          "flags": {
+            "items": {
+              "$ref": "#/components/schemas/InjectionFlag"
+            },
+            "type": "array",
+            "title": "Flags",
+            "description": "Buyer messages matching an injection rule. Informational: never blocks."
+          },
           "cache_hit": {
             "type": "boolean",
             "title": "Cache Hit",
@@ -8274,6 +8283,29 @@
           "offset"
         ],
         "title": "InboxPage"
+      },
+      "InjectionFlag": {
+        "properties": {
+          "rule_id": {
+            "type": "string",
+            "title": "Rule Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "message_id": {
+            "type": "string",
+            "title": "Message Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rule_id",
+          "label",
+          "message_id"
+        ],
+        "title": "InjectionFlag"
       },
       "IntakeSubmit": {
         "properties": {

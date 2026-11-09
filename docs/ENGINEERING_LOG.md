@@ -2571,6 +2571,197 @@ passed on changed files. No live provider call was made.
 `RESOLVE_EXTRACTION_MODEL` accepts any model ID. Sharing one key means
 revoking it disables both features together.
 
+### CHG-041 - Minimal cost control for promise extraction
+
+**Date:** 9 November 2026 (Asia/Calcutta).
+
+**Objective:** Bound Groq token spend for extraction without ever skipping a
+conversation that could contain a merchant commitment.
+
+**Files and behavior:**
+
+- `backend/app/ai_extraction.py`: checks now run in this order: disabled, no
+  messages, **no merchant messages**, not configured, data policy, **cache**,
+  **budget**, model call.
+  - The model is skipped only when the transcript has no merchant message,
+    because only merchant messages can create a promise. The result is `ok` with
+    `skipped_reason: no_merchant_messages`. Any merchant message, however
+    short, goes to the model; there is no other heuristic skip.
+  - Cache key: sha256 of the model, a prompt version (first 16 hex digits of
+    the system prompt's sha256) and every message field (id, sender, text,
+    sent_at). Entries are scoped per merchant, so one merchant's cache hit
+    cannot reveal another merchant's transcript. A hit returns the stored
+    proposals with the current request's `case_id` and `source`, `cache_hit:
+    true` and zero tokens. Only clean output (no review reason other than
+    `low_confidence`) is stored, so provider and parse failures stay retryable.
+  - `max_tokens=800` on every call (`MAX_COMPLETION_TOKENS`).
+  - `RESOLVE_EXTRACTION_DAILY_TOKEN_LIMIT` (environment only, like the other
+    extraction settings; default 100,000) per merchant per UTC day. A merchant
+    already at or over it gets `needs_review` / `budget_exceeded` with no call.
+    Cache hits are still served over budget.
+  - `ExtractionResult` gains `tokens`, `cache_hit` and `skipped_reason`.
+- `backend/app/ai_usage.py` (new): thread-safe in-process store with a
+  1,000-entry LRU cache and per-merchant daily totals. Every request records
+  tokens, cache hit, skipped reason and status (last 500 per merchant).
+- `backend/app/ai_routes.py`: `GET /ai/usage` returns the authenticated
+  merchant's totals for today (tokens, limit, remaining, model calls, cache
+  hits, skips by reason, recent calls) with `scope: process_memory`. The store
+  lives on `app.state`, so no `main.py` change was needed.
+- Eval runner: live runs pass no usage store, so repeated runs stay independent
+  of the cache; `--replay` uses a fresh store to exercise the new paths.
+  Records gain `cache_hit` and `skipped_reason`.
+- `backend/.env.example` lists the new variable; OpenAPI regenerated (additive,
+  178 lines: the usage endpoint and the new result fields).
+
+**Decisions:** DEC-079.
+
+**Storage choice (in memory, at the owner's direction):** cache and usage reset
+when the API process restarts and are counted separately by each process. The
+budget limits runaway use within one process; it is not an account-level
+spending cap. Durable storage would have needed a new SQLite migration appended
+to `storage.py`'s list, a PostgreSQL migration, importer registration and three
+tests that pin schema version 25. The owner chose not to make those changes.
+
+**Validation:**
+
+- `uv run python -m pytest -q`: 360 passed, 60 skipped. 14 new mocked tests in
+  `backend/tests/test_extraction_cost.py`: no-merchant transcripts are skipped;
+  very short merchant messages ("ok", "k", an emoji) are still sent; the 800
+  cap; identical input hits the cache at zero tokens while any message change
+  misses; no cache sharing between merchants; failures are not cached; per
+  merchant budget blocking with cache hits still served; the limit is read
+  from the environment and not `.env`; `/ai/usage` needs credentials; UTC day
+  rollover; and the cache key covering model, prompt version and each message
+  field. `uvx ruff check` passed on the changed files.
+- Replay, no provider calls (`extraction_2026-11-09_r1_replay_cost_control.*`):
+  the 80 gold + hard chats recorded live in CHG-038 run 1, through the new code
+  with a fresh usage store. All 80 returned identical proposals and statuses
+  chat by chat; recall gold 1.000 -> 1.000, hard 0.971 -> 0.971; precision
+  unchanged. No chat was skipped and none hit the cache.
+- Replay cannot show the 800-token cap's effect, because those outputs were
+  recorded without it. Recorded completions under the current prompt peaked at
+  474 tokens over 160 chats. One CHG-036 record under the earlier prompt
+  (gen-042, 951 tokens) would now be truncated; that becomes `invalid_json` /
+  `needs_review`, not a silent skip.
+
+**Limits:** In-memory scope as above. The budget is checked before a call
+using tokens already spent, so the final call of a day can exceed the limit by
+one call's tokens. The cache key omits `case_id`, so identical transcripts in
+two cases of the same merchant share a result (message IDs included). The cap
+has not been exercised live.
+
+**Process note:** this work began with `main` checked out, where extraction
+does not exist. The clean working tree was switched back to `feat/ai-part`.
+
+### CHG-042 - Show promise suggestions in the merchant workspace
+
+**Date:** 9 November 2026 (Asia/Calcutta).
+
+**Objective:** Let a merchant run promise extraction (CHG-035 to CHG-041) from a
+case and turn a suggestion into a promise through the existing, human-confirmed
+promise form.
+
+**Files and behavior:**
+
+- `frontend/components/promise-extraction.tsx` (new): `PromiseExtractionPanel`,
+  styled like `InvestigationReviewPanel` and mounted beside it in
+  `workspace.tsx` for connected merchants only (not in demo mode).
+  - "Extract promises from conversation" calls
+    `POST /resolution-cases/{id}/ai/extract-promises` through the existing
+    request helper (the case's stored conversation).
+  - Each proposal card shows kind, amount, action, condition, deadline, the
+    exact quote highlighted with its source message ID, and badges for
+    `possible_revision`, restatements (`supporting_message_ids`) and low
+    confidence. The summary line shows "cached, 0 tokens" on a cache hit,
+    otherwise the token count.
+  - `needs_review` reasons and dropped items are shown in plain English
+    (for example `extraction_disabled` -> "AI extraction is turned off on this
+    server", `budget_exceeded` -> "Today's AI budget is used up"). Unknown
+    codes fall back to a readable form of the code.
+  - Copy: "Suggestions only. Nothing is saved or paid until you confirm."
+  - "Use this proposal" opens the existing `PromiseForm` pre-filled; "Dismiss"
+    hides the card until the next extraction.
+- `frontend/components/forms.tsx`: `PromiseForm` gains an optional `draft` prop
+  (exported `PromiseDraft`) for initial remedy, action, refund amount, promise
+  text, source note and reference. It is ignored when editing, so existing
+  callers are unchanged. A suggestion's deadline is free text, so it goes into
+  the source note rather than the due-date field. Saving still uses
+  `savePromise` and the existing `POST /resolution-cases/{id}/promises`.
+- `frontend/components/workspace.tsx`: mounts the panel and passes the draft to
+  the promise dialog. `frontend/app/globals.css`: panel-scoped styles only.
+- `frontend/tests/promise-extraction.spec.ts` (new): Playwright with the extract
+  call mocked by `page.route` and everything else on the fixture backend.
+
+**Decisions:** DEC-080. No backend, API or schema change.
+
+**Validation:**
+
+- `npm run check` (`tsc --noEmit`; the frontend has no separate lint script):
+  passed.
+- New Playwright test passed. It covers: absent in demo mode; copy; cached
+  label; highlighted quote and source message; restatement, revision, amount,
+  action, condition and deadline display; dismiss; plain-English dropped item;
+  pre-filled form values; saving produces exactly one POST to the promise
+  route and none to refund, approval, execution or extraction routes; the
+  promise appears in the case; plain-English `extraction_disabled` and
+  `budget_exceeded`; the panel and cards fit a 390px viewport.
+- Full default Playwright suite with local Chrome via the existing
+  `PLAYWRIGHT_CHROMIUM_EXECUTABLE` hook (Playwright's own browser is not
+  installed here): 13 passed, 5 skipped, 1 failed. The failure is
+  `investigations.spec.ts` line 17 (page width 410 vs 390 at mobile width),
+  and it fails identically with this change stashed: the connected top bar
+  ("Sign out") already overflows at 390px. That test is normally run under
+  `playwright.investigations.config.ts`, which was not run.
+- Backend `uv run python -m pytest -q`: 360 passed, 60 skipped (unchanged).
+
+**Limits:** The top-bar overflow at 390px predates this change and was left
+for the owner. The panel does not remember dismissed cards or used proposals
+after a new extraction. A refund suggestion on a case with no linked payment
+opens the form with "Refund" selected; the backend rejects the save with its
+existing message. No live AI call was made.
+
+### CHG-043 - Allow the AI routes through the workspace proxy
+
+**Date:** 9 November 2026 (Asia/Calcutta).
+
+**Correction to CHG-042:** the promise suggestions panel failed live with
+"This action is not available in the workspace." The merchant UI reaches the
+backend only through the allow-listed proxy in
+`frontend/app/api/resolve/[...path]/route.ts`, and neither AI route was listed,
+so the proxy returned its own 404. CHG-042's Playwright test mocked the extract
+call with `page.route` in the browser, before the proxy, so it could not catch
+this.
+
+**Files and behavior:**
+
+- `frontend/app/api/resolve/[...path]/route.ts`: adds
+  `resolution-cases/${id}/ai/extract-promises` to `POST` and `ai/usage` to
+  `GET`, using the existing UUID pattern and anchored matching. Nothing else in
+  the proxy changed: same-origin, session, query and body rules apply as before
+  (the panel's POST has no body, which the existing empty-body path allows).
+- `frontend/tests/promise-extraction.spec.ts`: a new test with no browser-level
+  mock. It clicks the panel button and asserts the response came from the
+  backend through the proxy (200 with the case's own `case_id` and the backend's
+  `needs_review` result), then reads `/api/resolve/ai/usage` (200, includes that
+  case). It also checks the boundaries: `GET` on the extract path and an extra
+  segment after `ai/usage` still return the proxy's 404.
+
+**Validation:**
+
+- `npm run check`: passed.
+- New test passed. With only the proxy change stashed, it failed with
+  expected 200, received 404, matching the live failure.
+- Full default Playwright suite with local Chrome: 14 passed, 5 skipped,
+  1 failed. The failure is the existing `investigations.spec.ts` mobile-width
+  check (410 vs 390), recorded in CHG-042 as predating that change.
+- Backend `uv run python -m pytest -q`: 360 passed, 60 skipped.
+- The fixture backend runs with extraction off, so the forwarded request
+  returned `extraction_disabled` (or `no_messages` if a tester's shell enables
+  extraction) and made no AI call.
+
+**Limits:** The `/ai/usage` endpoint is reachable through the proxy but the UI
+does not display it yet.
+
 ## Decision register
 
 ### DEC-001 - Keep FastAPI/Pydantic and the existing uv project
@@ -3296,6 +3487,24 @@ file, and with nothing enabled until explicitly switched on. Reuse
 revocation happen in one place. Keep extraction's own enable switch, model and
 timeout, because the features can be operated independently.
 
+### DEC-079 - Spend tokens only where a commitment could exist, and never twice
+
+Cost control must not lower recall, so the only skip is the one that is
+certain: a transcript with no merchant message cannot contain a promise.
+Everything else goes to the model. Savings come from reusing results for
+identical input (scoped per merchant for privacy), capping completion length,
+and a daily per-merchant budget that fails closed to manual review. State is
+kept in memory as the owner chose, trading durability for no schema or
+storage change.
+
+### DEC-080 - Turn suggestions into promises only through the existing form
+
+The UI never writes a suggestion directly. A proposal only pre-fills the same
+`PromiseForm` a merchant uses by hand, so every saved promise passes the
+existing validation and is confirmed by a person, and the promise route stays
+the only write path. Extending the form with an optional draft avoids a second
+form that could drift from it.
+
 ## Open work and boundaries
 
 1. Verify import (if needed), SSL connection, migration startup, and worker
@@ -3321,7 +3530,7 @@ timeout, because the features can be operated independently.
 ## Template for the next entry
 
 ```text
-### CHG-041 - Concrete change title
+### CHG-044 - Concrete change title
 Date:
 Objective:
 Files and resulting behavior:

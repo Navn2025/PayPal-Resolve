@@ -532,4 +532,18 @@ cite { display: block; margin-top: 4px; font-size: 10px; font-style: normal; col
 .investigation-panel { margin: 16px; overflow-wrap: anywhere; }
 .investigation-panel ul { padding-left: 20px; }
 .investigation-panel li { margin-block: 10px; }
+.extraction-panel .section-head { flex-wrap: wrap; }
+.extraction-panel .button { white-space: normal; text-align: center; }
+.extraction-panel .proposal-list { display: grid; gap: 10px; }
+.proposal-card { border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+.proposal-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; }
+.proposal-head h3 { margin: 0; }
+.proposal-badges { display: flex; flex-wrap: wrap; gap: 5px; }
+.proposal-terms { display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; margin: 10px 0; }
+.proposal-terms dt { color: var(--muted); }
+.proposal-terms dd { margin: 0; }
+.proposal-quote { margin: 0 0 10px; padding-left: 10px; border-left: 3px solid var(--line); }
+.proposal-quote mark { background: #fff3c4; padding: 1px 2px; border-radius: 3px; }
+.proposal-quote footer { color: var(--muted); font-size: 12px; margin-top: 4px; }
+.proposal-dropped { margin-top: 10px; }
 .investigation-panel .review-actions { flex-wrap: wrap; gap: 8px; }

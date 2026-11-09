@@ -5248,6 +5248,33 @@
           }
         }
       }
+    },
+    "/ai/usage": {
+      "get": {
+        "tags": [
+          "AI promise extraction"
+        ],
+        "summary": "Extraction Usage",
+        "description": "Today's (UTC) extraction usage for the authenticated merchant. Counted in this\nAPI process's memory only: it resets on restart and is not shared between\nprocesses.",
+        "operationId": "extraction_usage_ai_usage_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsageSummary"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -7905,6 +7932,7 @@
                 "unexpected_error",
                 "extraction_disabled",
                 "data_policy_blocked",
+                "budget_exceeded",
                 "invalid_json",
                 "schema_invalid",
                 "low_confidence"
@@ -7944,6 +7972,37 @@
             },
             "type": "array",
             "title": "Adjustments"
+          },
+          "tokens": {
+            "type": "integer",
+            "title": "Tokens",
+            "description": "Provider tokens used by this request; 0 on a cache hit.",
+            "default": 0
+          },
+          "cache_hit": {
+            "type": "boolean",
+            "title": "Cache Hit",
+            "default": false
+          },
+          "skipped_reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "extraction_disabled",
+                  "no_messages",
+                  "no_merchant_messages",
+                  "not_configured",
+                  "data_policy_blocked",
+                  "budget_exceeded"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skipped Reason",
+            "description": "Why no model call was made, when none was."
           }
         },
         "type": "object",
@@ -12377,6 +12436,125 @@
           "carrier"
         ],
         "title": "TrackingReference"
+      },
+      "UsageCall": {
+        "properties": {
+          "at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "At"
+          },
+          "case_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Case Id"
+          },
+          "tokens": {
+            "type": "integer",
+            "title": "Tokens"
+          },
+          "cache_hit": {
+            "type": "boolean",
+            "title": "Cache Hit"
+          },
+          "skipped_reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "extraction_disabled",
+                  "no_messages",
+                  "no_merchant_messages",
+                  "not_configured",
+                  "data_policy_blocked",
+                  "budget_exceeded"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skipped Reason"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "needs_review"
+            ],
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "at",
+          "case_id",
+          "tokens",
+          "cache_hit",
+          "skipped_reason",
+          "status"
+        ],
+        "title": "UsageCall"
+      },
+      "UsageSummary": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "title": "Date"
+          },
+          "scope": {
+            "type": "string",
+            "const": "process_memory",
+            "title": "Scope",
+            "default": "process_memory"
+          },
+          "tokens": {
+            "type": "integer",
+            "title": "Tokens"
+          },
+          "daily_token_limit": {
+            "type": "integer",
+            "title": "Daily Token Limit"
+          },
+          "remaining_tokens": {
+            "type": "integer",
+            "title": "Remaining Tokens"
+          },
+          "model_calls": {
+            "type": "integer",
+            "title": "Model Calls"
+          },
+          "cache_hits": {
+            "type": "integer",
+            "title": "Cache Hits"
+          },
+          "skipped": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Skipped"
+          },
+          "calls": {
+            "items": {
+              "$ref": "#/components/schemas/UsageCall"
+            },
+            "type": "array",
+            "title": "Calls"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "tokens",
+          "daily_token_limit",
+          "remaining_tokens",
+          "model_calls",
+          "cache_hits",
+          "skipped",
+          "calls"
+        ],
+        "title": "UsageSummary"
       },
       "ValidationError": {
         "properties": {

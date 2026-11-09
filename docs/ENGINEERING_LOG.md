@@ -2720,6 +2720,48 @@ after a new extraction. A refund suggestion on a case with no linked payment
 opens the form with "Refund" selected; the backend rejects the save with its
 existing message. No live AI call was made.
 
+### CHG-043 - Allow the AI routes through the workspace proxy
+
+**Date:** 9 November 2026 (Asia/Calcutta).
+
+**Correction to CHG-042:** the promise suggestions panel failed live with
+"This action is not available in the workspace." The merchant UI reaches the
+backend only through the allow-listed proxy in
+`frontend/app/api/resolve/[...path]/route.ts`, and neither AI route was listed,
+so the proxy returned its own 404. CHG-042's Playwright test mocked the extract
+call with `page.route` in the browser, before the proxy, so it could not catch
+this.
+
+**Files and behavior:**
+
+- `frontend/app/api/resolve/[...path]/route.ts`: adds
+  `resolution-cases/${id}/ai/extract-promises` to `POST` and `ai/usage` to
+  `GET`, using the existing UUID pattern and anchored matching. Nothing else in
+  the proxy changed: same-origin, session, query and body rules apply as before
+  (the panel's POST has no body, which the existing empty-body path allows).
+- `frontend/tests/promise-extraction.spec.ts`: a new test with no browser-level
+  mock. It clicks the panel button and asserts the response came from the
+  backend through the proxy (200 with the case's own `case_id` and the backend's
+  `needs_review` result), then reads `/api/resolve/ai/usage` (200, includes that
+  case). It also checks the boundaries: `GET` on the extract path and an extra
+  segment after `ai/usage` still return the proxy's 404.
+
+**Validation:**
+
+- `npm run check`: passed.
+- New test passed. With only the proxy change stashed, it failed with
+  expected 200, received 404, matching the live failure.
+- Full default Playwright suite with local Chrome: 14 passed, 5 skipped,
+  1 failed. The failure is the existing `investigations.spec.ts` mobile-width
+  check (410 vs 390), recorded in CHG-042 as predating that change.
+- Backend `uv run python -m pytest -q`: 360 passed, 60 skipped.
+- The fixture backend runs with extraction off, so the forwarded request
+  returned `extraction_disabled` (or `no_messages` if a tester's shell enables
+  extraction) and made no AI call.
+
+**Limits:** The `/ai/usage` endpoint is reachable through the proxy but the UI
+does not display it yet.
+
 ## Decision register
 
 ### DEC-001 - Keep FastAPI/Pydantic and the existing uv project
@@ -3488,7 +3530,7 @@ form that could drift from it.
 ## Template for the next entry
 
 ```text
-### CHG-043 - Concrete change title
+### CHG-044 - Concrete change title
 Date:
 Objective:
 Files and resulting behavior:

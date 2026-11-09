@@ -9,6 +9,7 @@ const rules = {
     "resolution-cases", "resolution-cases/inbox", `resolution-cases/${id}(?:/(?:timeline|evidence-bundle|commerce|customer-link|customer-messages|operations|helpdesk|customer-evidence(?:/${id})?))?`,
     "cases", `cases/${id}(?:/(?:reconciliation|refund-approvals|refund-executions))?`,
     "review-queue",
+    "ai/usage",
   ],
   POST: [
     `resolution-cases/${id}/investigations/${id}/review`,
@@ -20,6 +21,7 @@ const rules = {
     "cases", `cases/${id}/(?:refund-approvals|refund-executions)`,
     `cases/${id}/refund-executions/${id}/refresh`,
     `review-queue/${id}/resolve`,
+    `resolution-cases/${id}/ai/extract-promises`,
   ],
   PUT: [`resolution-cases/${id}/promises/${id}`, `resolution-cases/${id}/(?:operations|payment-link|helpdesk)`],
   DELETE: [`merchant-auth/commerce-keys/${id}`, `resolution-cases/${id}/customer-link`],

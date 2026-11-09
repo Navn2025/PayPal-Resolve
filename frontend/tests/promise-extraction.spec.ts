@@ -102,3 +102,43 @@ test("promise suggestions pre-fill the existing promise form and save only throu
     .filter((element) => element.getBoundingClientRect().right > 390).length);
   expect(overflowing).toBe(0);
 });
+
+test("extraction and usage requests go through the workspace proxy to the backend", async ({ page }) => {
+  // No page.route here: the request must pass the real /api/resolve proxy.
+  await page.goto("/demo");
+  await connect(page);
+  await page.getByRole("button", { name: "New case", exact: true }).first().click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Case title").fill("Proxy forwarding browser test");
+  await dialog.getByRole("button", { name: "Create case" }).click();
+  await expect(page.getByRole("heading", { name: "Proxy forwarding browser test" })).toBeVisible();
+
+  const panel = page.getByRole("region", { name: "Promise suggestions" });
+  const forwarded = page.waitForResponse((response) => response.request().method() === "POST"
+    && /\/api\/resolve\/resolution-cases\/[^/]+\/ai\/extract-promises$/.test(new URL(response.url()).pathname));
+  await panel.getByRole("button", { name: "Extract promises from conversation" }).click();
+  const response = await forwarded;
+  const caseId = new URL(response.url()).pathname.split("/")[4];
+  // The backend's own result, not the proxy's "not available" 404. The fixture
+  // backend has extraction off (or, if enabled, no messages), so no AI call is made.
+  expect(response.status()).toBe(200);
+  const result = await response.json();
+  expect(result.case_id).toBe(caseId);
+  expect(result.status).toBe("needs_review");
+  expect(["extraction_disabled", "no_messages"]).toContain(result.review_reasons[0]);
+  await expect(panel.getByText("Needs your review:")).toBeVisible();
+  await expect(panel.getByText("This action is not available in the workspace.")).toHaveCount(0);
+
+  const usage = await page.request.get("/api/resolve/ai/usage");
+  expect(usage.status()).toBe(200);
+  const totals = await usage.json();
+  expect(totals.scope).toBe("process_memory");
+  expect(totals.calls.some((call: { case_id: string }) => call.case_id === caseId)).toBe(true);
+
+  // Only the two new routes were opened, each for its own method.
+  for (const path of [`/api/resolve/resolution-cases/${caseId}/ai/extract-promises`, "/api/resolve/ai/usage/extra"]) {
+    const blocked = await page.request.get(path);
+    expect(blocked.status()).toBe(404);
+    expect((await blocked.json()).detail).toBe("This action is not available in the workspace.");
+  }
+});

@@ -2571,6 +2571,88 @@ passed on changed files. No live provider call was made.
 `RESOLVE_EXTRACTION_MODEL` accepts any model ID. Sharing one key means
 revoking it disables both features together.
 
+### CHG-041 - Minimal cost control for promise extraction
+
+**Date:** 9 November 2026 (Asia/Calcutta).
+
+**Objective:** Bound Groq token spend for extraction without ever skipping a
+conversation that could contain a merchant commitment.
+
+**Files and behavior:**
+
+- `backend/app/ai_extraction.py`: checks now run in this order: disabled, no
+  messages, **no merchant messages**, not configured, data policy, **cache**,
+  **budget**, model call.
+  - The model is skipped only when the transcript has no merchant message,
+    because only merchant messages can create a promise. The result is `ok` with
+    `skipped_reason: no_merchant_messages`. Any merchant message, however
+    short, goes to the model; there is no other heuristic skip.
+  - Cache key: sha256 of the model, a prompt version (first 16 hex digits of
+    the system prompt's sha256) and every message field (id, sender, text,
+    sent_at). Entries are scoped per merchant, so one merchant's cache hit
+    cannot reveal another merchant's transcript. A hit returns the stored
+    proposals with the current request's `case_id` and `source`, `cache_hit:
+    true` and zero tokens. Only clean output (no review reason other than
+    `low_confidence`) is stored, so provider and parse failures stay retryable.
+  - `max_tokens=800` on every call (`MAX_COMPLETION_TOKENS`).
+  - `RESOLVE_EXTRACTION_DAILY_TOKEN_LIMIT` (environment only, like the other
+    extraction settings; default 100,000) per merchant per UTC day. A merchant
+    already at or over it gets `needs_review` / `budget_exceeded` with no call.
+    Cache hits are still served over budget.
+  - `ExtractionResult` gains `tokens`, `cache_hit` and `skipped_reason`.
+- `backend/app/ai_usage.py` (new): thread-safe in-process store with a
+  1,000-entry LRU cache and per-merchant daily totals. Every request records
+  tokens, cache hit, skipped reason and status (last 500 per merchant).
+- `backend/app/ai_routes.py`: `GET /ai/usage` returns the authenticated
+  merchant's totals for today (tokens, limit, remaining, model calls, cache
+  hits, skips by reason, recent calls) with `scope: process_memory`. The store
+  lives on `app.state`, so no `main.py` change was needed.
+- Eval runner: live runs pass no usage store, so repeated runs stay independent
+  of the cache; `--replay` uses a fresh store to exercise the new paths.
+  Records gain `cache_hit` and `skipped_reason`.
+- `backend/.env.example` lists the new variable; OpenAPI regenerated (additive,
+  178 lines: the usage endpoint and the new result fields).
+
+**Decisions:** DEC-079.
+
+**Storage choice (in memory, at the owner's direction):** cache and usage reset
+when the API process restarts and are counted separately by each process. The
+budget limits runaway use within one process; it is not an account-level
+spending cap. Durable storage would have needed a new SQLite migration appended
+to `storage.py`'s list, a PostgreSQL migration, importer registration and three
+tests that pin schema version 25. The owner chose not to make those changes.
+
+**Validation:**
+
+- `uv run python -m pytest -q`: 360 passed, 60 skipped. 14 new mocked tests in
+  `backend/tests/test_extraction_cost.py`: no-merchant transcripts are skipped;
+  very short merchant messages ("ok", "k", an emoji) are still sent; the 800
+  cap; identical input hits the cache at zero tokens while any message change
+  misses; no cache sharing between merchants; failures are not cached; per
+  merchant budget blocking with cache hits still served; the limit is read
+  from the environment and not `.env`; `/ai/usage` needs credentials; UTC day
+  rollover; and the cache key covering model, prompt version and each message
+  field. `uvx ruff check` passed on the changed files.
+- Replay, no provider calls (`extraction_2026-11-09_r1_replay_cost_control.*`):
+  the 80 gold + hard chats recorded live in CHG-038 run 1, through the new code
+  with a fresh usage store. All 80 returned identical proposals and statuses
+  chat by chat; recall gold 1.000 -> 1.000, hard 0.971 -> 0.971; precision
+  unchanged. No chat was skipped and none hit the cache.
+- Replay cannot show the 800-token cap's effect, because those outputs were
+  recorded without it. Recorded completions under the current prompt peaked at
+  474 tokens over 160 chats. One CHG-036 record under the earlier prompt
+  (gen-042, 951 tokens) would now be truncated; that becomes `invalid_json` /
+  `needs_review`, not a silent skip.
+
+**Limits:** In-memory scope as above. The budget is checked before a call
+using tokens already spent, so the final call of a day can exceed the limit by
+one call's tokens. The cache key omits `case_id`, so identical transcripts in
+two cases of the same merchant share a result (message IDs included). The cap
+has not been exercised live.
+
+**Process note:** this work began with `main` checked out, where extraction
+does not exist. The clean working tree was switched back to `feat/ai-part`.
+
 ## Decision register
 
 ### DEC-001 - Keep FastAPI/Pydantic and the existing uv project
@@ -3296,6 +3378,16 @@ file, and with nothing enabled until explicitly switched on. Reuse
 revocation happen in one place. Keep extraction's own enable switch, model and
 timeout, because the features can be operated independently.
 
+### DEC-079 - Spend tokens only where a commitment could exist, and never twice
+
+Cost control must not lower recall, so the only skip is the one that is
+certain: a transcript with no merchant message cannot contain a promise.
+Everything else goes to the model. Savings come from reusing results for
+identical input (scoped per merchant for privacy), capping completion length,
+and a daily per-merchant budget that fails closed to manual review. State is
+kept in memory as the owner chose, trading durability for no schema or
+storage change.
+
 ## Open work and boundaries
 
 1. Verify import (if needed), SSL connection, migration startup, and worker
@@ -3321,7 +3413,7 @@ timeout, because the features can be operated independently.
 ## Template for the next entry
 
 ```text
-### CHG-041 - Concrete change title
+### CHG-042 - Concrete change title
 Date:
 Objective:
 Files and resulting behavior:

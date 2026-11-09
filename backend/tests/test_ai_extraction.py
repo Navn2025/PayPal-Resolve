@@ -32,6 +32,7 @@ class FakeCompletions:
     def __init__(self, outcome):
         self.outcome = outcome
         self.calls = []
+        self.tokens = 0
 
     def create(self, **request):
         self.calls.append(request)
@@ -40,7 +41,10 @@ class FakeCompletions:
             raise outcome
         content = outcome if isinstance(outcome, str) else json.dumps(outcome)
         message = SimpleNamespace(content=content)
-        return SimpleNamespace(choices=[SimpleNamespace(message=message)])
+        return SimpleNamespace(
+            choices=[SimpleNamespace(message=message)],
+            usage=SimpleNamespace(total_tokens=self.tokens),
+        )
 
 
 def proposal(**fields):
@@ -87,6 +91,7 @@ def ai(client):
         )
 
     extract.calls = completions.calls
+    extract.completions = completions
     extract.case_id = case
     yield extract
     client.app.dependency_overrides.clear()

@@ -1,5 +1,6 @@
 """Propose merchant promises from a chat transcript; never records or approves them."""
 
+import hashlib
 import json
 import logging
 import re
@@ -26,6 +27,7 @@ from .resolution_models import Target
 logger = logging.getLogger(__name__)
 
 MIN_CONFIDENCE = 0.7
+MAX_COMPLETION_TOKENS = 800
 # The only policy under which app.inference allows a direct Groq call.
 GROQ_DATA_POLICY = "minimized_standard_retention"
 MAX_PROPOSALS = 30
@@ -58,6 +60,7 @@ ReviewReason = Literal[
     "unexpected_error",
     "extraction_disabled",
     "data_policy_blocked",
+    "budget_exceeded",
     "invalid_json",
     "schema_invalid",
     "low_confidence",
@@ -72,6 +75,14 @@ DropReason = Literal[
     "amount_not_in_quote",
     "duplicate",
     "limit_exceeded",
+]
+SkipReason = Literal[
+    "extraction_disabled",
+    "no_messages",
+    "no_merchant_messages",
+    "not_configured",
+    "data_policy_blocked",
+    "budget_exceeded",
 ]
 AdjustmentReason = Literal["quote_normalized", "amount_removed", "action_removed"]
 MessageID = Annotated[str, Field(min_length=1, max_length=80)]
@@ -106,6 +117,8 @@ class ExtractionSettings(BaseSettings):
     model: str = "openai/gpt-oss-120b"
     # Separate from app.inference's RESOLVE_AI_TIMEOUT_SECONDS, which has its own bounds.
     timeout_seconds: float = Field(20, gt=0, le=120)
+    # Per merchant per UTC day, counted in this process only (see app.ai_usage).
+    daily_token_limit: int = Field(100_000, ge=0)
 
 
 class ChatMessage(BaseModel):
@@ -193,6 +206,11 @@ class ExtractionResult(BaseModel):
     proposals: list[PromiseProposal]
     dropped: list[DroppedProposal]
     adjustments: list[Adjustment] = Field(default_factory=list)
+    tokens: int = Field(0, description="Provider tokens used by this request; 0 on a cache hit.")
+    cache_hit: bool = False
+    skipped_reason: SkipReason | None = Field(
+        None, description="Why no model call was made, when none was."
+    )
 
 
 ACTION_LINES = "; ".join(
@@ -414,11 +432,27 @@ def _consolidate(proposals, messages):
     return kept, dropped
 
 
+PROMPT_VERSION = hashlib.sha256(SYSTEM_PROMPT.encode()).hexdigest()[:16]
+
+
+def cache_key(model, messages):
+    """sha256 of model, prompt version and the full transcript."""
+    material = {
+        "model": model,
+        "prompt_version": PROMPT_VERSION,
+        "messages": [message.model_dump(mode="json") for message in messages],
+    }
+    return hashlib.sha256(
+        json.dumps(material, sort_keys=True, ensure_ascii=False).encode()
+    ).hexdigest()
+
+
 def _complete(client, model, timeout, case_id, messages):
     transcript = [message.model_dump(mode="json") for message in messages]
     response = client.chat.completions.create(
         model=model,
         temperature=0,
+        max_tokens=MAX_COMPLETION_TOKENS,
         response_format={"type": "json_object"},
         timeout=timeout,
         messages=[
@@ -432,7 +466,13 @@ def _complete(client, model, timeout, case_id, messages):
             },
         ],
     )
-    return response.choices[0].message.content
+    usage = getattr(response, "usage", None)
+    tokens = getattr(usage, "total_tokens", None)
+    if not isinstance(tokens, int):
+        tokens = (getattr(usage, "prompt_tokens", 0) or 0) + (
+            getattr(usage, "completion_tokens", 0) or 0
+        )
+    return response.choices[0].message.content, tokens
 
 
 def current_data_policy():
@@ -441,14 +481,36 @@ def current_data_policy():
 
 
 def extract_promises(
-    case_id, messages, client, settings, source, *, data_policy
+    case_id, messages, client, settings, source, *, data_policy, usage=None, merchant_id=None
 ) -> ExtractionResult:
     """Propose promises; every failure becomes needs_review instead of an exception.
 
     `data_policy` follows app.inference: Groq cannot enforce zero data retention
     per request, so the transcript is sent only when the operator has accepted
     Groq's standard retention. Anything else, including unknown values, blocks.
+
+    With `usage` (an app.ai_usage.ExtractionUsage), identical input for the same
+    merchant returns the stored result at zero tokens, and a merchant over its
+    daily token limit gets `budget_exceeded`. Every request is recorded there.
     """
+    result, called = _extract(
+        case_id, messages, client, settings, source, data_policy, usage, merchant_id
+    )
+    if usage is not None:
+        usage.record(
+            merchant_id,
+            case_id=case_id,
+            tokens=result.tokens,
+            cache_hit=result.cache_hit,
+            skipped_reason=result.skipped_reason,
+            status=result.status,
+            model_called=called,
+        )
+    return result
+
+
+def _extract(case_id, messages, client, settings, source, data_policy, usage, merchant_id):
+    """Return the result and whether the model was called."""
     result = ExtractionResult(
         case_id=case_id,
         status="ok",
@@ -465,19 +527,36 @@ def extract_promises(
         result.status = "needs_review"
         return result
 
+    def skip(reason, needs_review=True):
+        result.skipped_reason = reason
+        return (review(reason) if needs_review else result), False
+
     if not settings.enabled:
         result.model = None
-        return review("extraction_disabled")
+        return skip("extraction_disabled")
+    if not messages:
+        return skip("no_messages")
+    # Only merchant messages can create a promise, so without one no call can
+    # find anything. Any merchant message, however short, goes to the model.
+    if not any(message.sender == "merchant" for message in messages):
+        return skip("no_merchant_messages", needs_review=False)
     if client is None:
         result.model = None
-        return review("not_configured")
+        return skip("not_configured")
     if data_policy != GROQ_DATA_POLICY:
         logger.warning("AI promise extraction blocked for case %s by data policy", case_id)
-        return review("data_policy_blocked")
-    if not messages:
-        return review("no_messages")
+        return skip("data_policy_blocked")
+    key = cache_key(settings.model, messages)
+    if usage is not None:
+        stored = usage.cached(merchant_id, key)
+        if stored is not None:
+            hit = {**stored, "case_id": case_id, "source": source}
+            hit.update(cache_hit=True, tokens=0, skipped_reason=None)
+            return ExtractionResult.model_validate(hit), False
+        if usage.tokens_today(merchant_id) >= settings.daily_token_limit:
+            return skip("budget_exceeded")
     try:
-        content = _complete(
+        content, result.tokens = _complete(
             client,
             settings.model,
             settings.timeout_seconds,
@@ -487,15 +566,15 @@ def extract_promises(
     except Exception as error:  # noqa: BLE001 - the client always gets a reviewable result
         reason = _failure_reason(error)
         _log_failure(case_id, error, reason, settings)
-        return review(reason)
+        return review(reason), True
 
     try:
         payload = json.loads(content or "")
     except (TypeError, ValueError):
-        return review("invalid_json")
+        return review("invalid_json"), True
     items = payload.get("proposals") if isinstance(payload, dict) else None
     if not isinstance(items, list):
-        return review("schema_invalid")
+        return review("schema_invalid"), True
 
     by_id = {message.id: message for message in messages}
     validated = []
@@ -524,4 +603,7 @@ def extract_promises(
     result.dropped += duplicates
     if any(proposal.needs_review for proposal in result.proposals):
         review("low_confidence")
-    return result
+    # Only clean model output is reused; failures stay retryable.
+    if usage is not None and set(result.review_reasons) <= {"low_confidence"}:
+        usage.store(merchant_id, key, result.model_dump(mode="json"))
+    return result, True

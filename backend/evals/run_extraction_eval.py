@@ -42,6 +42,7 @@ from app.ai_extraction import (
     extract_promises,
     locate_quote,
 )
+from app.ai_usage import ExtractionUsage
 
 DATASETS = ("gold", "generated", "hard", "injection", "heldout")
 DATA_DIR = BACKEND_DIR / "evals/extraction"
@@ -143,7 +144,7 @@ class ReplayClient:
         return SimpleNamespace(choices=[SimpleNamespace(message=message)])
 
 
-def run_item(item, client, settings, data_policy):
+def run_item(item, client, settings, data_policy, usage=None):
     client.last = None
     client.item_id = item["id"]
     result = extract_promises(
@@ -153,6 +154,9 @@ def run_item(item, client, settings, data_policy):
         settings,
         "merchant_supplied",
         data_policy=data_policy,
+        # Live runs pass no usage store: a cache would make repeated runs identical.
+        usage=usage,
+        merchant_id="eval",
     )
     call = client.last or {}
     return {
@@ -167,6 +171,8 @@ def run_item(item, client, settings, data_policy):
         "prompt_tokens": call.get("prompt_tokens", 0),
         "completion_tokens": call.get("completion_tokens", 0),
         "raw_content": call.get("raw_content"),
+        "cache_hit": result.cache_hit,
+        "skipped_reason": result.skipped_reason,
         "final": [
             proposal.model_dump(
                 include={
@@ -182,7 +188,9 @@ def run_item(item, client, settings, data_policy):
     }
 
 
-def run_eval(items, client, settings, data_policy, records_path=None, progress=print):
+def run_eval(
+    items, client, settings, data_policy, records_path=None, progress=print, usage=None
+):
     """Return one record per item, reusing records already in `records_path`."""
     records = {}
     if records_path and Path(records_path).exists():
@@ -200,7 +208,7 @@ def run_eval(items, client, settings, data_policy, records_path=None, progress=p
         for number, item in enumerate(items, start=1):
             if item["id"] in records:
                 continue
-            record = run_item(item, client, settings, data_policy)
+            record = run_item(item, client, settings, data_policy, usage)
             records[item["id"]] = record
             if output:
                 output.write(json.dumps(record, ensure_ascii=False) + "\n")
@@ -864,6 +872,9 @@ def main():
             # output was recorded, so it is accepted here to rerun the validators.
             GROQ_DATA_POLICY,
             progress=lambda _: None,
+            # Exercise the cache, budget and skip paths as the API does. Replayed
+            # calls report no tokens, so the budget cannot change the outcome.
+            usage=ExtractionUsage(),
         )
         mode_note = (
             f"model output recorded live in `{args.replay.name}`, replayed through the "

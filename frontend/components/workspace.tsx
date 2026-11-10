@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Activity, ArrowRight, BookOpen, CheckCircle2, ChevronRight, CircleAlert, ClipboardList, FlaskConical, Inbox, Layers3, Link2, LogOut, Package, Plus, RefreshCw, Search, Settings2, ShieldCheck, X } from "lucide-react";
 import Link from "next/link";
 import { DemoStore, demoPrimary } from "@/lib/demo";
-import { activeApproval, ApiError, dateText, money, outcomeLabels, pretty, reconcileLabels, shortId, timeText, uuid,
+import { activeApproval, amountCents, ApiError, dateText, money, outcomeLabels, pretty, reconcileLabels, shortId, timeText, uuid,
   type Approval, type CaseView, type Execution, type LegacyCase, type Merchant, type Outcome, type Page,
   type PromiseView, type Reconciliation, type Requester, type Review, type Session, type Terms, type Timeline } from "@/lib/domain";
 import { backendRequest, readJson } from "@/lib/http";
@@ -13,6 +13,7 @@ import { Badge, Brand, Button, Empty, Notice, remedyIcons } from "./ui";
 import { CaseDesk, type DeskTab } from "./case-desk";
 import { InvestigationReviewPanel } from "./investigation-review";
 import { PromiseExtractionPanel } from "./promise-extraction";
+import { PromiseHealthPanel } from "./promise-health";
 import { CaseForm, ConnectForm, EvidenceForm, LocalGuide, PromiseForm, RefundForm, ReviewForm, type PromiseDraft } from "./forms";
 import { InviteForm, OperationsForm, PaymentLinkForm } from "./merchant-triage";
 
@@ -20,7 +21,7 @@ const CASE_PAGE = 12, EVENT_PAGE = 30;
 type Filter = "all" | Outcome | Workflow | "unread";
 type Nav = "inbox" | "review";
 type Dialog = { kind: "connect" | "case" | "guide" | "invite" } | { kind: "payment-link"; item: CaseView } | { kind: "operations"; id: string; fields: Operations } | { kind: "promise"; edit?: PromiseView; draft?: PromiseDraft }
-  | { kind: "evidence"; promise: PromiseView } | { kind: "approve"; basis: Reconciliation }
+  | { kind: "evidence"; promise: PromiseView } | { kind: "approve"; basis: Reconciliation; prefill?: string }
   | { kind: "execute"; approval: Approval } | { kind: "review"; item: Review };
 type Detail = {
   item: CaseView; timeline: Timeline | null; timelineError?: string; payment: LegacyCase | null;
@@ -347,7 +348,7 @@ export function Workspace({ mode, initialCaseId = null }: { mode: "demo" | "merc
     ? paymentBasis.status === "refund_required" && !paymentBasis.paypal_history_current ? "Check current PayPal history before approving an exact amount." : reconcileLabels[paymentBasis.status] ?? pretty(paymentBasis.next_action)
     : "Read the payment evidence to see the next step.";
 
-  async function reviewRefund() {
+  async function reviewRefund(prefill?: string) {
     if (!item?.refund_case_id) return;
     setPaymentBusy(true); setActionError("");
     try {
@@ -356,7 +357,9 @@ export function Workspace({ mode, initialCaseId = null }: { mode: "demo" | "merc
         await loadDetail(item.id);
         throw new Error("The evidence changed. Review the current case before approving.");
       }
-      setDialog({ kind: "approve", basis });
+      // A suggested amount only pre-fills the form, and never above the backend's current cap.
+      const capped = prefill && (amountCents(prefill) ?? 0) <= (amountCents(basis.recommended_refund_amount) ?? 0) ? prefill : undefined;
+      setDialog({ kind: "approve", basis, prefill: capped });
     } catch (failure) { setActionError(errorText(failure)); }
     finally { setPaymentBusy(false); }
   }
@@ -425,7 +428,7 @@ export function Workspace({ mode, initialCaseId = null }: { mode: "demo" | "merc
     onEvidence={(promise) => setDialog({ kind: "evidence", promise })} onRefresh={checkProvider} onExport={exportEvidence}
     refreshing={refreshing} error={detailError || actionError} verifiedMessage={refundNotice}
     payment={{ basis: paymentBasis, approval: active, execution: latestExecution, nextMessage, canReview, canSubmit,
-      busy: paymentBusy || !!refreshing || !current, error: current?.paymentError, onReview: reviewRefund,
+      busy: paymentBusy || !!refreshing || !current, error: current?.paymentError, onReview: () => void reviewRefund(),
       onSubmit: () => active && setDialog({ kind: "execute", approval: active }),
       onRefresh: () => refund && void checkProvider(refund), onCheckExecution: checkExecution,
       onSimulateOutside: demo && item.id === demoPrimary ? simulateOutsideRefund : undefined }} />;
@@ -487,7 +490,10 @@ export function Workspace({ mode, initialCaseId = null }: { mode: "demo" | "merc
             <InboxPane cases={inbox.items} selected={selected} select={select} filter={filter} setFilter={setFilter} search={search}
               setSearch={setSearch} more={inbox.offset + CASE_PAGE < inbox.total} onMore={() => loadInbox(inbox.offset + CASE_PAGE)}
               loading={loadingList} onNew={() => setDialog({ kind: "case" })} demo={demo} />
-            <div className="desk-pane">{desk || <Empty title={loadingList ? "Loading case workspace…" : "Select a case"} detail={loadingList ? "Reading your cases from the local backend." : "Open a case from the inbox to see its promises and evidence."} />}{!demo && item && <InvestigationReviewPanel key={item.id} caseId={item.id} request={request} />}
+            <div className="desk-pane">{desk || <Empty title={loadingList ? "Loading case workspace…" : "Select a case"} detail={loadingList ? "Reading your cases from the local backend." : "Open a case from the inbox to see its promises and evidence."} />}{!demo && item && <PromiseHealthPanel key={"health-" + item.id} caseId={item.id} request={request}
+                refreshKey={current?.basis?.state_fingerprint} canRefund={canReview && !active && !paymentBusy} blockedReason={active ? "an approval is already recorded." : nextMessage}
+                onRefund={(amount) => void reviewRefund(amount)} />}
+              {!demo && item && <InvestigationReviewPanel key={item.id} caseId={item.id} request={request} />}
               {!demo && item && <PromiseExtractionPanel key={"extract-" + item.id} caseId={item.id} request={request} onUse={(draft) => setDialog({ kind: "promise", draft })} />}</div>
           </div>
           {demo && <div className="demo-tools"><span><FlaskConical size={17} /> Demo controls</span><p>Try the normal refund, or approve first and simulate a refund made outside Resolve.</p>
@@ -520,7 +526,7 @@ export function Workspace({ mode, initialCaseId = null }: { mode: "demo" | "merc
     }} />}
     {dialog?.kind === "promise" && item && <PromiseForm item={item} edit={dialog.edit} draft={dialog.draft} linkedPayment={current?.payment} onClose={closeDialog} onSave={savePromise} />}
     {dialog?.kind === "evidence" && <EvidenceForm promise={dialog.promise} onClose={closeDialog} onSave={(data) => saveEvidence(dialog.promise, data)} />}
-    {dialog?.kind === "approve" && <RefundForm amount={dialog.basis.recommended_refund_amount} demo={demo}
+    {dialog?.kind === "approve" && <RefundForm amount={dialog.basis.recommended_refund_amount} initial={dialog.prefill} demo={demo}
       onClose={closeDialog} onApprove={(note, requested) => approveRefund(dialog.basis, note, requested)} onExecute={executeRefund} />}
     {dialog?.kind === "execute" && <RefundForm amount={dialog.approval.amount} approval={dialog.approval} demo={demo}
       onClose={closeDialog} onApprove={async () => { throw new ApiError(409, "This approval is already recorded."); }} onExecute={executeRefund} />}

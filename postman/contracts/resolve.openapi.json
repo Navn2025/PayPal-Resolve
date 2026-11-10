@@ -3762,6 +3762,106 @@
         }
       }
     },
+    "/resolution-cases/promise-health": {
+      "get": {
+        "tags": [
+          "Promise health"
+        ],
+        "summary": "Promises Needing Attention",
+        "description": "At-risk and broken refund promises across the merchant's cases, largest amount at risk first.",
+        "operationId": "promises_needing_attention_resolution_cases_promise_health_get",
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PromiseHealthPage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/resolution-cases/{case_id}/promise-health": {
+      "get": {
+        "tags": [
+          "Promise health"
+        ],
+        "summary": "Case Promise Health",
+        "description": "Kept, partially kept, at-risk or broken status for each accepted refund promise on one case.",
+        "operationId": "case_promise_health_resolution_cases__case_id__promise_health_get",
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CasePromiseHealth"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/resolution-cases": {
       "post": {
         "tags": [
@@ -5346,6 +5446,7 @@
             "type": "string",
             "enum": [
               "quote_normalized",
+              "quote_unmasked",
               "amount_removed",
               "action_removed"
             ],
@@ -5577,6 +5678,33 @@
           "offset"
         ],
         "title": "CasePage"
+      },
+      "CasePromiseHealth": {
+        "properties": {
+          "case_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Case Id"
+          },
+          "overdue_after_days": {
+            "type": "integer",
+            "title": "Overdue After Days"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PromiseHealth"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "case_id",
+          "overdue_after_days",
+          "items"
+        ],
+        "title": "CasePromiseHealth"
       },
       "CaseResponse": {
         "properties": {
@@ -7979,6 +8107,14 @@
             "description": "Provider tokens used by this request; 0 on a cache hit.",
             "default": 0
           },
+          "flags": {
+            "items": {
+              "$ref": "#/components/schemas/InjectionFlag"
+            },
+            "type": "array",
+            "title": "Flags",
+            "description": "Buyer messages matching an injection rule. Informational: never blocks."
+          },
           "cache_hit": {
             "type": "boolean",
             "title": "Cache Hit",
@@ -8274,6 +8410,29 @@
           "offset"
         ],
         "title": "InboxPage"
+      },
+      "InjectionFlag": {
+        "properties": {
+          "rule_id": {
+            "type": "string",
+            "title": "Rule Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "message_id": {
+            "type": "string",
+            "title": "Message Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rule_id",
+          "label",
+          "message_id"
+        ],
+        "title": "InjectionFlag"
       },
       "IntakeSubmit": {
         "properties": {
@@ -9817,6 +9976,168 @@
           "created_at"
         ],
         "title": "PortalMessage"
+      },
+      "PromiseHealth": {
+        "properties": {
+          "case_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Case Id"
+          },
+          "case_title": {
+            "type": "string",
+            "title": "Case Title"
+          },
+          "order_reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order Reference"
+          },
+          "refund_case_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Refund Case Id"
+          },
+          "promise_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Promise Id"
+          },
+          "promise_revision": {
+            "type": "integer",
+            "title": "Promise Revision"
+          },
+          "promise": {
+            "type": "string",
+            "title": "Promise"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "kept",
+              "partially_kept",
+              "at_risk",
+              "broken"
+            ],
+            "title": "Status"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency"
+          },
+          "promised_amount": {
+            "type": "string",
+            "title": "Promised Amount"
+          },
+          "refunded_amount": {
+            "type": "string",
+            "title": "Refunded Amount"
+          },
+          "pending_amount": {
+            "type": "string",
+            "title": "Pending Amount"
+          },
+          "remaining_amount": {
+            "type": "string",
+            "title": "Remaining Amount"
+          },
+          "captured_amount": {
+            "type": "string",
+            "title": "Captured Amount"
+          },
+          "suggested_refund_amount": {
+            "type": "string",
+            "title": "Suggested Refund Amount"
+          },
+          "promised_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Promised At"
+          },
+          "deadline": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Deadline"
+          },
+          "days_since_promise": {
+            "type": "integer",
+            "title": "Days Since Promise"
+          },
+          "overdue": {
+            "type": "boolean",
+            "title": "Overdue"
+          },
+          "ledger_ahead_of_provider": {
+            "type": "boolean",
+            "title": "Ledger Ahead Of Provider"
+          }
+        },
+        "type": "object",
+        "required": [
+          "case_id",
+          "case_title",
+          "order_reference",
+          "refund_case_id",
+          "promise_id",
+          "promise_revision",
+          "promise",
+          "status",
+          "currency",
+          "promised_amount",
+          "refunded_amount",
+          "pending_amount",
+          "remaining_amount",
+          "captured_amount",
+          "suggested_refund_amount",
+          "promised_at",
+          "deadline",
+          "days_since_promise",
+          "overdue",
+          "ledger_ahead_of_provider"
+        ],
+        "title": "PromiseHealth"
+      },
+      "PromiseHealthPage": {
+        "properties": {
+          "overdue_after_days": {
+            "type": "integer",
+            "title": "Overdue After Days"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PromiseHealth"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "cases_checked": {
+            "type": "integer",
+            "title": "Cases Checked"
+          }
+        },
+        "type": "object",
+        "required": [
+          "overdue_after_days",
+          "items",
+          "total",
+          "limit",
+          "cases_checked"
+        ],
+        "title": "PromiseHealthPage"
       },
       "PromiseProposal": {
         "properties": {

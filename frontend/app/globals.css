@@ -546,4 +546,17 @@ cite { display: block; margin-top: 4px; font-size: 10px; font-style: normal; col
 .proposal-quote mark { background: #fff3c4; padding: 1px 2px; border-radius: 3px; }
 .proposal-quote footer { color: var(--muted); font-size: 12px; margin-top: 4px; }
 .proposal-dropped { margin-top: 10px; }
+.injection-flags { margin: 10px 0; }
+.injection-flags p { margin: 6px 0; }
 .investigation-panel .review-actions { flex-wrap: wrap; gap: 8px; }
+/* Broken-promise check */
+.badge-broken { color: #8a2433; background: #fde7ea; }
+.health-card { border: 1px solid var(--line); border-left: 3px solid var(--line); border-radius: 10px; padding: 12px; margin-top: 10px; display: grid; gap: 6px; }
+.health-at_risk { border-left-color: #c98a1b; }
+.health-broken { border-left-color: #b4384a; }
+.health-kept { border-left-color: var(--green); }
+.health-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; }
+.health-line { font-size: 15px; font-variant-numeric: tabular-nums; }
+.health-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.health-actions small { color: var(--muted); }
+.promise-health .button { white-space: normal; }

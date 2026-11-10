@@ -21,6 +21,7 @@ from pydantic import (
 )
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from .ai_privacy import InjectionFlag, injection_flags, mask_text
 from .inference import InvestigationSettings
 from .resolution_models import Target
 
@@ -84,7 +85,7 @@ SkipReason = Literal[
     "data_policy_blocked",
     "budget_exceeded",
 ]
-AdjustmentReason = Literal["quote_normalized", "amount_removed", "action_removed"]
+AdjustmentReason = Literal["quote_normalized", "quote_unmasked", "amount_removed", "action_removed"]
 MessageID = Annotated[str, Field(min_length=1, max_length=80)]
 
 # A currency marker must sit next to the number, so order or tracking numbers
@@ -207,6 +208,10 @@ class ExtractionResult(BaseModel):
     dropped: list[DroppedProposal]
     adjustments: list[Adjustment] = Field(default_factory=list)
     tokens: int = Field(0, description="Provider tokens used by this request; 0 on a cache hit.")
+    flags: list[InjectionFlag] = Field(
+        default_factory=list,
+        description="Buyer messages matching an injection rule. Informational: never blocks.",
+    )
     cache_hit: bool = False
     skipped_reason: SkipReason | None = Field(
         None, description="Why no model call was made, when none was."
@@ -301,14 +306,28 @@ def _normalized(text):
     return "".join(chars), origin
 
 
-def locate_quote(text, quote):
-    """The span of `text` matching `quote` up to case, spacing and curly quotes."""
+def _locate_span(text, quote):
     needle, _ = _normalized(quote)
     haystack, origin = _normalized(text)
     start = haystack.find(needle) if needle else -1
     if start < 0:
         return None
-    return text[origin[start] : origin[start + len(needle) - 1] + 1]
+    return origin[start], origin[start + len(needle) - 1] + 1
+
+
+def locate_quote(text, quote):
+    """The span of `text` matching `quote` up to case, spacing and curly quotes."""
+    span = _locate_span(text, quote)
+    return text[span[0] : span[1]] if span else None
+
+
+def _locate_unmasked(text, quote):
+    """The original words behind a quote the model copied from masked text."""
+    masked, origin, counts = mask_text(text)
+    span = _locate_span(masked, quote) if counts else None
+    if span is None:
+        return None
+    return text[origin[span[0]][0] : origin[span[1] - 1][1]]
 
 
 def amounts_in(quote):
@@ -353,8 +372,9 @@ def _check(raw, messages):
     if message.sender != "merchant":
         return ("buyer_message", "Only merchant messages can create promises"), []
     # The returned quote is always the message's own text, even when the model
-    # changed its case, spacing or quotation marks.
+    # changed its case, spacing or quotation marks, or quoted masked details.
     quote = locate_quote(message.text, raw.exact_quote)
+    unmasked = quote is None and (quote := _locate_unmasked(message.text, raw.exact_quote)) is not None
     if quote is None:
         return ("quote_not_found", "The quote does not appear in the message"), []
     adjust = []
@@ -364,7 +384,9 @@ def _check(raw, messages):
             Adjustment(reason=reason, detail=detail, kind=kind, source_message_id=message.id)
         )
 
-    if quote != raw.exact_quote.strip():
+    if unmasked:
+        note("quote_unmasked", "The model quoted masked text; the quote shows the merchant's original words")
+    elif quote != raw.exact_quote.strip():
         note("quote_normalized", "Quote matched after ignoring case, spacing or quote marks")
     amount = raw.amount_cents
     if amount is not None and kind not in AMOUNT_KINDS:
@@ -448,7 +470,12 @@ def cache_key(model, messages):
 
 
 def _complete(client, model, timeout, case_id, messages):
-    transcript = [message.model_dump(mode="json") for message in messages]
+    # The provider sees card, UPI, bank, email and phone details only as
+    # placeholders; validation keeps using the original messages.
+    transcript = [
+        {**message.model_dump(mode="json"), "text": mask_text(message.text)[0]}
+        for message in messages
+    ]
     response = client.chat.completions.create(
         model=model,
         temperature=0,
@@ -526,6 +553,9 @@ def _extract(case_id, messages, client, settings, source, data_policy, usage, me
             result.review_reasons.append(reason)
         result.status = "needs_review"
         return result
+
+    # Flags are computed for every request, including ones that make no call.
+    result.flags = injection_flags(messages)
 
     def skip(reason, needs_review=True):
         result.skipped_reason = reason

@@ -14,6 +14,7 @@ type Dropped = { reason: string; detail: string; kind: string | null; source_mes
 type Extraction = {
   status: "ok" | "needs_review"; review_reasons: string[]; proposals: Proposal[]; dropped: Dropped[];
   tokens: number; cache_hit: boolean; skipped_reason: string | null;
+  flags?: { rule_id: string; label: string; message_id: string }[];
 };
 
 const reviewText: Record<string, string> = {
@@ -83,6 +84,12 @@ export function PromiseExtractionPanel({ caseId, request, onUse }: {
     {result && <p className="muted" role="status">
       {result.cache_hit ? "cached, 0 tokens" : result.skipped_reason ? "No AI call made" : `${result.tokens} tokens`}
       {" · "}{result.proposals.length} {result.proposals.length === 1 ? "suggestion" : "suggestions"}</p>}
+    {!!result?.flags?.length && <div className="injection-flags" role="note" aria-label="Suspicious buyer instructions">
+      <span className="badge badge-needs_review">Suspicious instruction ignored</span>
+      <p className="muted">A buyer message tried to give instructions. It was read as ordinary chat and cannot create a promise.</p>
+      <ul>{result.flags.map((flag, index) => <li key={index}>
+        <strong>{flag.rule_id}</strong> · {flag.label} · buyer message {flag.message_id}</li>)}</ul>
+    </div>}
     {result?.skipped_reason === "no_merchant_messages" && <p>No merchant messages yet, so there is nothing to suggest.</p>}
     {!!result?.review_reasons.length && <Notice><strong>Needs your review:</strong> {result.review_reasons.map((reason) => plain(reviewText, reason)).join(" ")}</Notice>}
     {result && !result.proposals.length && !result.review_reasons.length && !result.skipped_reason && <p>No promises were found in this conversation.</p>}

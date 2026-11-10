@@ -82,28 +82,49 @@ function MoneySummary({ item, payment, demo, checks }: Pick<DeskProps, "item" | 
   </section>;
 }
 
-/** The single next-step block: one action, its reason, one primary button, and what is missing before a refund. */
+// Missing items as ordered, imperative steps. Codes the backend explains specifically keep its wording.
+const stepOrder = ["no_linked_payment", "no_amount", "agreement_not_accepted", "no_refund_promise", "unmet_condition", "no_deadline", "pending_refund_unconfirmed"];
+const stepText: Record<string, string> = {
+  no_linked_payment: "Link the payment record.",
+  no_amount: "Add the agreed refund amount to the linked payment case.",
+  agreement_not_accepted: "Mark the refund agreement as accepted on the linked payment case.",
+  no_refund_promise: "Record the refund promise.",
+  no_deadline: "Add a due date to the refund promise.",
+};
+const orderedSteps = (missing: { code: string; text: string }[]) => [...missing]
+  .sort((a, b) => stepOrder.indexOf(a.code) - stepOrder.indexOf(b.code))
+  .map((entry) => ({ ...entry, text: stepText[entry.code] ?? entry.text }));
+
+/** The single next-step block: the action as the title, one short reason, one primary button, then ordered steps. */
 function NextStep({ item, payment, checks, onAdd, onLinkPayment }: Pick<DeskProps, "item" | "payment" | "onAdd" | "onLinkPayment"> & { checks: CaseChecks }) {
   const refund = item.promises.find((p) => p.terms.target.kind === "refund");
   const progress = refund?.refund_progress;
   const done = refund?.outcome === "fulfilled";
   const execution = payment.execution;
+  const { next, explanation, explaining } = checks;
+  const steps = next ? orderedSteps(next.missing) : [];
+  const needsAgreement = steps.some((step) => step.code === "no_amount" || step.code === "agreement_not_accepted");
   const owed = checks.health?.items.find((entry) => entry.status !== "kept" && cents(entry.suggested_refund_amount) > 0);
   let kicker = "Next action", title: string, reason: string, buttons: ReactNode = null;
   if (!item.refund_case_id) {
-    title = "No payment linked"; reason = "Link the payment if this case needs a refund.";
+    title = "Link the payment record"; reason = "Refunds can only be tracked against a linked payment.";
     buttons = <Button variant="primary" onClick={onLinkPayment}>Link payment record</Button>;
+  } else if (!progress && !refund && needsAgreement) {
+    // The agreed amount lives on the payment case and cannot be edited on this page.
+    title = "Add the agreed refund amount"; reason = "Set it on the linked payment case first, then record the refund promise.";
+    buttons = <Button onClick={onAdd}><Plus size={16} /> Record promise</Button>;
+  } else if (!progress && !refund) {
+    title = "Record the refund promise"; reason = "The payment is linked, but no refund is promised yet.";
+    buttons = <Button variant="primary" onClick={onAdd}><Plus size={16} /> Record promise</Button>;
   } else if (!progress) {
-    title = refund ? "Review the evidence" : "Payment record linked";
-    reason = refund ? payment.nextMessage : "Record a refund promise to see how much was returned and what still needs to happen.";
-    if (!refund) buttons = <Button variant="primary" onClick={onAdd}><Plus size={16} /> Record promise</Button>;
+    title = "Review the evidence"; reason = payment.nextMessage;
   } else {
     kicker = done ? "Verified outcome" : payment.approval ? "Approval recorded" : "Next action";
-    title = done ? "Refund promise fulfilled" : payment.approval ? `${money(payment.approval.amount)} approved` :
+    title = done ? "Refund promise fulfilled" : payment.approval ? `Submit the approved ${money(payment.approval.amount)} refund` :
       payment.canReview ? `Review ${money(payment.basis?.recommended_refund_amount)} refund` :
-      execution && ["unknown", "pending", "submitting", "reserved"].includes(execution.status) ? "Refund outcome pending" :
+      execution && ["unknown", "pending", "submitting", "reserved"].includes(execution.status) ? "Wait for the refund outcome" :
       refund.outcome === "needs_review" ? "Review the evidence" : "Check before approving";
-    reason = done ? "The confirmed amount matches the promise." : payment.approval ? "Review the approved amount before submitting." : payment.nextMessage;
+    reason = done ? "The confirmed amount matches the promise." : payment.approval ? "Check the approved amount, then submit it." : payment.nextMessage;
     buttons = done ? null : <>
       {payment.canSubmit && <Button variant="primary" onClick={payment.onSubmit} disabled={payment.busy}>Review submission <ArrowRight size={16} /></Button>}
       {payment.canSubmit && payment.onSimulateOutside && <Button variant="ghost" onClick={payment.onSimulateOutside} disabled={payment.busy}>
@@ -114,32 +135,32 @@ function NextStep({ item, payment, checks, onAdd, onLinkPayment }: Pick<DeskProp
         : !payment.canReview && !payment.canSubmit && <Button onClick={payment.onRefresh} disabled={payment.busy}><RefreshCw size={15} /> Refresh evidence</Button>}
     </>;
   }
-  const { next, explanation, explaining } = checks;
+  // The code summary and its AI rewording only add value once a refund promise has amounts or progress.
+  const hasFacts = !!next?.facts.refunds.length;
   const capped = owed && payment.canReview && cents(owed.suggested_refund_amount) < cents(owed.remaining_amount);
   return <section className={`next-step-block ${done ? "next-step-done" : ""}`} aria-label="Next step">
-    <div className="next-step-main">
+    <div className="next-step-head">
       <div className="action-symbol">{done ? <Check size={22} /> : <ShieldCheck size={22} />}</div>
-      <div className="action-copy"><div className="eyebrow">{kicker}</div><h3>{title}</h3><p>{reason}</p>
-        {capped && <p className="card-note">The review opens at {money(owed.suggested_refund_amount)}: refunds already recorded or pending and the captured amount limit what can be sent.</p>}</div>
-      {buttons && <div className="action-buttons">{buttons}</div>}
+      <div className="action-copy"><div className="eyebrow">{kicker}</div><h3>{title}</h3><p>{reason}</p></div>
     </div>
+    {buttons && <div className="next-step-actions">{buttons}</div>}
+    {capped && <p className="card-note">The review opens at {money(owed.suggested_refund_amount)}: refunds already recorded or pending and the captured amount limit what can be sent.</p>}
     {payment.error && <Notice>{payment.error}</Notice>}
-    {checks.enabled && <div className="next-step-detail">
-      {checks.loading && <p className="panel-state" role="status">Checking what is missing…</p>}
-      {next && <div className="checklist">
-        <h4>Missing before refund</h4>
-        {next.missing.length ? <ul>{next.missing.map((entry, index) => <li key={entry.code + index} data-code={entry.code}>{entry.text}</li>)}</ul>
-          : <p className="checklist-done">Nothing missing ✓</p>}
-      </div>}
-      {next && <div className="explain">
-        {explanation?.source === "ai" && <span className="badge badge-needs_review ai-label"><span />{explanation.label}</span>}
-        <p className="explain-text">{explanation?.text ?? next.summary}</p>
-        {explanation?.source === "template" && <p className="card-note">Written from case facts. AI explanation not used: {fallbackText[explanation.fallback_reason ?? ""] ?? explanation.fallback_reason?.replace(/_/g, " ")}.</p>}
-        <div className="card-actions"><Button variant="ghost" className="small-button" disabled={explaining} onClick={() => void checks.explain()}>{explaining ? "Explaining…" : "Explain with AI"}</Button>
-          <small>Advisory only. It never approves or sends a refund.</small></div>
-      </div>}
-      {checks.error && <Notice>{checks.error}</Notice>}
+    {checks.enabled && checks.loading && <p className="panel-state" role="status">Checking what is missing…</p>}
+    {next && <div className="checklist">
+      <h4>Missing before refund</h4>
+      {steps.length ? <ol>{steps.map((entry, index) => <li key={entry.code + index} data-code={entry.code}>{entry.text}</li>)}</ol>
+        : <p className="checklist-done">Nothing missing ✓</p>}
     </div>}
+    {next && hasFacts && <div className="explain">
+      <h4>Summary</h4>
+      {explanation?.source === "ai" && <span className="badge badge-needs_review ai-label"><span />{explanation.label}</span>}
+      <p className="explain-text">{explanation?.text ?? next.summary}</p>
+      {explanation?.source === "template" && <p className="card-note">Written from case facts. AI explanation not used: {fallbackText[explanation.fallback_reason ?? ""] ?? explanation.fallback_reason?.replace(/_/g, " ")}.</p>}
+      <div><Button className="small-button" disabled={explaining} onClick={() => void checks.explain()}>{explaining ? "Explaining…" : "Explain with AI"}</Button>
+        <p className="advisory">Advisory only. It never approves or sends a refund.</p></div>
+    </div>}
+    {checks.error && <Notice>{checks.error}</Notice>}
   </section>;
 }
 

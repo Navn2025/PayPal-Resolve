@@ -3395,6 +3395,87 @@ workspace, and show message times in the viewer's own time zone.
   until hydration replaces them; mismatch warnings are suppressed on those
   elements.
 
+### CHG-052 - Next step card: action titles, ordered steps, no repeated summary
+
+**Date:** 10 November 2026 (Asia/Calcutta). Branch `feat/ai-part`. Frontend only;
+existing colour tokens only.
+
+**Objective:** the Next step card showed a status as its title ("Payment
+record linked"). It also repeated the checklist in a summary sentence that
+could contradict it ("record the agreed refund amount on the payment case"
+next to "Record a refund promise"), and "Explain with AI" looked like plain
+text.
+
+**Files and resulting behavior (`frontend/components/case-desk.tsx`,
+`frontend/app/globals.css`):**
+
+- **Titles are actions:** "Link the payment record", "Add the agreed refund
+  amount", "Record the refund promise", "Submit the approved $X refund",
+  "Wait for the refund outcome". Each has one short reason line underneath.
+  - **Kept as they were:** "Check before approving", "Review $X refund",
+    "Review the evidence" and "Refund promise fulfilled"; tests and the done
+    state rely on them.
+- **Ordered steps:** missing items are numbered in a fixed order: link
+  payment, agreed amount, agreement accepted, refund promise, unmet
+  condition, due date, pending refund.
+  - **Instruction wording:** codes with a generic backend sentence are
+    rewritten as instructions ("Add the agreed refund amount to the linked
+    payment case.", "Record the refund promise.", "Add a due date to the
+    refund promise."). Specific backend texts such as "The return is not
+    confirmed yet." are kept.
+  - **When both are needed:** the agreed amount and the refund promise
+    appear as two ordered steps, and the title follows the first.
+  - **No button for the agreed amount:** this page has no control for it
+    (it is set on the payment case), so that state shows "Record promise" as
+    a secondary button and no primary button.
+- **Summary only with facts:** the code summary and "Explain with AI"
+  appear only once a refund promise has facts (amounts or progress). When
+  nothing is recorded, the checklist alone is shown.
+- **AI button:** "Explain with AI" is a secondary button, with the advisory
+  note under it in small text.
+- **One column:** icon, title and reason, the action buttons, the numbered
+  checklist, then the summary and AI explanation, each section separated by
+  a rule.
+
+**Tests:** `frontend/tests/promise-health.spec.ts`:
+
+- **Updated:** the checklist is now ordered ("The return is not confirmed
+  yet.", then "Add a due date to the refund promise."), and the checks
+  confirm "Explain with AI" is a secondary button and the advisory note is
+  shown.
+- **New:** a linked payment with an agreed amount shows "Record the refund
+  promise", a primary "Record promise", a single step and no summary or AI
+  button (and never the `{recommended}` placeholder). Without an agreed
+  amount it shows "Add the agreed refund amount", two ordered steps and no
+  primary button.
+
+**Reason and decision IDs:** DEC-088.
+
+**Validation actually performed:**
+
+- `npm run check`: passed. `npx playwright test tests/promise-health.spec.ts`:
+  4 passed.
+- **Screenshots:** before (`4652c68`) and after, at 1280 and 390px, of the
+  linked-without-agreed-amount, linked-with-agreed-amount and at-risk fixture
+  states, with a scratch Playwright script. The cases were created through
+  the real proxy on the isolated fixture backend. The first 390px at-risk
+  "after" shot was taken while loading; the script now waits for the loaded
+  state. The screenshots aren't committed.
+- **Full Playwright suite** (`PLAYWRIGHT_CHROMIUM_EXECUTABLE=<system Chrome> npx
+  playwright test`): 21 passed, 5 skipped, 0 failed.
+- **Backend:** not changed, so not re-run.
+
+**Known limitations and follow-up:**
+
+- **Backend bug found:** with a linked payment that has an accepted agreed
+  amount and no refund promise, the CHG-048 code summary prints a raw
+  `{recommended}` placeholder. `next_action.template()` doesn't format the
+  no-refund-promise branch. The UI no longer shows that summary, but the API
+  still returns it; the fix belongs in a backend change.
+- No UI sets the payment case's agreed amount, although
+  `PUT /cases/{id}/commitment` exists; adding it needs a proxy entry and a
+  form.
+
 ## Decision register
 
 ### DEC-001 - Keep FastAPI/Pydantic and the existing uv project
@@ -4199,6 +4280,15 @@ the top bar. Message times follow the viewer's time zone because they
 describe conversations people read in their own day; audit and
 session times stay in UTC.
 
+### DEC-088 - The next step names an action and lists steps once
+
+The card title is always the thing to do. What is missing is shown once, as
+numbered steps in the order they must happen, and the step list replaces
+any summary that would only restate it. Code summaries and AI wording appear
+only when they add amounts or progress the steps don't. When the first step
+cannot be done on this page, the card says where it happens instead of
+offering a primary button that skips it.
+
 ## Open work and boundaries
 
 1. Verify import (if needed), SSL connection, migration startup, and worker
@@ -4224,7 +4314,7 @@ session times stay in UTC.
 ## Template for the next entry
 
 ```text
-### CHG-052 - Concrete change title
+### CHG-053 - Concrete change title
 Date:
 Objective:
 Files and resulting behavior:

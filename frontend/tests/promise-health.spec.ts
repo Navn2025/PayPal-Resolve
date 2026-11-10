@@ -43,8 +43,10 @@ test("promise check reads the real backend through the proxy", async ({ page }) 
 
   // Missing information is the next step's checklist, written by code from the same case.
   const missing = step.locator(".checklist li");
-  await expect(missing.filter({ hasText: "The refund promise has no due date." })).toHaveCount(1);
-  await expect(missing.filter({ hasText: "The return is not confirmed yet." })).toHaveCount(1);
+  // Ordered steps: the unconfirmed return comes before the missing due date.
+  await expect(missing).toHaveText(["The return is not confirmed yet.", "Add a due date to the refund promise."]);
+  await expect(step.getByRole("button", { name: "Explain with AI" })).toHaveClass(/button-secondary/);
+  await expect(step.getByText("Advisory only. It never approves or sends a refund.")).toBeVisible();
   const summary = "Promised $30.00 after return; $0.00 refunded; $30.00 remaining; return not confirmed → confirm the return before any refund.";
   await expect(step.getByText(summary)).toBeVisible();
   // The fixture backend has AI extraction off, so the explanation falls back to the same template.
@@ -133,4 +135,37 @@ test("an AI explanation is labelled and changes nothing", async ({ page }) => {
   await expect(step.getByText("AI explanation – verify before acting")).toBeVisible();
   await expect(step.getByText(text)).toBeVisible();
   expect(posts.filter((path) => /refund-approvals|refund-executions|promises/.test(path))).toEqual([]);
+});
+
+test("a linked payment with nothing promised shows the action as the title and ordered steps only", async ({ page }) => {
+  await signIn(page);
+  const make = async (title: string, agreed: boolean) => {
+    const capture = "SIMSTEPS" + Date.now();
+    const payment = await api<{ id: string }>(page, "/cases", {
+      order_id: "ORDER" + capture, complaint: title, payment: { capture_id: capture, captured_amount: "100.00" },
+      ...(agreed ? { commitment: { amount: "40.00", status: "accepted", source_message: "Agreed in chat" } } : {}),
+    });
+    await api(page, "/resolution-cases", { title, order_reference: "ORD-" + capture, refund_case_id: payment.id });
+  };
+  await make("Steps with agreed amount", true);
+  await make("Steps without agreed amount", false);
+  await page.reload();
+
+  await page.getByRole("button", { name: /Steps with agreed amount/ }).click();
+  const step = page.getByRole("region", { name: "Next step" });
+  await expect(step.getByRole("heading", { name: "Record the refund promise" })).toBeVisible();
+  await expect(step.getByText("The payment is linked, but no refund is promised yet.")).toBeVisible();
+  await expect(step.getByRole("button", { name: "Record promise" })).toHaveClass(/button-primary/);
+  await expect(step.locator(".checklist li")).toHaveText(["Record the refund promise."]);
+  // Nothing is recorded yet, so no summary sentence or AI rewording repeats the checklist.
+  await expect(step.locator(".explain")).toHaveCount(0);
+  await expect(step.getByRole("button", { name: "Explain with AI" })).toHaveCount(0);
+  await expect(step).not.toContainText("{recommended}");
+
+  await page.getByRole("button", { name: /Steps without agreed amount/ }).click();
+  await expect(step.getByRole("heading", { name: "Add the agreed refund amount" })).toBeVisible();
+  await expect(step.locator(".checklist li")).toHaveText([
+    "Add the agreed refund amount to the linked payment case.", "Record the refund promise."]);
+  await expect(step.locator(".button-primary")).toHaveCount(0);
+  await expect(step.locator(".explain")).toHaveCount(0);
 });

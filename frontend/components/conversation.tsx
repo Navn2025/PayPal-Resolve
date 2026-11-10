@@ -2,7 +2,7 @@
 
 import { useRef, useState, type FormEvent } from "react";
 import { MessageCircle, RefreshCw, Send } from "lucide-react";
-import { timeText, uuid } from "@/lib/domain";
+import { localTimeText, timeText, uuid } from "@/lib/domain";
 import type { Message } from "@/lib/customer";
 import { Button, Notice } from "./ui";
 
@@ -27,14 +27,14 @@ export function Conversation({ messages, viewer, onSend, onRefresh, refreshing, 
     finally { setSending(false); }
   }
   return <section className="section-card customer-conversation customer-print-hide">
-    <div className="section-head"><div><div className="eyebrow">FOLLOW-UP</div><h3>{viewer === "merchant" ? "Customer conversation" : "Messages"}</h3></div>
+    <div className="section-head"><div><div className="eyebrow">Follow-up</div><h3>{viewer === "merchant" ? "Customer conversation" : "Messages"}</h3></div>
       {onRefresh && <Button className="small-button" onClick={onRefresh} disabled={refreshing}><RefreshCw size={15} className={refreshing ? "spin" : ""} /> Refresh messages</Button>}</div>
     {error && <Notice>{error}</Notice>}
     {messages.length === 0 ? <div className="conversation-empty"><MessageCircle size={20} /><p>No messages yet.</p></div> :
       <ol className="conversation-list" aria-label="Case messages" aria-live="polite">
         {messages.map((message) => <li key={message.id} className={message.sender === viewer ? "conversation-own" : ""}>
           <div><strong>{message.sender === viewer ? "You" : message.sender === "merchant" ? "Merchant" : "Customer"}</strong>
-            <time dateTime={message.created_at}>{timeText(message.created_at)}</time></div>
+            <time dateTime={message.created_at} title={timeText(message.created_at)} suppressHydrationWarning>{localTimeText(message.created_at)}</time></div>
           <p>{message.body}</p>
         </li>)}
       </ol>}

@@ -51,7 +51,7 @@ export function MerchantCustomer({ item, request, demo, onOperations }: {
   }, [refresh]);
 
   if (demo) return <section className="section-card customer-share">
-    <div className="section-head"><div><div className="eyebrow">CUSTOMER ACCESS</div><h3>Customer portal</h3></div><span className="section-icon"><Link2 size={20} /></span></div>
+    <div className="section-head"><div><div className="eyebrow">Customer access</div><h3>Customer portal</h3></div><span className="section-icon"><Link2 size={20} /></span></div>
     <p>A customer sees the agreed remedy, progress, and messages for their case. Open the sample to see their experience.</p>
     <a className="button button-primary" href="/customer?demo=1" target="_blank" rel="noreferrer">Open customer demo <ArrowUpRight size={15} /></a>
     <p className="muted">Connect your merchant account to create a private link for a real case.</p>
@@ -95,7 +95,7 @@ export function MerchantCustomer({ item, request, demo, onOperations }: {
   }
   return <>
     <section className="section-card customer-share">
-      <div className="section-head"><div><div className="eyebrow">CUSTOMER ACCESS</div><h3>Share with customer</h3></div>
+      <div className="section-head"><div><div className="eyebrow">Customer access</div><h3>Share with customer</h3></div>
         <span className="provider-chip"><LockKeyhole size={13} /> {link?.active ? "Link active" : "No active link"}</span></div>
       <p>Anyone with the link can see the shared timeline, promises, conversation, and customer uploads. Internal notes and payment records stay private.</p>
       {error && <Notice>{error}</Notice>}{notice && <Notice tone="success">{notice}</Notice>}

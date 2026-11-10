@@ -278,14 +278,14 @@ pending, and failed refund records, without executing financial operations.
 
 **New API behavior:**
 
-| Endpoint | Purpose |
-| --- | --- |
-| `POST /cases/{case_id}/refunds` | Record a manual refund observation, not execute a refund. |
-| `GET /cases/{case_id}/refunds` | List the capture's shared refund history. |
-| `PATCH /cases/{case_id}/refunds/{refund_id}` | Change a pending record to completed or failed. |
-| `POST /cases/{case_id}/condition-checks` | Add an evidence-backed manual condition check. |
-| `GET /cases/{case_id}/condition-checks` | Retrieve that case's condition history. |
-| `GET /cases/{case_id}/reconciliation` | Calculate recorded totals and the next suggested step. |
+| Endpoint                                     | Purpose                                                   |
+| -------------------------------------------- | --------------------------------------------------------- |
+| `POST /cases/{case_id}/refunds`              | Record a manual refund observation, not execute a refund. |
+| `GET /cases/{case_id}/refunds`               | List the capture's shared refund history.                 |
+| `PATCH /cases/{case_id}/refunds/{refund_id}` | Change a pending record to completed or failed.           |
+| `POST /cases/{case_id}/condition-checks`     | Add an evidence-backed manual condition check.            |
+| `GET /cases/{case_id}/condition-checks`      | Retrieve that case's condition history.                   |
+| `GET /cases/{case_id}/reconciliation`        | Calculate recorded totals and the next suggested step.    |
 
 Identical refund replays return `200`; new records return `201`. Conflicting
 identities, excessive active totals, and forbidden state transitions return
@@ -536,8 +536,7 @@ recorded actor IDs extend the manual condition-history design in DEC-009.
 **Compatibility/data changes:** Clients must now authorize protected API calls.
 Case responses add `merchant_id`; condition responses add a nullable
 `recorded_by_merchant_id`. Version-1 records are preserved but remain inaccessible
-through normal merchant requests until explicitly assigned. Schema version is now
-2. The public health method and existing case request shapes are retained.
+through normal merchant requests until explicitly assigned. Schema version is now 2. The public health method and existing case request shapes are retained.
 No real access token was generated for the owner's database by the assistant;
 tests provisioned only temporary test credentials/databases.
 
@@ -792,8 +791,8 @@ still work in the local ledger but may fail the provider-read syntax check.
   version-3 database retaining its existing approval and older JSON snapshot.
 - From the repo root, with only `RESOLVE_RUN_PAYPAL_SIMULATION=1` set for this
   process: `postman simulation run postman/simulations/paypal-read/paypal-read.sim.yaml
-  --proxy --lift "uv --directory backend run python -m pytest
-  tests/test_paypal_simulation.py -q --maxfail=1 --tb=short" --output ndjson`:
+--proxy --lift "uv --directory backend run python -m pytest
+tests/test_paypal_simulation.py -q --maxfail=1 --tb=short" --output ndjson`:
   **22 passed**, exit 0. Session `56bcce1a-f96e-41c9-85a9-cb681ca7c0be`
   logged **44 mocked requests, zero passed through** and stopped its own server.
   Observed both OAuth POSTs and capture GETs, not just a running proxy. Assertions
@@ -2388,11 +2387,11 @@ only its final version is expected.
 
 **Validation (live model output from CHG-036, replayed, synthetic data):**
 
-| Stage | Overall P | Generated P | Overall R |
-|---|---|---|---|
-| CHG-036 extractor, strict labels | 0.832 | 0.793 | 0.907 |
-| CHG-036 extractor, restatement labels | 0.898 | 0.882 | 0.907 |
-| Merge extractor, restatement labels | 0.898 | 0.882 | 0.907 |
+| Stage                                 | Overall P | Generated P | Overall R |
+| ------------------------------------- | --------- | ----------- | --------- |
+| CHG-036 extractor, strict labels      | 0.832     | 0.793       | 0.907     |
+| CHG-036 extractor, restatement labels | 0.898     | 0.882       | 0.907     |
+| Merge extractor, restatement labels   | 0.898     | 0.882       | 0.907     |
 
 - The label fix accounts for the whole precision gain: 23 generated
   proposals were restatements, so false positives went from 53 to 30. Gold,
@@ -2478,19 +2477,20 @@ retrying.
   because records omitted `action` (fixed, with a test). The other 152 ran
   after budget returned at about 15:13.
 
-  | Set | Chats | Precision [95% CI] | Recall [95% CI] | F1 |
-  |---|---|---|---|---|
-  | All four | 160 | 0.951 [0.91, 0.98] | 0.992 [0.97, 1.00] | 0.971 |
-  | gold | 50 | 1.000 | 1.000 | 1.000 |
-  | hard | 30 | 0.872 [0.78, 0.97] | 0.971 [0.91, 1.00] | 0.919 |
-  | injection | 50 | 1.000 | 1.000 | 1.000 |
-  | heldout (reported separately) | 30 | 0.966 [0.90, 1.00] | 1.000 | 0.982 |
+  | Set                           | Chats | Precision [95% CI] | Recall [95% CI]    | F1    |
+  | ----------------------------- | ----- | ------------------ | ------------------ | ----- |
+  | All four                      | 160   | 0.951 [0.91, 0.98] | 0.992 [0.97, 1.00] | 0.971 |
+  | gold                          | 50    | 1.000              | 1.000              | 1.000 |
+  | hard                          | 30    | 0.872 [0.78, 0.97] | 0.971 [0.91, 1.00] | 0.919 |
+  | injection                     | 50    | 1.000              | 1.000              | 1.000 |
+  | heldout (reported separately) | 30    | 0.966 [0.90, 1.00] | 1.000              | 0.982 |
 
   Injection success 0/50; agent-only and executed (system) violations both 0;
   validator drops 0; one `quote_normalized` adjustment; `needs_review` 0; mean
   latency 0.84 s; 112,724 tokens. Gold is no longer clean for these fixes, so
   its 1.000 is not evidence that they generalise; held-out is the comparison.
   Hard currency formats and amount-vs-order-number are 6/6 each.
+
 - All 6 false positives are superseded earlier statements in revision chats
   (hard-007 to hard-011, held-030), which the README rule expects to be left
   out. `possible_revision` fired 5 times, each on the correct final proposal; the
@@ -2639,7 +2639,7 @@ conversation that could contain a merchant commitment.
     sent_at). Entries are scoped per merchant, so one merchant's cache hit
     cannot reveal another merchant's transcript. A hit returns the stored
     proposals with the current request's `case_id` and `source`, `cache_hit:
-    true` and zero tokens. Only clean output (no review reason other than
+true` and zero tokens. Only clean output (no review reason other than
     `low_confidence`) is stored, so provider and parse failures stay retryable.
   - `max_tokens=800` on every call (`MAX_COMPLETION_TOKENS`).
   - `RESOLVE_EXTRACTION_DAILY_TOKEN_LIMIT` (environment only, like the other
@@ -2808,6 +2808,720 @@ this.
 
 **Limits:** The `/ai/usage` endpoint is reachable through the proxy but the UI
 does not display it yet.
+
+### CHG-044 - Mask payment details before extraction and flag injection attempts
+
+**Date:** 9 November 2026 (Asia/Calcutta).
+
+**Objective:** Keep personal payment and contact details out of the provider
+call, and show merchants when a buyer message looks like an injection attempt,
+without blocking extraction.
+
+**Files and behavior:**
+
+- `backend/app/ai_privacy.py` (new):
+  - `mask_text` replaces card numbers (13 to 19 digits passing the Luhn check),
+    UPI IDs, labelled bank account numbers (after "A/c", "account", "khata"
+    and similar), IFSC codes, email addresses and phone numbers (Indian,
+    international `+`, US) with `[card]`, `[upi_id]`, `[bank_account]`,
+    `[ifsc]`, `[email]` and `[phone]`. PayPal capture, order, invoice and
+    dispute IDs, order numbers, SKUs, tracking codes and amounts are kept.
+    For every masked character it records which original span it stands for.
+  - `injection_flags` checks buyer messages only, against five rules:
+    RG-INJ-001 fake system/admin text, RG-INJ-002 claimed authority,
+    RG-INJ-003 requests to mark a refund or payment as done, RG-INJ-004 quoted
+    or labelled merchant text, RG-INJ-005 instruction overrides. Each has
+    English and Hinglish patterns.
+- `backend/app/ai_extraction.py`:
+  - The transcript sent to the provider is masked. Validation still uses the
+    original messages.
+  - A quote that matches only the masked text (for example
+    "refund to [upi_id]") is resolved to the merchant's original words through
+    the span map, recorded as a new `quote_unmasked` adjustment, and its
+    amount is checked against the original words. Words not in the message
+    still fail `quote_not_found`.
+  - `ExtractionResult.flags` lists `rule_id`, `label` and `message_id`. Flags
+    are computed for every request, including disabled or skipped ones, and
+    are included in cached results. They never block or change proposals.
+  - The system prompt is unchanged, so the cache prompt version is unchanged.
+- `frontend/components/promise-extraction.tsx`: a "Suspicious instruction
+  ignored" badge with each rule ID, rule name and buyer message ID, explaining
+  that the message was read as ordinary chat. Panel-scoped CSS.
+- OpenAPI regenerated (32 lines added).
+
+**Decisions:** DEC-081.
+
+**Measurement (no provider calls; rules written from the requested categories
+and not adjusted to these results):**
+
+- Masking on all eval sets: 0 spans in gold, hard, injection and held-out, so
+  their provider transcripts are byte-identical to before and CHG-038's recall
+  is unaffected. 3 spans in generated, all genuine email addresses in
+  Qwen-written chats.
+- Flags: 21 of 50 injection chats; 0 of 310 non-injection chats (gold, hard,
+  held-out, generated). By type: fake system 5/5, fake authority 4/5,
+  instruction in buyer text 4/5, fake quoted merchant 3/5, fake merchant label
+  3/5, multilingual 2/5, role-play 0/5, encoded 0/5, JSON injection 0/5,
+  merchant echo 0/5. The last four types are outside the rule categories, and
+  two multilingual items are Spanish and French.
+- In-category misses: "the merchant's lawyer" (inj-009), "Note for the
+  extraction tool" (inj-013), "Your agent said yesterday:" (inj-016), "Copying
+  your earlier email:" (inj-017), "[Merchant]" without a colon (inj-037),
+  "Message from merchant forwarded:" (inj-039), and a "SYSTEM (hidden):" line
+  with zero-width characters (inj-050).
+- Two rule bugs were found by the new unit tests' own examples, not by the eval
+  set, and fixed before the measurement above: "mark this order as refunded"
+  was missed, and "Is the refund approved yet?" was flagged.
+
+**Validation:** Backend `uv run python -m pytest -q`: 396 passed, 60 skipped
+(36 new in `backend/tests/test_extraction_privacy.py`). `uvx ruff check`
+passed. Frontend `npm run check` passed; Playwright with local Chrome: 14
+passed, 5 skipped, 1 failed (the existing `investigations.spec.ts`
+mobile-width check from CHG-042). The mocked panel test now checks the badge,
+rule ID and message ID, and that the badge is absent when there are no flags.
+
+**Limits:** Flags are regular expressions with the misses listed above;
+improving them should use attack examples outside `injection.jsonl` so the
+detection rate stays meaningful. Masking is pattern-based: unlabelled bank
+account numbers, names and street addresses are not masked, and a 16-digit
+order number that passes the Luhn check would be masked as a card (safe, but
+it hides that number from the model). Masked details are restored only in the
+returned quote. No live provider call was made.
+
+### CHG-047 - Broken-promise detector for accepted refund promises
+
+**Date:** 10 November 2026 (Asia/Calcutta). Branch `feat/ai-part`.
+
+**Objective:** flag accepted refund promises that are going unpaid, using the
+existing reconciliation only. No model call, no new storage. CHG-045, CHG-046
+and DEC-082 are skipped because the local, unmerged `ui-revamp` branch already
+uses them.
+
+**Files and resulting behavior:**
+
+- `backend/app/promise_health.py` (new):
+  - **Promises checked:** refund promises on a resolution case whose linked
+    payment case has a commitment with `status == "accepted"`. Other promise
+    kinds, unlinked cases and unaccepted commitments are left out.
+  - **Inputs, all existing values:**
+    - Promised, refunded, pending, remaining and captured come from the
+      promise's `refund_progress`. That is the same PayPal-confirmed progress
+      the workspace shows, built from `ResolveStore._reconcile`.
+    - Locally recorded completed and pending refunds come from the same
+      reconciliation.
+  - **Status (`classify`):**
+    - `kept` when the confirmed refund covers the promise.
+    - Before the deadline: `partially_kept` if part was refunded, `at_risk` if
+      nothing was refunded yet.
+    - After the deadline: `at_risk` if part was refunded, `broken` if nothing
+      was.
+  - **Deadline:** the promise's own `due_at` when set; otherwise its creation
+    time plus `RESOLVE_PROMISE_OVERDUE_DAYS`. That is a new `Settings` field,
+    default 3, 1–365, read like the other `RESOLVE_` settings.
+  - **Days since promise:** whole days since the promise was created.
+  - **Suggested refund:** the promise minus the larger of PayPal-confirmed and
+    locally recorded refunds, minus pending refunds. It is never above what is
+    left of the capture and never below zero.
+    `ledger_ahead_of_provider` is true when local records exceed the
+    PayPal-confirmed amount.
+- `backend/app/promise_health_routes.py` (new), registered in `main.py` before
+  the resolution router so the path isn't read as a case ID:
+  - `GET /resolution-cases/{case_id}/promise-health`: every assessed promise
+    on one case.
+  - `GET /resolution-cases/promise-health?limit=` (1–200, default 50): the
+    merchant's `at_risk` and `broken` promises, sorted by remaining amount and
+    then by days. It returns `total` and `cases_checked`.
+  - Both are read-only and scoped to the merchant.
+- `frontend/app/api/resolve/[...path]/route.ts`: both paths added to `GET`
+  only.
+- `frontend/components/promise-health.tsx` (new), mounted in the connected
+  workspace (not the demo) above the investigation panel. It shows one card
+  per promise, for example "Promised $30.00 · Refunded $17.50 · $12.50 at risk
+  · 4 days", with a status badge, the deadline, pending money, and a warning
+  when local records are ahead of PayPal.
+- **Refund button:** "Refund remaining $X" opens the existing refund review
+  (`RefundForm`) with that amount pre-filled.
+  - The workspace uses the suggestion only if it is at or below the current
+    reconciliation's `recommended_refund_amount`; otherwise the form keeps the
+    recommended amount.
+  - The button is disabled with the reason when review isn't available: an
+    approval already exists, or the evidence isn't ready.
+  - The merchant still writes a note, approves and submits separately.
+    `RefundForm` gained an optional `initial` amount.
+
+**Reason and decision IDs:** DEC-083.
+
+**Compatibility:** additive API and setting; no migration. OpenAPI contract
+regenerated (+289 lines).
+
+**Validation actually performed:**
+
+- `uv run python -m pytest -q tests/test_promise_health.py`: 16 passed. The
+  PayPal refunds in these tests are simulated through the store's own
+  `_record_provider_refund`, with synthetic data and no network. They cover:
+  - every classification rule and the suggestion limits;
+  - the environment setting;
+  - kept, partial before the deadline, at risk 4 days after with a 3-day
+    threshold (still partial with 5 days), and broken past `due_at`;
+  - over-refund: with $90 recorded outside PayPal confirmation, only $10 is
+    suggested and a $100 approval is refused with 409;
+  - on a case ready for approval, the suggestion equals the recommended $80:
+    $80.01 is refused with 409 and $80.00 is accepted;
+  - unaccepted, unlinked and unknown cases;
+  - merchant list order and filter.
+- Full backend: `uv run python -m pytest -q`: 412 passed, 60 skipped (before
+  the ruff autofix; the new file was re-run after it: 16 passed).
+  `uvx ruff check` on the new files: clean after `--fix`.
+- `npm run check`: passed.
+- `npx playwright test tests/promise-health.spec.ts`: 2 passed.
+  - **Real proxy and fixture backend:** the card reads "Promised $30.00 ·
+    Refunded $0.00 · $30.00 at risk · 0 days", with the button disabled. The
+    merchant list returns 200, and a POST on the path returns the proxy's 404.
+  - **Mocked part:** the health response and `paypal_history_current` are
+    mocked in the browser, because the fixture has no PayPal history. In it,
+    the pre-fill of $12.50 works, $45.00 falls back to the $30.00 cap, and no
+    approval or execution request is sent.
+- Full Playwright suite: 14 passed, 5 skipped, 3 failed during a run in which
+  the machine slept (1.7 h, `ERR_NETWORK_IO_SUSPENDED`). Re-run on its own:
+  `orders` and both `promise-extraction` tests passed. `investigations.spec.ts`
+  still fails its 390px width check (410), and it also fails with all of these
+  frontend changes stashed, so the failure was already there (the top bar,
+  fixed on `ui-revamp` in CHG-045).
+
+**Known limitations and follow-up:**
+
+- The merchant list is computed on request across every linked case, with no
+  stored index. That is fine at fixture scale but should be measured on large
+  merchants.
+- There is no merchant-wide UI yet; the endpoint is reachable through the
+  proxy.
+- Only refund promises are checked.
+- Days count from the promise's first creation, not its latest revision.
+
+### CHG-048 - Missing-before-refund reasons, a fact-guarded next-step explanation, and time to verified resolution
+
+**Date:** 10 November 2026 (Asia/Calcutta). Branch `feat/ai-part`.
+
+**Objective:** tell the merchant what is missing before a refund, and explain
+the next action in one sentence. Missing items and the default summary are
+code. The optional AI wording is checked against the facts it was given. Also
+measure time to verified resolution on synthetic cases.
+
+**Files and resulting behavior:**
+
+- `backend/app/next_action.py` (new):
+  - **`collect()`** builds message-free `CaseFacts` from the workspace view
+    and `ResolveStore._reconcile`: payment linked, captured and agreed
+    amounts, agreement and reconciliation status, recommended refund, and per
+    refund promise the promised, PayPal-confirmed, pending and remaining
+    amounts, due date, days since the promise, and prerequisites by kind with
+    their done flag.
+  - **Missing-before-refund codes**, each with short text:
+    - `no_linked_payment`
+    - `no_refund_promise`
+    - `no_amount` (no agreed amount on the payment case)
+    - `agreement_not_accepted`
+    - `no_deadline`
+    - `unmet_condition`: an unconfirmed prerequisite such as "The return is
+      not confirmed yet.", or reconciliation `awaiting_condition`
+    - `pending_refund_unconfirmed`: a pending refund, or local refund records
+      ahead of PayPal confirmation
+  - **`template()`** writes the code summary, for example "Promised $100.00
+    after return; $20.00 refunded; $80.00 remaining; return confirmed → review
+    a refund of $80.00." The next action comes from the reconciliation status.
+  - **`guard()`:** every currency amount, ISO or month-name date, and bare
+    number in the text must be a value in the facts. Claims such as
+    "approved", "authorized" or "has been paid", and anything over 400
+    characters or more than one line, are also rejected. Templates always pass.
+  - **`explain()`:**
+    - **Reused controls:** the `ExtractionSettings` switch (off by default),
+      Groq client, `RESOLVE_AI_DATA_POLICY` check and `MAX_COMPLETION_TOKENS`
+      (800), plus the `ExtractionUsage` cache and per-merchant daily budget.
+      The cache key covers the model, prompt version and facts.
+    - **What the model sees:** facts JSON only. Promise wording, source notes,
+      chat messages and IDs are not sent.
+    - **Fallback:** a guard violation, invalid JSON, provider failure or any
+      skip returns the template with `fallback_reason` and the violations.
+    - **Label:** accepted text is labelled "AI explanation – verify before
+      acting".
+    - **Usage:** every call is recorded in `/ai/usage`.
+    - **Advisory only:** the result carries `authorizes: "nothing"`. Nothing
+      is written, approved or submitted.
+- **Routes:**
+  - `GET /resolution-cases/{id}/next-action` (code only, in
+    `promise_health_routes.py`).
+  - `POST /resolution-cases/{id}/ai/explain-next-action` (in `ai_routes.py`,
+    same dependencies as extraction).
+- `backend/app/resolution_metrics.py` (new):
+  - **Time to verified resolution:** from the first `promise_recorded` event
+    to the first `paypal.refund_verified` timeline entry at which the latest
+    status per refund ID, counting COMPLETED only, covers the promised amount.
+    Merchant-recorded refunds don't count.
+  - **Statistics:** nearest-rank p90 and the median.
+- `backend/evals/run_resolution_eval.py` (new) builds 40 **synthetic** cases
+  through the real API on a temporary SQLite database.
+  - **How the cases are made:** each case has a seeded amount and scenario.
+    PayPal refunds are simulated with the store's own recorder, and the event
+    and verification timestamps are set to seeded delays. The metric is then
+    read back from the timeline API.
+  - **Results:** `backend/evals/results/resolution_time_2026-11-10.{json,md}`.
+    Seed 7, 40 cases, 24 resolved: median 86.49 h, p90 124.47 h. Partial-only
+    and no-refund cases are never resolved, as designed. These numbers
+    describe the generator, not real merchants.
+- **Frontend:**
+  - **Proxy:** allows `GET .../next-action` and
+    `POST .../ai/explain-next-action`.
+  - **Panel:** `PromiseHealthPanel` adds "Next step" (the code summary), an
+    "Explain with AI" button, and a "Missing before refund" list.
+  - **AI text in the panel:** it shows with the label badge. When the
+    template is used, the panel says why ("AI explanation not used: ...").
+  - **Reloads:** an explanation stays visible while the code summary it was
+    written for is unchanged.
+
+**Reason and decision IDs:** DEC-084.
+
+**Compatibility:** additive routes. No schema or setting change; the AI uses
+the existing extraction settings. OpenAPI regenerated (+431 lines).
+
+**Validation actually performed:**
+
+- `uv run python -m pytest -q tests/test_next_action.py`: 27 passed. All data
+  is synthetic, with a local fake model and simulated PayPal refunds. The
+  tests cover:
+  - every missing code;
+  - the example summary after a confirmed return and a $20 refund;
+  - the fact guard, which accepts facts in other formats and rejects an
+    invented amount, "85 dollars", an invented named or ISO date, a bare
+    "7 days", and "approved";
+  - an invented $90.00 from the model, which gives the template with reason
+    `fact_guard`;
+  - accepted text that is labelled and cached (second call 0 tokens, no
+    model call), with the payload free of promise wording, notes and the
+    case ID;
+  - each skip and failure, which gives the template;
+  - the route through the dependencies (an invented $1,000.00 gives the
+    template, and the call is recorded in `/ai/usage`), and the default-off
+    route;
+  - the metric, percentiles, and an eval run checked against its own seeded
+    plan.
+- **Mutation check:** replacing the guard call with an empty list made the
+  two fallback tests fail. The code was restored and the tests pass again.
+- The eval was re-run after the ruff fixes: the JSON was byte-identical.
+- `npm run check`: passed. `npx playwright test tests/promise-health.spec.ts`:
+  3 passed.
+  - **Real proxy:** the fixture case shows "no due date" and "return is not
+    confirmed yet", and its summary. "Explain with AI" falls back with
+    "AI is turned off on this server", and a POST to `next-action` returns 404.
+  - **Mocked AI response:** the label is shown, and there is no approval,
+    execution or promise POST.
+- **Not done:** no live Groq call was made for this feature.
+- **Full backend suite:** `uv run python -m pytest -q`: 439 passed, 60
+  skipped. It took 84 min of wall time on this machine; the run was slow,
+  not failing.
+- **Race found by the full Playwright suite:** the first full run failed the
+  real-proxy promise-check test.
+  - **Cause:** when the case's reconciliation finished loading, the panel
+    reloaded and cleared an explanation the merchant had just requested.
+  - **Fix:** an explanation is now kept with the code summary it was
+    written for, and stays while that summary is unchanged.
+  - **Test:** it holds reconciliation until after the click. With the old
+    clearing restored, it fails after the reload; with the fix, it passes.
+- **Full Playwright suite after the fix:** 17 passed, 5 skipped, 1 failed.
+  The failure is `investigations.spec.ts` at the 390px width check (410). It
+  also fails without these changes (CHG-047); it is the top-bar overflow
+  fixed on `ui-revamp`.
+
+**Known limitations and follow-up:**
+
+- The guard checks values, not meaning: a sentence can reuse correct numbers
+  in the wrong roles. That is why the label says to verify, and why the code
+  summary stays visible.
+- Facts and the summary describe the first refund promise when there are
+  several.
+- Time to verified resolution is only measured on synthetic data so far.
+
+### CHG-049 - Structured workspace layout with the existing colours
+
+**Date:** 10 November 2026 (Asia/Calcutta). Branch `feat/ai-part`. Frontend only;
+no backend or API change.
+
+**Objective:** make the merchant workspace easier to scan without changing its
+colours. That means one spacing scale, one type scale, clear case areas,
+consistent cards and status pills, and clear empty, loading and disabled
+states. It also fixes the 390px top-bar overflow.
+
+**Files and resulting behavior:**
+
+- `frontend/app/globals.css`: a "Layout system" block at the end.
+  - **Scales:**
+    - Spacing tokens `--sp-1` to `--sp-6` (4–32px).
+    - Type tokens `--fs-xs` to `--fs-xl` (11–26px).
+    - One `--radius`.
+  - **Smaller headings:** page 26px, case 20px, cards 15px.
+  - **Colours:** every colour in the block is an existing token (`--ink`,
+    `--muted`, `--line`, `--soft-line`, `--canvas`, `--white`, `--amber`,
+    `--green`, `--green-soft`, `--shadow`); a grep of the block finds no
+    colour literal.
+  - **Overview grid:** `.case-overview` with three named areas, Case summary,
+    Promises & AI and Timeline. The timeline sits beside promises when the
+    case panel is at least 900px wide (container query) and below it
+    otherwise.
+  - **AI cards:** `.ai-card` is one card shape for Promise suggestions,
+    Promise check, Missing before refund and Next step. The automatic
+    investigation panel keeps its markup and only gets spacing and type.
+  - **Money:** `.money-rows` shows right-aligned label/value rows. Amount
+    values and money tiles are right-aligned too.
+  - **Status pills:** one `.badge` shape; pills without a dot element get
+    one through `::before`.
+  - **States:** `.panel-state` is the shared empty or loading block (dashed,
+    muted; italic when it's a status). A disabled refund button shows its
+    reason in `--amber`.
+  - **390px top bar:** below 520px the Settings, Sign out and Connect buttons
+    become icon-only, and their labels stay in the accessibility tree through
+    a clipped span. The skip link is clipped until it's focused.
+  - **Collapsed sidebar:** the "Orders" label is now hidden like the other
+    rail labels, and the next-action card wraps properly on phones.
+- `frontend/components/case-desk.tsx`:
+  - **Areas:** the overview tab renders the three areas.
+  - **Timeline area:** `RecentActivity` lists the six latest loaded events
+    (title, source, time) with "See all events", which opens the existing
+    evidence timeline tab. Its loading, empty and error states are explicit.
+  - **Shared builder:** event building moved into `caseEvents()`, used by both
+    the area and the tab. `case.created` is labelled "Payment case opened".
+  - **AI slot:** a new optional `assistant` prop renders the AI panels inside
+    Promises & AI.
+- `frontend/components/workspace.tsx`: the three merchant panels are passed to
+  `CaseDesk` as `assistant`, in the order Suggestions, Promise check
+  (including Missing before refund and Next step), then Automatic
+  investigation. They used to be stacked below the desk.
+  - **Behaviour change:** they now show on the Overview tab only, instead of
+    under every tab.
+- `frontend/components/promise-health.tsx`: the same "Promise check" region
+  now holds three cards, in this order: Promise check, Missing before refund
+  (with an open-count pill, or "Nothing is missing before a refund.") and
+  Next step (with the AI label shown as a pill). Money moved from the
+  one-line summary into right-aligned rows (Promised, Refunded, Pending with
+  PayPal, At risk, Days since promise). The text, reasons and buttons are
+  unchanged.
+- `frontend/components/promise-extraction.tsx`:
+  - **Card shape:** the panel is now a card with an h3 heading, and the
+    proposal titles are h4.
+  - **New "before" state:** "No suggestions yet. Extract to read the stored
+    conversation." While a request is running it reads "Reading the stored
+    conversation…".
+  - **Amounts:** the amount is right-aligned.
+- `frontend/tests/promise-health.spec.ts`: two assertions now read the money
+  rows instead of the removed one-line summary. No other test changed.
+
+**Reason and decision IDs:** DEC-085.
+
+**Validation actually performed:**
+
+- `npm run check`: passed. A grep of the new CSS block finds no colour
+  literals.
+- **Screenshots:** before and after at 1280, 768 and 390px, workspace inbox
+  and case, with a scratch Playwright script against the isolated fixture
+  backend. The AI suggestions are a browser-level mock (synthetic). The
+  connected page's `scrollWidth` at 390px went from 410 to 390. The
+  screenshots aren't committed.
+- **Full Playwright suite** (`PLAYWRIGHT_CHROMIUM_EXECUTABLE=<system Chrome> npx
+playwright test`): 18 passed, 5 skipped, 0 failed.
+  `investigations.spec.ts`, which had failed its 390px width check (410) in
+  CHG-047 and CHG-048, now passes.
+- **Backend:** not changed, so not re-run.
+
+**Known limitations and follow-up:**
+
+- Older rules earlier in `globals.css` still carry their own pixel values. The
+  new block overrides them for the workspace instead of rewriting the file.
+- The customer portal, orders and settings pages weren't restructured.
+- The colours `badge-broken` and `health-*` added in CHG-047 remain as they
+  were.
+
+### CHG-050 - One next step, one money summary, collapsed details, inbox risk
+
+**Date:** 10 November 2026 (Asia/Calcutta). Branch `feat/ai-part`. Frontend only;
+no backend or API change; existing colour tokens only (a grep of the new CSS
+block finds no colour literal).
+
+**Objective:** make the case page answer "what do I do now?" first, show money
+once, collapse finished and diagnostic detail, and surface broken promises in
+the inbox.
+
+**Files and resulting behavior:**
+
+- `frontend/components/case-checks.tsx` (new): `useCaseChecks()` loads
+  `GET .../promise-health` and `GET .../next-action` once per case and
+  reconciliation fingerprint, and runs `POST .../ai/explain-next-action` on
+  request. It is shared by the Next step block, the money summary and the
+  promise check. An explanation is kept per case and per code summary, which
+  preserves the CHG-048 race fix. The file also holds `dueLabel()`, which
+  returns "Due Nov 13" or "Overdue since Nov 13" plus the rule for the
+  tooltip (agreed due date, or the N-day window).
+- `frontend/components/case-desk.tsx`:
+  - **Next step block:** one block at the top of Case summary (region
+    "Next step") replaces the Next action card and the AI Next step card. It
+    shows the action title, the reason (the existing reconciliation sentence)
+    and the existing buttons, with only one of them primary.
+    - **Cases without a linked payment:** "Link payment record".
+    - **Linked payment, no refund promise:** "Record promise".
+    - **Merchant mode extras:** the "Missing before refund" checklist ("Nothing
+      missing ✓" when empty), the code summary and "Explain with AI".
+    - **Pre-filled review:** "Review refund" passes the promise-health
+      suggestion to the existing review. The workspace still caps it at the
+      backend's recommended amount; this replaces the separate "Refund
+      remaining $X" button.
+  - **Money summary:** the only amounts on the overview, using the same labels
+    Payment, Promised, Refunded and Remaining (`.money-confirmed` and
+    `.money-outstanding` kept). It shows the worst promise status pill, the
+    due label with its tooltip, days since the promise, and the provider chip.
+    It replaces the Refund reconciliation tiles.
+  - **Timeline:** in both the overview list and the full tab, the actor is
+    shown only when it changes from the event above.
+- `frontend/components/promise-health.tsx`: now `PromiseCheckList`, one line
+  per promise (text, due label, days, status pill), with no amounts and a note
+  pointing to the money summary. A kept promise is a single line.
+- `frontend/components/workspace.tsx`:
+  - **AI area:** the AI slot holds the suggestions and a collapsed
+    "Automatic investigation details" `<details>`.
+  - **Inbox risk:** in merchant mode the workspace reads
+    `GET /resolution-cases/promise-health?limit=200` on inbox and detail
+    loads. Each flagged row gets an At risk or Broken pill, an Overdue pill,
+    and "$X at risk" (the sum of remaining amounts on that case).
+  - **"At risk" filter (merchant only):** it lists the cases from that
+    endpoint, loading each with the existing summary calls and searching on
+    the client.
+  - `PaymentActions` gained `captured` and an optional pre-fill on `onReview`.
+- `frontend/components/promise-extraction.tsx`:
+  - **Collapsed by default:** results show as "N suggestions · Review" until
+    opened (stays open for later runs).
+  - **Message names:** the panel reads the existing `customer-messages`
+    thread and names messages "Merchant · Nov 7, 9:24" (UTC). IDs not in the
+    thread show as "Merchant message" or "Buyer message", without the ID.
+    Restatements read "Also confirmed in N later messages".
+  - The saved promise draft is unchanged.
+- `frontend/components/investigation-review.tsx` (display text only):
+  - **Plain words:** internal status, state, next-step, missing-evidence and
+    failure codes are replaced. For example "missing · revision 3 · blocked"
+    becomes "Evidence missing · needs your review", and "inference disabled"
+    becomes "Automatic analysis is turned off".
+  - **Removed from display:** the reviewer ID is no longer shown.
+  - **Unchanged:** the actions and the "Review: … No payment authorized."
+    status.
+- **Sentence case:** all `.eyebrow` labels across the components, so only the
+  three area titles stay uppercase (by CSS).
+- `frontend/app/globals.css`: grey disabled buttons using `--soft-line`,
+  `--line` and `--muted`, plus styles for the Next step block, checklist,
+  money status, check rows, suggestion toggle, details card and inbox risk
+  amount.
+- **Tests:**
+  - `promise-health.spec.ts`: asserts the money summary, the Next step region
+    and the checklist, and pre-fills through "Review refund".
+  - `promise-extraction.spec.ts`: opens "Review", and checks the new message
+    names and the restatement text.
+  - `investigations.spec.ts`: opens the details and checks the plain
+    "automatic analysis is turned off" wording.
+
+**Reason and decision IDs:** DEC-086.
+
+**Validation actually performed:**
+
+- `npm run check`: passed.
+- The three changed spec files: 6 passed. After the first run, one assertion
+  still expected "buyer message m1" in the flag list; it was updated to the
+  new label.
+- **Screenshots:** before (`aaffaee`) and after at 1280, 768 and 390px of the
+  workspace inbox and case, with a scratch Playwright script against the
+  isolated fixture backend. The AI suggestions are a browser-level mock
+  (synthetic). `scrollWidth` equals the viewport at every width, and the
+  390px case page went from 3,613 to about 2,560 px tall. The screenshots
+  aren't committed.
+- **Full Playwright suite** (`PLAYWRIGHT_CHROMIUM_EXECUTABLE=<system Chrome> npx
+playwright test`): 18 passed, 5 skipped, 0 failed.
+- **Backend:** not changed, so not re-run.
+
+**Known limitations and follow-up:**
+
+- Panels show on the Overview tab only (as since CHG-049).
+- The "At risk" filter lists up to 200 flagged promises and has no paging.
+- Message times are shown in UTC without a suffix, as requested; the full
+  timestamp is not in a tooltip.
+- The buyer receipt and customer portal keep their buyer-facing wording
+  ("Refund agreed", "Still owed").
+- Finding lines in the investigation panel still show evidence IDs.
+
+### CHG-051 - Settings inside the workspace shell; local message times
+
+**Date:** 10 November 2026 (Asia/Calcutta). Branch `feat/ai-part`. Frontend only;
+existing colour tokens only (a grep of the new CSS block finds no colour literal).
+
+**Objective:** make `/workspace/settings` look and behave like the rest of the
+workspace, and show message times in the viewer's own time zone.
+
+**Files and resulting behavior:**
+
+- `frontend/components/workspace-shell.tsx` (new): `WorkspaceShell` uses the
+  workspace's own markup and classes.
+  - **Sidebar:** Case inbox, Orders and Settings, with `aria-current` on the
+    active page.
+  - **Top bar:** the breadcrumb "Workspace > Settings", the mode chip, the
+    Settings link (`aria-label="Account settings"`), the only Sign out, and
+    the avatar.
+  - **Mobile:** the mobile brand and mobile nav, and the same icon-only top
+    bar at 390px.
+  - **Sign out:** calls the existing `DELETE /api/session`, then goes to
+    `/login`.
+- `frontend/components/merchant-login.tsx` (`MerchantSettings`):
+  - **Layout:** renders inside the shell, with the workspace intro header
+    (small eyebrow "Merchant workspace", h1 "Account settings", subtitle).
+  - **Cards:** Account, PayPal sign-in and SDK keys are separate
+    `section-card`s with the existing pills:
+    - Account: "Signed in".
+    - PayPal sign-in: "Not configured", "Ready to link" or "Linked", plus
+      "Sandbox".
+    - SDK keys: "Not configured" or "N active".
+  - **Account details:** shown as right-aligned label/value rows.
+  - **Removed:** the old divider borders and the duplicate in-page Sign out.
+  - **Unchanged:** the PayPal link and unlink actions, the confirm step and
+    the notices.
+- `frontend/components/merchant-sdk-keys.tsx`:
+  - **Card shape:** card header with the pill; buttons use the shared
+    `Button`, and loading and empty states use `panel-state`.
+  - **Copy button:** the code example has a header row with "Copy"
+    (`aria-label="Copy example code"`, success notice "Example code
+    copied."), placed above the snippet so it never covers code on phones.
+  - **Unchanged:** the setup-copy, hide, revoke and confirm flows and their
+    labels.
+- `frontend/components/workspace.tsx`: the main workspace sidebar also links
+  to Settings (merchant mode), so all three pages share the same navigation.
+- **Message times in the viewer's local time:**
+  - `frontend/lib/domain.ts`: `localTimeText()` uses the viewer's time zone
+    and locale, for example "Nov 7, 9:24 AM".
+  - `frontend/components/conversation.tsx`: message times use it, with
+    `suppressHydrationWarning` and the UTC time in `title`.
+  - `frontend/components/promise-extraction.tsx`: the "Merchant · …" message
+    names use it too.
+  - Other timestamps (for example "Session ends") stay in UTC.
+- `frontend/app/globals.css`: settings card, facts, code header and SDK
+  setup styles.
+  - **Overflow fix:** `min-width: 0` on the grid children. The long code
+    line had made the old settings page 517px wide on a 390px screen; it now
+    scrolls inside the code box.
+- `frontend/tests/settings.spec.ts` (new):
+  - **Shell checks:** the breadcrumb, Settings `aria-current` in the sidebar,
+    exactly one Sign out, three separate cards with their pills, and the
+    copy button (clipboard contents read back). The page is 390px wide at
+    390px, and Sign out goes to `/login`.
+  - **Local times:** the customer demo's message time matches the browser's
+    formatting in Asia/Kolkata and America/New_York, without "UTC".
+- No existing test needed changes: `sdk-keys.spec.ts` and the settings steps
+  in `site-auth.spec.ts` use the same labels.
+
+**Reason and decision IDs:** DEC-087.
+
+**Validation actually performed:**
+
+- `npm run check`: passed.
+- `npx playwright test tests/settings.spec.ts tests/sdk-keys.spec.ts
+tests/site-auth.spec.ts`: passed (one PayPal test skipped as usual). One
+  first-run failure was in the new test itself: the sidebar is an `<aside>`
+  (role complementary), not a navigation landmark.
+- **Screenshots:** settings at 1280 and 390px, before (`40db217`, taken with
+  the changes stashed) and after, with a scratch Playwright script against
+  the isolated fixture backend. They aren't committed.
+- **Full Playwright suite** (`PLAYWRIGHT_CHROMIUM_EXECUTABLE=<system Chrome> npx
+playwright test`): 20 passed, 5 skipped, 0 failed.
+- **Backend:** not changed, so not re-run.
+
+**Known limitations and follow-up:**
+
+- The Orders page still renders its own copy of the shell and could move to
+  `WorkspaceShell`.
+- The shell's "Sandbox connection" note is static text, as in the workspace.
+- Server-rendered message times can differ from the browser's for a moment
+  until hydration replaces them; mismatch warnings are suppressed on those
+  elements.
+
+### CHG-052 - Next step card: action titles, ordered steps, no repeated summary
+
+**Date:** 10 November 2026 (Asia/Calcutta). Branch `feat/ai-part`. Frontend only;
+existing colour tokens only.
+
+**Objective:** the Next step card showed a status as its title ("Payment
+record linked"). It also repeated the checklist in a summary sentence that
+could contradict it ("record the agreed refund amount on the payment case"
+next to "Record a refund promise"), and "Explain with AI" looked like plain
+text.
+
+**Files and resulting behavior (`frontend/components/case-desk.tsx`,
+`frontend/app/globals.css`):**
+
+- **Titles are actions:** "Link the payment record", "Add the agreed refund
+  amount", "Record the refund promise", "Submit the approved $X refund",
+  "Wait for the refund outcome". Each has one short reason line underneath.
+  - **Kept as they were:** "Check before approving", "Review $X refund",
+    "Review the evidence" and "Refund promise fulfilled"; tests and the done
+    state rely on them.
+- **Ordered steps:** missing items are numbered in a fixed order: link
+  payment, agreed amount, agreement accepted, refund promise, unmet
+  condition, due date, pending refund.
+  - **Instruction wording:** codes with a generic backend sentence are
+    rewritten as instructions ("Add the agreed refund amount to the linked
+    payment case.", "Record the refund promise.", "Add a due date to the
+    refund promise."). Specific backend texts such as "The return is not
+    confirmed yet." are kept.
+  - **When both are needed:** the agreed amount and the refund promise
+    appear as two ordered steps, and the title follows the first.
+  - **No button for the agreed amount:** this page has no control for it
+    (it is set on the payment case), so that state shows "Record promise" as
+    a secondary button and no primary button.
+- **Summary only with facts:** the code summary and "Explain with AI"
+  appear only once a refund promise has facts (amounts or progress). When
+  nothing is recorded, the checklist alone is shown.
+- **AI button:** "Explain with AI" is a secondary button, with the advisory
+  note under it in small text.
+- **One column:** icon, title and reason, the action buttons, the numbered
+  checklist, then the summary and AI explanation, each section separated by
+  a rule.
+
+**Tests:** `frontend/tests/promise-health.spec.ts`:
+
+- **Updated:** the checklist is now ordered ("The return is not confirmed
+  yet.", then "Add a due date to the refund promise."), and the checks
+  confirm "Explain with AI" is a secondary button and the advisory note is
+  shown.
+- **New:** a linked payment with an agreed amount shows "Record the refund
+  promise", a primary "Record promise", a single step and no summary or AI
+  button (and never the `{recommended}` placeholder). Without an agreed
+  amount it shows "Add the agreed refund amount", two ordered steps and no
+  primary button.
+
+**Reason and decision IDs:** DEC-088.
+
+**Validation actually performed:**
+
+- `npm run check`: passed. `npx playwright test tests/promise-health.spec.ts`:
+  4 passed.
+- **Screenshots:** before (`4652c68`) and after, at 1280 and 390px, of the
+  linked-without-agreed-amount, linked-with-agreed-amount and at-risk fixture
+  states, with a scratch Playwright script. The cases were created through
+  the real proxy on the isolated fixture backend. The first 390px at-risk
+  "after" shot was taken while loading; the script now waits for the loaded
+  state. The screenshots aren't committed.
+- **Full Playwright suite** (`PLAYWRIGHT_CHROMIUM_EXECUTABLE=<system Chrome> npx
+playwright test`): 21 passed, 5 skipped, 0 failed.
+- **Backend:** not changed, so not re-run.
+
+**Known limitations and follow-up:**
+
+- **Backend bug found:** with a linked payment that has an accepted agreed
+  amount and no refund promise, the CHG-048 code summary prints a raw
+  `{recommended}` placeholder. `next_action.template()` doesn't format the
+  no-refund-promise branch. The UI no longer shows that summary, but the API
+  still returns it; the fix belongs in a backend change.
+- No UI sets the payment case's agreed amount, although
+  `PUT /cases/{id}/commitment` exists; adding it needs a proxy entry and a
+  form.
 
 ## Decision register
 
@@ -3552,6 +4266,76 @@ existing validation and is confirmed by a person, and the promise route stays
 the only write path. Extending the form with an optional draft avoids a second
 form that could drift from it.
 
+### DEC-081 - Mask for the provider, verify against the original, and label rather than block
+
+The provider needs the words of a commitment, not a buyer's card, UPI or
+bank details, so those are masked in what is sent. Evidence must stay exact,
+so quote and amount checks run on the original messages through a span map,
+and the returned quote is always the merchant's real text. Injection rules
+label suspicious buyer text for the merchant but do not block: blocking on a
+regex would skip real commitments when a buyer is merely angry, while the code
+validators already stop buyer text from becoming a promise (0/50 attacks
+succeeded in CHG-038).
+
+### DEC-083 - Detect broken promises from reconciled evidence, and only suggest refunds
+
+Promise health is computed in code from the values reconciliation already
+produces; no model judges it. The status depends only on confirmed refund
+versus promise, and on a deadline (the agreed due date, otherwise a
+configurable window), so the same evidence always gives the same answer.
+Within the window, an unpaid promise is `at_risk` rather than a fifth state, so
+it is visible early. The refund action only pre-fills the existing review. The
+amount is limited by the promise, by refunds already recorded or pending, by
+the capture and by the server's own approval cap, so the detector can never
+widen what may be refunded.
+
+### DEC-084 - AI may only reword facts the code already has
+
+The next step is decided by code from reconciliation. The model only rewords
+it, from structured facts and never from messages. Its text is used only if
+every amount, date and number in it appears in those facts and it claims no
+approval; otherwise the code template is shown. It shares extraction's off
+switch, data policy, cache, token cap and daily budget, so it adds no new
+provider path, and its output can never authorize a refund.
+
+### DEC-085 - Restructure with layout tokens, not new colours
+
+Structure comes from spacing, type size, grouping and alignment, so the
+existing palette stays exactly as it is. The AI and check panels sit with the
+promises they act on, inside the case overview, rather than below the whole
+case, and they share one card shape so suggestions, checks and the
+recommendation read as one assistant area. Money is right-aligned in
+label/value rows so amounts can be compared at a glance; the one-line summary
+it replaces carried the same values.
+
+### DEC-086 - One answer to "what now?", one place for money
+
+The case overview shows a single next step with one primary action, and lists
+what is missing as that step's checklist. Amounts appear once, in a money
+summary with fixed labels; the promise check, inbox and AI explanation point
+to it instead of repeating figures in other formats. Detail that is finished
+or diagnostic (kept promises, empty checklists, the automatic investigation,
+unopened suggestions) is collapsed, so the page stays short without hiding
+anything a test or merchant needs.
+
+### DEC-087 - One workspace frame for every merchant page
+
+Settings is part of the merchant workspace, so it uses the same frame,
+header and card patterns instead of the public-site look. One shared shell
+keeps navigation and sign-out in one place; the page shows Sign out only in
+the top bar. Message times follow the viewer's time zone because they
+describe conversations people read in their own day; audit and
+session times stay in UTC.
+
+### DEC-088 - The next step names an action and lists steps once
+
+The card title is always the thing to do. What is missing is shown once, as
+numbered steps in the order they must happen, and the step list replaces
+any summary that would only restate it. Code summaries and AI wording appear
+only when they add amounts or progress the steps don't. When the first step
+cannot be done on this page, the card says where it happens instead of
+offering a primary button that skips it.
+
 ## Open work and boundaries
 
 1. Verify import (if needed), SSL connection, migration startup, and worker
@@ -3577,7 +4361,7 @@ form that could drift from it.
 ## Template for the next entry
 
 ```text
-### CHG-052 - Concrete change title
+### CHG-044 - Concrete change title
 Date:
 Objective:
 Files and resulting behavior:
@@ -3712,7 +4496,7 @@ policy. The guide links the exact official endpoint catalogs and API docs.
 **Final checks and corrections:**
 
 - From `backend`: `.venv/Scripts/python.exe scripts/isolated.py -m pytest -q
-  --tb=short -p no:cacheprovider` passed **292 tests**, with **59 opt-in skips**.
+--tb=short -p no:cacheprovider` passed **292 tests**, with **59 opt-in skips**.
   After adding the existing-history regression, the latest targeted
   `tests/test_investigations.py` passed **34 tests**. The final history-expiry
   approval rejection assertion passed separately on both databases.
@@ -3745,13 +4529,13 @@ policy. The guide links the exact official endpoint catalogs and API docs.
   to avoid the pre-existing eager global app's dotenv read. uv's default cache
   was denied, so validation used `.local/uv-cache` or the existing venv executable.
 - `npm run check` in `frontend` passed. `node --test
-  --experimental-test-isolation=none tests/investigations.gateway.mjs` passed
+--experimental-test-isolation=none tests/investigations.gateway.mjs` passed
   against the actual Next/FastAPI test services: session authentication, CSRF,
   private responses, advisory review, stale rejection, immutability across
   sessions and no refund approvals/executions. The in-process Next fallback
   switched compiler workers to threads in its disposable source copy only.
 - SDK `node --test --experimental-test-isolation=none
-  test/investigations.external.mjs` passed **2 integration tests** against its
+test/investigations.external.mjs` passed **2 integration tests** against its
   separate synthetic FastAPI fixture. **2 existing redirect/error/timeout tests**
   also passed without child processes. The normal `npm test` integration runner
   was blocked by this host's Node `spawn EPERM`; it was not claimed as passing.
@@ -3967,17 +4751,17 @@ Verification for app passwords. No attempt to authenticate or send was made.
 **Validation actually performed:**
 
 - `.venv/Scripts/python.exe scripts/isolated.py -m pytest
-  tests/test_investigations.py -q --tb=short -p no:cacheprovider`: **40 passed**
+tests/test_investigations.py -q --tb=short -p no:cacheprovider`: **40 passed**
   on disposable SQLite and loopback HTTP/MockTransport. An earlier intermediate
   free-default run passed 38 tests before the stronger-model clarification.
 - After explicitly covering Google AI Studio rejection, the targeted
   `-k budget_openrouter_models` run passed **6 tests**, 34 deselected. The
   pre-existing HTTPX/Starlette deprecation warning remains.
 - `.venv/Scripts/python.exe scripts/isolated.py
-  scripts/evaluate_investigations.py`: the final Gemini-default offline HTTP
+scripts/evaluate_investigations.py`: the final Gemini-default offline HTTP
   evaluator passed all 13 synthetic labels, all four pipeline scores 1.0 and
   all hard gates true. Report: `.local/ai-evaluation/
-  run-619c46a2e1f6406f98d3694bbe4ad2b6/report.json`. The earlier free-default
+run-619c46a2e1f6406f98d3694bbe4ad2b6/report.json`. The earlier free-default
   offline run also passed. These measure pipeline behavior with stand-ins,
   not live model quality, availability, latency or cost.
 - `uv run python scripts/isolated.py scripts/export_openapi.py` from `backend`
@@ -4039,7 +4823,7 @@ metadata, not account quota, real billing or inference quality.
 **Validation actually performed:**
 
 - From `backend`, `.venv/Scripts/python.exe scripts/isolated.py -m pytest
-  tests/test_investigations.py -q --tb=short -p no:cacheprovider`: **38 passed**,
+tests/test_investigations.py -q --tb=short -p no:cacheprovider`: **38 passed**,
   including default/optional model payloads, the 0.74 completion-price filter,
   provider identity, strict schema/privacy controls and rejection of Gemini and
   Sonnet. Existing HTTPX/Starlette deprecation warning remains. Two now-removed
@@ -4060,8 +4844,7 @@ and restart the applicable processes before enabling inference. A future price
 or capacity change can block routing rather than exceed the token-price filter.
 Real provider availability, billing enforcement and model quality remain
 unverified; no account-backed AI request, email, payment, commit, push or
- deployment was performed. Existing disabled feature/worker settings remain.
-
+deployment was performed. Existing disabled feature/worker settings remain.
 
 ### CHG-048 - Build eight merchant operations workflows with scoped identities and evidence
 
@@ -4181,7 +4964,7 @@ recorded-ledger scope rather than treating them as verified provider outcomes.
 **Validation actually performed (synthetic unless explicitly stated):**
 
 - From backend, `.venv/Scripts/python.exe scripts/isolated.py -m pytest -q
-  --tb=short -p no:cacheprovider`: **379 passed, 60 skipped**. This was the full
+--tb=short -p no:cacheprovider`: **379 passed, 60 skipped**. This was the full
   suite before the final session-revocation race test and final worker/import
   refinements; opt-in PostgreSQL/provider scenarios are not implied by this run.
   An earlier full run exposed eleven old hardcoded schema-version expectations;
@@ -4198,11 +4981,11 @@ recorded-ledger scope rather than treating them as verified provider outcomes.
   these are not account-backed provider requests.
 - Fresh local PostgreSQL 18 on loopback 56440, disposable UTF8 database and random
   per-test schemas: isolated runner with `--postgres-operations --storage-postgres
-  -m pytest tests/test_platform_operations.py tests/test_postgres.py -k
-  "not contended_writer"`: **23 passed, 1 skipped, 1 deselected** before the final
+-m pytest tests/test_platform_operations.py tests/test_postgres.py -k
+"not contended_writer"`: **23 passed, 1 skipped, 1 deselected** before the final
   new race case. Final PostgreSQL operations suite: **15 passed, 1 skipped**.
   The separately run `-k contended_writer` test passed. The expanded `-k
-  sqlite_import` test passed with real owner session, offer, overdue alert and
+sqlite_import` test passed with real owner session, offer, overdue alert and
   reserved return rows copied from SQLite, in addition to its existing exact
   money/attachment/capability/sequence verification. Source bytes stayed intact;
   imported sessions/terms/returns remained usable. No owner database was used for
@@ -4211,10 +4994,10 @@ recorded-ledger scope rather than treating them as verified provider outcomes.
   merchant bounds. The core financial suites also passed within the full run;
   tests do not establish new consent or authorization to move real money.
 - `postman simulation run postman/simulations/merchant-operations/merchant-operations.sim.yaml
-  --proxy --proxy-port 7005 --no-history --lift
-  'backend\.venv\Scripts\python.exe backend\scripts\isolated.py --platform-postman
-  -m pytest backend/tests/test_platform_operations.py -k postman -q --tb=short
-  -p no:cacheprovider' --output ndjson`: final **1 passed, 15 deselected**,
+--proxy --proxy-port 7005 --no-history --lift
+'backend\.venv\Scripts\python.exe backend\scripts\isolated.py --platform-postman
+-m pytest backend/tests/test_platform_operations.py -k postman -q --tb=short
+-p no:cacheprovider' --output ndjson`: final **1 passed, 15 deselected**,
   **8 mocked requests, 0 pass-through**, both comment pages/author roles/repeat
   import and buyer privacy checked through real TLS interception. Initial use of
   forward-slash Windows executable spelling failed before application requests;
@@ -4263,7 +5046,6 @@ shipments/replacements are arranged externally; package exports contain private
 source metadata but no embedded raw files, and no dispute is submitted. No live
 provider check, email, new refund, deployment, commit or push was performed.
 
-
 **Final tooling/cleanup:** `postman status` passed last after the simulations:
 CLI 1.82.0, signed out, no initialized shared resources; no remote workspace was
 created or updated. Its optional skill-update/install notices did not block the
@@ -4273,7 +5055,6 @@ PostgreSQL cluster under `.local/pg-operations/data` was stopped cleanly with
 refusal on a redundant `createdb` attempt because the test server had deliberately
 stopped. This was cleanup, not a failed migration test. Existing local dotenv
 files remain ignored and no old migration SQL is in the diff.
-
 
 ### CHG-049 - Give SDK 0.6 an embedded order-support use case
 
@@ -4373,7 +5154,7 @@ requests are not legal commitments or authorization to move money.
 **Validation actually performed:**
 
 - `.venv/Scripts/python.exe scripts/isolated.py -m pytest -q --tb=short
-  -p no:cacheprovider` from backend: **384 passed, 60 opt-in skipped**. This full
+-p no:cacheprovider` from backend: **384 passed, 60 opt-in skipped**. This full
   regression includes existing local financial/condition/offer/shared-capture
   tests, aftercare submission/status and ordinary customer portal compatibility.
   The final merchant request projection was then checked by the targeted suite
@@ -4400,11 +5181,11 @@ requests are not legal commitments or authorization to move money.
   grant enforcement, source isolation, idempotent issues/conflict codes, portal
   conversation and general merchant access denial. Unknown extra input fields
   are not forwarded. Generation/build passed; `npm pack --pack-destination
-  ../../.local/artifacts --silent` created the local preview archive.
+../../.local/artifacts --silent` created the local preview archive.
 - Existing PayPal simulation, with `RESOLVE_RUN_CHECKOUT_STORE_SIMULATION=1`,
   `NODE_USE_ENV_PROXY=1` and loopback NO_PROXY: `postman simulation run
-  postman/simulations/paypal-read/paypal-read.sim.yaml --proxy --proxy-port 7006
-  --no-history --lift 'npm --prefix examples/checkout-store test' --output ndjson`:
+postman/simulations/paypal-read/paypal-read.sim.yaml --proxy --proxy-port 7006
+--no-history --lift 'npm --prefix examples/checkout-store test' --output ndjson`:
   **2 browser tests passed, 19 mocked requests, 0 pass-through**. The actual store
   captured one simulated order, detected an external USD 5 completed refund,
   submitted a damaged-item support report twice with one stored issue/message,
@@ -4453,7 +5234,6 @@ PayPal verification/execution remains Sandbox, with the existing explicit gates.
 No refund automation, email send, financial permission expansion, commit or push
 was performed. CHG-048's broader provider/onboarding limitations still apply.
 
-
 **Sample launcher completion:** `examples/checkout-store/scripts/local_sandbox.py`
 now explicitly grants its newly issued commerce key aftercare access for
 `field-brew-store` and records a local-launcher audit event. This keeps the
@@ -4464,7 +5244,6 @@ already exercised by the PostgreSQL/SDK/browser checks above. The sample README
 clarifies that its random-port isolated API needs a separately configured matching
 customer frontend/public origin for navigable portal links; the launcher does not
 silently repoint the owner's frontend. No provider request was made by this check.
-
 
 ### CHG-050 - Build merchant, buyer and SDK aftercare assurance
 
@@ -4580,10 +5359,10 @@ submission, deployment, commit or push is part of this change.
   same issue identity and one stored issue, plus receipt lookup; PostgreSQL
   callback rollback, concurrent deduplication and stale revision handling passed.
   Provider-backed opt-ins remain skipped. `npm pack --pack-destination
-  ../../.local/artifacts --silent` produced `resolve-paypal-sdk-0.7.0.tgz`.
+../../.local/artifacts --silent` produced `resolve-paypal-sdk-0.7.0.tgz`.
 - Existing owned PayPal simulation, `postman simulation run
-  postman/simulations/paypal-read/paypal-read.sim.yaml --proxy --proxy-port 7006
-  --no-history --lift 'npm --prefix examples/checkout-store test' --output ndjson`
+postman/simulations/paypal-read/paypal-read.sim.yaml --proxy --proxy-port 7006
+--no-history --lift 'npm --prefix examples/checkout-store test' --output ndjson`
   with the existing opt-in/proxy variables: **2 browser tests passed, 19 mocked
   requests, 0 pass-through**. New refund guidance, previous report and inactive
   policy cost message passed. The mock/provider contract was reused unchanged.
@@ -4605,7 +5384,6 @@ arrange labels externally and run the operations worker separately for periodic
 refresh. Production needs the app's own order authorization and durable request/
 outbox state, hosted origins, real provider accounts and account-backed checks.
 Local startup, final browser validation and cleanup are recorded below.
-
 
 **Final observed browser/startup/cleanup results:**
 
@@ -4634,7 +5412,6 @@ Local startup, final browser validation and cleanup are recorded below.
   out and no initialized shared resources. Existing local mocks were sufficient;
   no remote Postman workspace/resource was created. Optional plugin/skill-update
   notices were not required for the successful local simulation.
-
 
 ### CHG-051 - Reduce case-opening latency and make tab navigation responsive
 
@@ -4724,7 +5501,7 @@ frontend changes. Local source changes remain uncommitted; no agents were spawne
   was 3.340 cold / 1.478 / 1.473 warm. This measures network/transaction overhead,
   not whole-page latency, provider performance or a production load test.
 - Isolated full backend: `python scripts/isolated.py -m pytest -q --tb=short
-  -p no:cacheprovider`: **390 passed, 62 skipped** in 148.75 seconds. Separate
+-p no:cacheprovider`: **390 passed, 62 skipped** in 148.75 seconds. Separate
   authentication/operations checks: **50 passed, 2 skipped**. An early optimization
   failed the mid-authorization revocation test; write-time fresh checking was
   restored. An overly broad replacement briefly denied writes; the explicit

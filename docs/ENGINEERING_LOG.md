@@ -3093,6 +3093,308 @@ the existing extraction settings. OpenAPI regenerated (+431 lines).
   several.
 - Time to verified resolution is only measured on synthetic data so far.
 
+### CHG-049 - Structured workspace layout with the existing colours
+
+**Date:** 10 November 2026 (Asia/Calcutta). Branch `feat/ai-part`. Frontend only;
+no backend or API change.
+
+**Objective:** make the merchant workspace easier to scan without changing its
+colours. That means one spacing scale, one type scale, clear case areas,
+consistent cards and status pills, and clear empty, loading and disabled
+states. It also fixes the 390px top-bar overflow.
+
+**Files and resulting behavior:**
+
+- `frontend/app/globals.css`: a "Layout system" block at the end.
+  - **Scales:**
+    - Spacing tokens `--sp-1` to `--sp-6` (4–32px).
+    - Type tokens `--fs-xs` to `--fs-xl` (11–26px).
+    - One `--radius`.
+  - **Smaller headings:** page 26px, case 20px, cards 15px.
+  - **Colours:** every colour in the block is an existing token (`--ink`,
+    `--muted`, `--line`, `--soft-line`, `--canvas`, `--white`, `--amber`,
+    `--green`, `--green-soft`, `--shadow`); a grep of the block finds no
+    colour literal.
+  - **Overview grid:** `.case-overview` with three named areas, Case summary,
+    Promises & AI and Timeline. The timeline sits beside promises when the
+    case panel is at least 900px wide (container query) and below it
+    otherwise.
+  - **AI cards:** `.ai-card` is one card shape for Promise suggestions,
+    Promise check, Missing before refund and Next step. The automatic
+    investigation panel keeps its markup and only gets spacing and type.
+  - **Money:** `.money-rows` shows right-aligned label/value rows. Amount
+    values and money tiles are right-aligned too.
+  - **Status pills:** one `.badge` shape; pills without a dot element get
+    one through `::before`.
+  - **States:** `.panel-state` is the shared empty or loading block (dashed,
+    muted; italic when it's a status). A disabled refund button shows its
+    reason in `--amber`.
+  - **390px top bar:** below 520px the Settings, Sign out and Connect buttons
+    become icon-only, and their labels stay in the accessibility tree through
+    a clipped span. The skip link is clipped until it's focused.
+  - **Collapsed sidebar:** the "Orders" label is now hidden like the other
+    rail labels, and the next-action card wraps properly on phones.
+- `frontend/components/case-desk.tsx`:
+  - **Areas:** the overview tab renders the three areas.
+  - **Timeline area:** `RecentActivity` lists the six latest loaded events
+    (title, source, time) with "See all events", which opens the existing
+    evidence timeline tab. Its loading, empty and error states are explicit.
+  - **Shared builder:** event building moved into `caseEvents()`, used by both
+    the area and the tab. `case.created` is labelled "Payment case opened".
+  - **AI slot:** a new optional `assistant` prop renders the AI panels inside
+    Promises & AI.
+- `frontend/components/workspace.tsx`: the three merchant panels are passed to
+  `CaseDesk` as `assistant`, in the order Suggestions, Promise check
+  (including Missing before refund and Next step), then Automatic
+  investigation. They used to be stacked below the desk.
+  - **Behaviour change:** they now show on the Overview tab only, instead of
+    under every tab.
+- `frontend/components/promise-health.tsx`: the same "Promise check" region
+  now holds three cards, in this order: Promise check, Missing before refund
+  (with an open-count pill, or "Nothing is missing before a refund.") and
+  Next step (with the AI label shown as a pill). Money moved from the
+  one-line summary into right-aligned rows (Promised, Refunded, Pending with
+  PayPal, At risk, Days since promise). The text, reasons and buttons are
+  unchanged.
+- `frontend/components/promise-extraction.tsx`:
+  - **Card shape:** the panel is now a card with an h3 heading, and the
+    proposal titles are h4.
+  - **New "before" state:** "No suggestions yet. Extract to read the stored
+    conversation." While a request is running it reads "Reading the stored
+    conversation…".
+  - **Amounts:** the amount is right-aligned.
+- `frontend/tests/promise-health.spec.ts`: two assertions now read the money
+  rows instead of the removed one-line summary. No other test changed.
+
+**Reason and decision IDs:** DEC-085.
+
+**Validation actually performed:**
+
+- `npm run check`: passed. A grep of the new CSS block finds no colour
+  literals.
+- **Screenshots:** before and after at 1280, 768 and 390px, workspace inbox
+  and case, with a scratch Playwright script against the isolated fixture
+  backend. The AI suggestions are a browser-level mock (synthetic). The
+  connected page's `scrollWidth` at 390px went from 410 to 390. The
+  screenshots aren't committed.
+- **Full Playwright suite** (`PLAYWRIGHT_CHROMIUM_EXECUTABLE=<system Chrome> npx
+  playwright test`): 18 passed, 5 skipped, 0 failed.
+  `investigations.spec.ts`, which had failed its 390px width check (410) in
+  CHG-047 and CHG-048, now passes.
+- **Backend:** not changed, so not re-run.
+
+**Known limitations and follow-up:**
+
+- Older rules earlier in `globals.css` still carry their own pixel values. The
+  new block overrides them for the workspace instead of rewriting the file.
+- The customer portal, orders and settings pages weren't restructured.
+- The colours `badge-broken` and `health-*` added in CHG-047 remain as they
+  were.
+
+### CHG-050 - One next step, one money summary, collapsed details, inbox risk
+
+**Date:** 10 November 2026 (Asia/Calcutta). Branch `feat/ai-part`. Frontend only;
+no backend or API change; existing colour tokens only (a grep of the new CSS
+block finds no colour literal).
+
+**Objective:** make the case page answer "what do I do now?" first, show money
+once, collapse finished and diagnostic detail, and surface broken promises in
+the inbox.
+
+**Files and resulting behavior:**
+
+- `frontend/components/case-checks.tsx` (new): `useCaseChecks()` loads
+  `GET .../promise-health` and `GET .../next-action` once per case and
+  reconciliation fingerprint, and runs `POST .../ai/explain-next-action` on
+  request. It is shared by the Next step block, the money summary and the
+  promise check. An explanation is kept per case and per code summary, which
+  preserves the CHG-048 race fix. The file also holds `dueLabel()`, which
+  returns "Due Nov 13" or "Overdue since Nov 13" plus the rule for the
+  tooltip (agreed due date, or the N-day window).
+- `frontend/components/case-desk.tsx`:
+  - **Next step block:** one block at the top of Case summary (region
+    "Next step") replaces the Next action card and the AI Next step card. It
+    shows the action title, the reason (the existing reconciliation sentence)
+    and the existing buttons, with only one of them primary.
+    - **Cases without a linked payment:** "Link payment record".
+    - **Linked payment, no refund promise:** "Record promise".
+    - **Merchant mode extras:** the "Missing before refund" checklist ("Nothing
+      missing ✓" when empty), the code summary and "Explain with AI".
+    - **Pre-filled review:** "Review refund" passes the promise-health
+      suggestion to the existing review. The workspace still caps it at the
+      backend's recommended amount; this replaces the separate "Refund
+      remaining $X" button.
+  - **Money summary:** the only amounts on the overview, using the same labels
+    Payment, Promised, Refunded and Remaining (`.money-confirmed` and
+    `.money-outstanding` kept). It shows the worst promise status pill, the
+    due label with its tooltip, days since the promise, and the provider chip.
+    It replaces the Refund reconciliation tiles.
+  - **Timeline:** in both the overview list and the full tab, the actor is
+    shown only when it changes from the event above.
+- `frontend/components/promise-health.tsx`: now `PromiseCheckList`, one line
+  per promise (text, due label, days, status pill), with no amounts and a note
+  pointing to the money summary. A kept promise is a single line.
+- `frontend/components/workspace.tsx`:
+  - **AI area:** the AI slot holds the suggestions and a collapsed
+    "Automatic investigation details" `<details>`.
+  - **Inbox risk:** in merchant mode the workspace reads
+    `GET /resolution-cases/promise-health?limit=200` on inbox and detail
+    loads. Each flagged row gets an At risk or Broken pill, an Overdue pill,
+    and "$X at risk" (the sum of remaining amounts on that case).
+  - **"At risk" filter (merchant only):** it lists the cases from that
+    endpoint, loading each with the existing summary calls and searching on
+    the client.
+  - `PaymentActions` gained `captured` and an optional pre-fill on `onReview`.
+- `frontend/components/promise-extraction.tsx`:
+  - **Collapsed by default:** results show as "N suggestions · Review" until
+    opened (stays open for later runs).
+  - **Message names:** the panel reads the existing `customer-messages`
+    thread and names messages "Merchant · Nov 7, 9:24" (UTC). IDs not in the
+    thread show as "Merchant message" or "Buyer message", without the ID.
+    Restatements read "Also confirmed in N later messages".
+  - The saved promise draft is unchanged.
+- `frontend/components/investigation-review.tsx` (display text only):
+  - **Plain words:** internal status, state, next-step, missing-evidence and
+    failure codes are replaced. For example "missing · revision 3 · blocked"
+    becomes "Evidence missing · needs your review", and "inference disabled"
+    becomes "Automatic analysis is turned off".
+  - **Removed from display:** the reviewer ID is no longer shown.
+  - **Unchanged:** the actions and the "Review: … No payment authorized."
+    status.
+- **Sentence case:** all `.eyebrow` labels across the components, so only the
+  three area titles stay uppercase (by CSS).
+- `frontend/app/globals.css`: grey disabled buttons using `--soft-line`,
+  `--line` and `--muted`, plus styles for the Next step block, checklist,
+  money status, check rows, suggestion toggle, details card and inbox risk
+  amount.
+- **Tests:**
+  - `promise-health.spec.ts`: asserts the money summary, the Next step region
+    and the checklist, and pre-fills through "Review refund".
+  - `promise-extraction.spec.ts`: opens "Review", and checks the new message
+    names and the restatement text.
+  - `investigations.spec.ts`: opens the details and checks the plain
+    "automatic analysis is turned off" wording.
+
+**Reason and decision IDs:** DEC-086.
+
+**Validation actually performed:**
+
+- `npm run check`: passed.
+- The three changed spec files: 6 passed. After the first run, one assertion
+  still expected "buyer message m1" in the flag list; it was updated to the
+  new label.
+- **Screenshots:** before (`aaffaee`) and after at 1280, 768 and 390px of the
+  workspace inbox and case, with a scratch Playwright script against the
+  isolated fixture backend. The AI suggestions are a browser-level mock
+  (synthetic). `scrollWidth` equals the viewport at every width, and the
+  390px case page went from 3,613 to about 2,560 px tall. The screenshots
+  aren't committed.
+- **Full Playwright suite** (`PLAYWRIGHT_CHROMIUM_EXECUTABLE=<system Chrome> npx
+  playwright test`): 18 passed, 5 skipped, 0 failed.
+- **Backend:** not changed, so not re-run.
+
+**Known limitations and follow-up:**
+
+- Panels show on the Overview tab only (as since CHG-049).
+- The "At risk" filter lists up to 200 flagged promises and has no paging.
+- Message times are shown in UTC without a suffix, as requested; the full
+  timestamp is not in a tooltip.
+- The buyer receipt and customer portal keep their buyer-facing wording
+  ("Refund agreed", "Still owed").
+- Finding lines in the investigation panel still show evidence IDs.
+
+### CHG-051 - Settings inside the workspace shell; local message times
+
+**Date:** 10 November 2026 (Asia/Calcutta). Branch `feat/ai-part`. Frontend only;
+existing colour tokens only (a grep of the new CSS block finds no colour literal).
+
+**Objective:** make `/workspace/settings` look and behave like the rest of the
+workspace, and show message times in the viewer's own time zone.
+
+**Files and resulting behavior:**
+
+- `frontend/components/workspace-shell.tsx` (new): `WorkspaceShell` uses the
+  workspace's own markup and classes.
+  - **Sidebar:** Case inbox, Orders and Settings, with `aria-current` on the
+    active page.
+  - **Top bar:** the breadcrumb "Workspace > Settings", the mode chip, the
+    Settings link (`aria-label="Account settings"`), the only Sign out, and
+    the avatar.
+  - **Mobile:** the mobile brand and mobile nav, and the same icon-only top
+    bar at 390px.
+  - **Sign out:** calls the existing `DELETE /api/session`, then goes to
+    `/login`.
+- `frontend/components/merchant-login.tsx` (`MerchantSettings`):
+  - **Layout:** renders inside the shell, with the workspace intro header
+    (small eyebrow "Merchant workspace", h1 "Account settings", subtitle).
+  - **Cards:** Account, PayPal sign-in and SDK keys are separate
+    `section-card`s with the existing pills:
+    - Account: "Signed in".
+    - PayPal sign-in: "Not configured", "Ready to link" or "Linked", plus
+      "Sandbox".
+    - SDK keys: "Not configured" or "N active".
+  - **Account details:** shown as right-aligned label/value rows.
+  - **Removed:** the old divider borders and the duplicate in-page Sign out.
+  - **Unchanged:** the PayPal link and unlink actions, the confirm step and
+    the notices.
+- `frontend/components/merchant-sdk-keys.tsx`:
+  - **Card shape:** card header with the pill; buttons use the shared
+    `Button`, and loading and empty states use `panel-state`.
+  - **Copy button:** the code example has a header row with "Copy"
+    (`aria-label="Copy example code"`, success notice "Example code
+    copied."), placed above the snippet so it never covers code on phones.
+  - **Unchanged:** the setup-copy, hide, revoke and confirm flows and their
+    labels.
+- `frontend/components/workspace.tsx`: the main workspace sidebar also links
+  to Settings (merchant mode), so all three pages share the same navigation.
+- **Message times in the viewer's local time:**
+  - `frontend/lib/domain.ts`: `localTimeText()` uses the viewer's time zone
+    and locale, for example "Nov 7, 9:24 AM".
+  - `frontend/components/conversation.tsx`: message times use it, with
+    `suppressHydrationWarning` and the UTC time in `title`.
+  - `frontend/components/promise-extraction.tsx`: the "Merchant · …" message
+    names use it too.
+  - Other timestamps (for example "Session ends") stay in UTC.
+- `frontend/app/globals.css`: settings card, facts, code header and SDK
+  setup styles.
+  - **Overflow fix:** `min-width: 0` on the grid children. The long code
+    line had made the old settings page 517px wide on a 390px screen; it now
+    scrolls inside the code box.
+- `frontend/tests/settings.spec.ts` (new):
+  - **Shell checks:** the breadcrumb, Settings `aria-current` in the sidebar,
+    exactly one Sign out, three separate cards with their pills, and the
+    copy button (clipboard contents read back). The page is 390px wide at
+    390px, and Sign out goes to `/login`.
+  - **Local times:** the customer demo's message time matches the browser's
+    formatting in Asia/Kolkata and America/New_York, without "UTC".
+- No existing test needed changes: `sdk-keys.spec.ts` and the settings steps
+  in `site-auth.spec.ts` use the same labels.
+
+**Reason and decision IDs:** DEC-087.
+
+**Validation actually performed:**
+
+- `npm run check`: passed.
+- `npx playwright test tests/settings.spec.ts tests/sdk-keys.spec.ts
+  tests/site-auth.spec.ts`: passed (one PayPal test skipped as usual). One
+  first-run failure was in the new test itself: the sidebar is an `<aside>`
+  (role complementary), not a navigation landmark.
+- **Screenshots:** settings at 1280 and 390px, before (`40db217`, taken with
+  the changes stashed) and after, with a scratch Playwright script against
+  the isolated fixture backend. They aren't committed.
+- **Full Playwright suite** (`PLAYWRIGHT_CHROMIUM_EXECUTABLE=<system Chrome> npx
+  playwright test`): 20 passed, 5 skipped, 0 failed.
+- **Backend:** not changed, so not re-run.
+
+**Known limitations and follow-up:**
+
+- The Orders page still renders its own copy of the shell and could move to
+  `WorkspaceShell`.
+- The shell's "Sandbox connection" note is static text, as in the workspace.
+- Server-rendered message times can differ from the browser's for a moment
+  until hydration replaces them; mismatch warnings are suppressed on those
+  elements.
+
 ## Decision register
 
 ### DEC-001 - Keep FastAPI/Pydantic and the existing uv project
@@ -3868,6 +4170,35 @@ approval; otherwise the code template is shown. It shares extraction's off
 switch, data policy, cache, token cap and daily budget, so it adds no new
 provider path, and its output can never authorize a refund.
 
+### DEC-085 - Restructure with layout tokens, not new colours
+
+Structure comes from spacing, type size, grouping and alignment, so the
+existing palette stays exactly as it is. The AI and check panels sit with the
+promises they act on, inside the case overview, rather than below the whole
+case, and they share one card shape so suggestions, checks and the
+recommendation read as one assistant area. Money is right-aligned in
+label/value rows so amounts can be compared at a glance; the one-line summary
+it replaces carried the same values.
+
+### DEC-086 - One answer to "what now?", one place for money
+
+The case overview shows a single next step with one primary action, and lists
+what is missing as that step's checklist. Amounts appear once, in a money
+summary with fixed labels; the promise check, inbox and AI explanation point
+to it instead of repeating figures in other formats. Detail that is finished
+or diagnostic (kept promises, empty checklists, the automatic investigation,
+unopened suggestions) is collapsed, so the page stays short without hiding
+anything a test or merchant needs.
+
+### DEC-087 - One workspace frame for every merchant page
+
+Settings is part of the merchant workspace, so it uses the same frame,
+header and card patterns instead of the public-site look. One shared shell
+keeps navigation and sign-out in one place; the page shows Sign out only in
+the top bar. Message times follow the viewer's time zone because they
+describe conversations people read in their own day; audit and
+session times stay in UTC.
+
 ## Open work and boundaries
 
 1. Verify import (if needed), SSL connection, migration startup, and worker
@@ -3893,7 +4224,7 @@ provider path, and its output can never authorize a refund.
 ## Template for the next entry
 
 ```text
-### CHG-049 - Concrete change title
+### CHG-052 - Concrete change title
 Date:
 Objective:
 Files and resulting behavior:

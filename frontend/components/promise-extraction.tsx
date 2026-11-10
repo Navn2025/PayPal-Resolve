@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { money, pretty, remedyLabels, type Remedy, type Requester } from "@/lib/domain";
+import { localTimeText, money, pretty, remedyLabels, type Remedy, type Requester } from "@/lib/domain";
+import type { Message } from "@/lib/customer";
 import type { PromiseDraft } from "./forms";
 import { Button, Notice } from "./ui";
 
@@ -47,6 +48,13 @@ const droppedText: Record<string, string> = {
   limit_exceeded: "There were too many suggestions in one answer.",
 };
 const plain = (texts: Record<string, string>, reason: string) => texts[reason] ?? pretty(reason) + ".";
+/** "Merchant · Nov 7, 9:24 AM" in the viewer's local time, from the stored conversation; IDs are never shown. */
+function speaker(id: string | null, thread: Message[], fallback: string) {
+  const found = id ? thread.find((message) => message.id === id) : undefined;
+  if (!found) return fallback;
+  return `${found.sender === "merchant" ? "Merchant" : "Buyer"} · ${localTimeText(found.created_at)}`;
+}
+const later = (count: number) => `Also confirmed in ${count} later ${count === 1 ? "message" : "messages"}`;
 
 export function draftFrom(proposal: Proposal): PromiseDraft {
   const notes = [`Suggested from merchant message ${proposal.source_message_id}: "${proposal.exact_quote}"`];
@@ -64,6 +72,8 @@ export function PromiseExtractionPanel({ caseId, request, onUse }: {
   caseId: string; request: Requester; onUse: (draft: PromiseDraft) => void;
 }) {
   const [result, setResult] = useState<Extraction | null>(null);
+  const [thread, setThread] = useState<Message[]>([]);
+  const [open, setOpen] = useState(false);
   const [dismissed, setDismissed] = useState<number[]>([]);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -72,52 +82,59 @@ export function PromiseExtractionPanel({ caseId, request, onUse }: {
     try {
       setResult(await request<Extraction>(`/resolution-cases/${caseId}/ai/extract-promises`, "POST"));
       setDismissed([]);
+      // Read-only: the same stored thread the customer tab shows, to name messages by sender and time.
+      request<Message[]>(`/resolution-cases/${caseId}/customer-messages`).then(setThread).catch(() => setThread([]));
     } catch (failure) { setError(failure instanceof Error ? failure.message : "Suggestions are unavailable. Try again."); }
     finally { setBusy(false); }
   }
   const visible = result?.proposals.map((proposal, index) => ({ proposal, index })).filter(({ index }) => !dismissed.includes(index)) ?? [];
-  return <section className="section-card investigation-panel extraction-panel" aria-label="Promise suggestions">
-    <div className="section-head"><div><div className="eyebrow">AI SUGGESTIONS</div><h2>Promise suggestions</h2></div>
-      <Button disabled={busy} onClick={() => void extract()}>{busy ? "Reading conversation…" : "Extract promises from conversation"}</Button></div>
-    <p>Suggestions only. Nothing is saved or paid until you confirm.</p>
+  return <section className="ai-card extraction-panel" aria-label="Promise suggestions" aria-busy={busy}>
+    <header className="card-head"><div><div className="eyebrow">AI suggestions</div><h3>Promise suggestions</h3></div>
+      <Button disabled={busy} onClick={() => void extract()}>{busy ? "Reading conversation…" : "Extract promises from conversation"}</Button></header>
+    <p className="card-note">Suggestions only. Nothing is saved or paid until you confirm.</p>
+    {!result && !error && <p className="panel-state">{busy ? "Reading the stored conversation…" : "No suggestions yet. Extract to read the stored conversation."}</p>}
     {error && <Notice>{error}</Notice>}
-    {result && <p className="muted" role="status">
+    {result && <p className="card-note" role="status">
       {result.cache_hit ? "cached, 0 tokens" : result.skipped_reason ? "No AI call made" : `${result.tokens} tokens`}
       {" · "}{result.proposals.length} {result.proposals.length === 1 ? "suggestion" : "suggestions"}</p>}
     {!!result?.flags?.length && <div className="injection-flags" role="note" aria-label="Suspicious buyer instructions">
       <span className="badge badge-needs_review">Suspicious instruction ignored</span>
       <p className="muted">A buyer message tried to give instructions. It was read as ordinary chat and cannot create a promise.</p>
       <ul>{result.flags.map((flag, index) => <li key={index}>
-        <strong>{flag.rule_id}</strong> · {flag.label} · buyer message {flag.message_id}</li>)}</ul>
+        <strong>{flag.rule_id}</strong> · {flag.label} · {speaker(flag.message_id, thread, "Buyer message")}</li>)}</ul>
     </div>}
-    {result?.skipped_reason === "no_merchant_messages" && <p>No merchant messages yet, so there is nothing to suggest.</p>}
+    {result?.skipped_reason === "no_merchant_messages" && <p className="panel-state">No merchant messages yet, so there is nothing to suggest.</p>}
     {!!result?.review_reasons.length && <Notice><strong>Needs your review:</strong> {result.review_reasons.map((reason) => plain(reviewText, reason)).join(" ")}</Notice>}
-    {result && !result.proposals.length && !result.review_reasons.length && !result.skipped_reason && <p>No promises were found in this conversation.</p>}
-    <div className="proposal-list">{visible.map(({ proposal, index }) => <article className="proposal-card" key={index}
+    {result && !result.proposals.length && !result.review_reasons.length && !result.skipped_reason && <p className="panel-state">No promises were found in this conversation.</p>}
+    {!!visible.length && <div className="suggestion-toggle">
+      <span>{visible.length} {visible.length === 1 ? "suggestion" : "suggestions"}</span>
+      <Button className="small-button" aria-expanded={open} aria-controls={"suggestions-" + caseId} onClick={() => setOpen(!open)}>{open ? "Hide" : "Review"}</Button>
+    </div>}
+    {open && <div className="proposal-list" id={"suggestions-" + caseId}>{visible.map(({ proposal, index }) => <article className="proposal-card" key={index}
       aria-label={`Suggested ${remedyLabels[proposal.kind] ?? pretty(proposal.kind)}`}>
-      <div className="proposal-head"><h3>{remedyLabels[proposal.kind] ?? pretty(proposal.kind)}</h3>
+      <div className="proposal-head"><h4>{remedyLabels[proposal.kind] ?? pretty(proposal.kind)}</h4>
         <span className="proposal-badges">
           {proposal.possible_revision && <span className="badge badge-needs_review">Possible revision</span>}
-          {!!proposal.supporting_message_ids.length && <span className="badge badge-pending">Also in {proposal.supporting_message_ids.join(", ")}</span>}
+          {!!proposal.supporting_message_ids.length && <span className="badge badge-pending">{later(proposal.supporting_message_ids.length)}</span>}
           {proposal.needs_review && <span className="badge badge-needs_review">Low confidence</span>}
         </span></div>
       <dl className="proposal-terms">
-        {proposal.amount_cents !== null && <><dt>Amount</dt><dd>{money(proposal.amount_cents / 100)}</dd></>}
+        {proposal.amount_cents !== null && <><dt>Amount</dt><dd className="money-value">{money(proposal.amount_cents / 100)}</dd></>}
         {proposal.action && <><dt>Action</dt><dd>{pretty(proposal.action)}</dd></>}
         {proposal.condition && <><dt>Condition</dt><dd>{proposal.condition}</dd></>}
         {proposal.deadline && <><dt>Deadline</dt><dd>{proposal.deadline}</dd></>}
       </dl>
       <blockquote className="proposal-quote"><mark>{proposal.exact_quote}</mark>
-        <footer>Merchant message {proposal.source_message_id}</footer></blockquote>
-      <div className="review-actions">
+        <footer>{speaker(proposal.source_message_id, thread, "Merchant message")}</footer></blockquote>
+      <div className="card-actions">
         <Button variant="primary" onClick={() => onUse(draftFrom(proposal))}>Use this proposal</Button>
         <Button onClick={() => setDismissed((previous) => [...previous, index])}>Dismiss</Button>
       </div>
-    </article>)}</div>
-    {!!result?.dropped.length && <details className="proposal-dropped"><summary>{result.dropped.length} not suggested</summary>
+    </article>)}</div>}
+    {open && !!result?.dropped.length && <details className="proposal-dropped"><summary>{result.dropped.length} not suggested</summary>
       <ul>{result.dropped.map((item, index) => <li key={index}>
         {item.exact_quote && <q>{item.exact_quote}</q>} {plain(droppedText, item.reason)}
-        {item.source_message_id && <small> (message {item.source_message_id})</small>}
+        {item.source_message_id && <small> ({speaker(item.source_message_id, thread, "cited message")})</small>}
       </li>)}</ul></details>}
   </section>;
 }

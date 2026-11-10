@@ -13,12 +13,13 @@ import { Badge, Brand, Button, Empty, Notice, remedyIcons } from "./ui";
 import { CaseDesk, type DeskTab } from "./case-desk";
 import { InvestigationReviewPanel } from "./investigation-review";
 import { PromiseExtractionPanel } from "./promise-extraction";
-import { PromiseHealthPanel } from "./promise-health";
+import { statusBadge, statusLabels, type HealthStatus, type PromiseHealth } from "./case-checks";
 import { CaseForm, ConnectForm, EvidenceForm, LocalGuide, PromiseForm, RefundForm, ReviewForm, type PromiseDraft } from "./forms";
 import { InviteForm, OperationsForm, PaymentLinkForm } from "./merchant-triage";
 
 const CASE_PAGE = 12, EVENT_PAGE = 30;
-type Filter = "all" | Outcome | Workflow | "unread";
+type Filter = "all" | Outcome | Workflow | "unread" | "at_risk";
+type Risk = Map<string, { amount: number; currency: string; status: HealthStatus; overdue: boolean }>;
 type Nav = "inbox" | "review";
 type Dialog = { kind: "connect" | "case" | "guide" | "invite" } | { kind: "payment-link"; item: CaseView } | { kind: "operations"; id: string; fields: Operations } | { kind: "promise"; edit?: PromiseView; draft?: PromiseDraft }
   | { kind: "evidence"; promise: PromiseView } | { kind: "approve"; basis: Reconciliation; prefill?: string }
@@ -45,17 +46,17 @@ function StatusMetrics({ cases, total }: { cases: CaseView[]; total: number }) {
   </div>;
 }
 
-function InboxPane({ cases, selected, select, filter, setFilter, search, setSearch, more, onMore, loading, onNew, demo }: {
+function InboxPane({ cases, selected, select, filter, setFilter, search, setSearch, more, onMore, loading, onNew, demo, risk }: {
   cases: CaseView[]; selected: string | null; select: (id: string) => void; filter: Filter; setFilter: (filter: Filter) => void;
   search: string; setSearch: (search: string) => void; more: boolean; onMore: () => void; loading: boolean; onNew: () => void;
-  demo: boolean;
+  demo: boolean; risk: Risk;
 }) {
   const needle = search.trim().toLowerCase();
-  const items = cases.filter((item) => (filter === "all" || item.outcome === filter || item.operations?.workflow === filter ||
+  const items = cases.filter((item) => (filter === "all" || (filter === "at_risk" && risk.has(item.id)) || item.outcome === filter || item.operations?.workflow === filter ||
     (filter === "unread" && !!item.operations?.unread_count)) &&
     (!demo || !needle || [item.title, item.order_reference ?? "", item.id, item.operations?.assignee ?? ""].some((value) => value.toLowerCase().includes(needle))));
   return <aside className="inbox-pane" aria-label="Case inbox">
-    <div className="inbox-head"><div><div className="eyebrow">WORK QUEUE</div><h2>Case inbox</h2></div><span className="inbox-count">{cases.length}</span></div>
+    <div className="inbox-head"><div><div className="eyebrow">Work queue</div><h2>Case inbox</h2></div><span className="inbox-count">{cases.length}</span></div>
     <label className="search-box"><Search size={17} /><input aria-label="Search cases" placeholder="Search cases…" maxLength={160} value={search} onChange={(event) => setSearch(event.target.value)} />
       {search && <Button variant="ghost" className="icon-button" aria-label="Clear search" onClick={() => setSearch("")}><X size={15} /></Button>}</label>
     <div className="filters" aria-label="Filter cases">
@@ -63,7 +64,7 @@ function InboxPane({ cases, selected, select, filter, setFilter, search, setSear
         <button type="button" key={id} className={filter === id ? "active" : ""} aria-pressed={filter === id} onClick={() => setFilter(id)}>{label}</button>)}
     </div>
     <div className="filters inbox-flow-filters" aria-label="Filter by next step">
-      {([["waiting_on_customer", "Waiting on customer"], ["needs_approval", "Needs approval"], ["pending_with_paypal", "Pending with PayPal"], ["unread", "Unread"]] as const).map(([id, label]) =>
+      {([["waiting_on_customer", "Waiting on customer"], ["needs_approval", "Needs approval"], ["pending_with_paypal", "Pending with PayPal"], ["unread", "Unread"], ...(demo ? [] : [["at_risk", "At risk"]] as const)] as const).map(([id, label]) =>
         <button type="button" key={id} className={filter === id ? "active" : ""} aria-pressed={filter === id} onClick={() => setFilter(id)}>{label}</button>)}
     </div>
     <div className="case-list">
@@ -72,12 +73,16 @@ function InboxPane({ cases, selected, select, filter, setFilter, search, setSear
         const Icon = kind ? remedyIcons[kind] : ClipboardList;
         const ops = item.operations;
         const due = ops?.due_at ?? ops?.promise_due_at;
+        const flagged = risk.get(item.id);
         return <button type="button" key={item.id} className={`case-row ${selected === item.id ? "selected" : ""}`}
           aria-current={selected === item.id ? "true" : undefined} onClick={() => select(item.id)}>
           <span className={`case-row-icon case-tone-${item.outcome}`}><Icon size={17} /></span>
           <span className="case-row-body"><span className="case-row-meta"><span>{item.order_reference || "Case " + shortId(item.id)}</span><time dateTime={item.created_at}>{dateText(item.created_at)}</time></span>
             <strong>{item.title}</strong><span className="case-row-badges"><Badge outcome={item.outcome} />
-              {!!ops?.unread_count && <span className="unread-chip">{ops.unread_count} unread</span>}</span>
+              {!!ops?.unread_count && <span className="unread-chip">{ops.unread_count} unread</span>}
+              {flagged && <span className={`badge ${statusBadge[flagged.status]}`}><span />{statusLabels[flagged.status]}</span>}
+              {flagged?.overdue && <span className="badge badge-broken"><span />Overdue</span>}</span>
+            {flagged && <span className="case-row-risk">{money(flagged.amount.toFixed(2), flagged.currency)} at risk</span>}
             {ops && <span className="case-row-triage"><span>{workflowLabels[ops.workflow]}{ops.assignee ? " · " + ops.assignee : ""}</span>
               {due && ops.workflow !== "resolved" && <span className={ops.overdue ? "overdue" : ""}>{ops.overdue ? "Overdue" : "Due " + dateText(due)}</span>}</span>}
           </span><ChevronRight className="case-arrow" size={16} />
@@ -96,7 +101,7 @@ function ReviewPane({ items, total, status, setStatus, loading, error, onMore, c
   error: string; onMore: () => void; cases: CaseView[]; onOpen: (id: string) => void; onResolve: (item: Review) => void;
 }) {
   return <section className="review-pane section-card">
-    <div className="section-head"><div><div className="eyebrow">EXCEPTIONS</div><h2>Review queue</h2></div>
+    <div className="section-head"><div><div className="eyebrow">Exceptions</div><h2>Review queue</h2></div>
       <div className="filters" aria-label="Review status">{(["open", "resolved"] as const).map((state) => <button type="button" key={state}
         className={status === state ? "active" : ""} aria-pressed={status === state} onClick={() => setStatus(state)}>{pretty(state)}</button>)}</div></div>
     {error && <Notice>{error}</Notice>}
@@ -155,6 +160,7 @@ export function Workspace({ mode, initialCaseId = null }: { mode: "demo" | "merc
   const [search, setSearch] = useState("");
   const [dialog, setDialog] = useState<Dialog | null>(null);
   const [loadingList, setLoadingList] = useState(false);
+  const [risk, setRisk] = useState<Risk>(() => new Map());
   const [loadingTimeline, setLoadingTimeline] = useState(false);
   const [listError, setListError] = useState("");
   const [detailError, setDetailError] = useState("");
@@ -175,10 +181,42 @@ export function Workspace({ mode, initialCaseId = null }: { mode: "demo" | "merc
   const item = current?.item ?? inbox.items.find((entry) => entry.id === selected);
   const refund = item?.promises.find((p) => p.terms.target.kind === "refund");
 
+  // Merchant-wide at-risk and broken promises, for row pills and the At risk filter. Read-only; failures leave rows plain.
+  const loadRisk = useCallback(async () => {
+    if (demo) return null;
+    try {
+      const page = await request<{ items: PromiseHealth[] }>("/resolution-cases/promise-health?limit=200");
+      const next: Risk = new Map();
+      for (const entry of page.items) {
+        const prior = next.get(entry.case_id);
+        const rank = (status: HealthStatus) => status === "broken" ? 0 : 1;
+        next.set(entry.case_id, {
+          amount: (prior?.amount ?? 0) + Number(entry.remaining_amount), currency: entry.currency,
+          status: prior && rank(prior.status) <= rank(entry.status) ? prior.status : entry.status,
+          overdue: !!prior?.overdue || entry.overdue,
+        });
+      }
+      setRisk(next);
+      return page.items;
+    } catch { return null; }
+  }, [demo, request]);
+
   const loadInbox = useCallback(async (offset = 0) => {
     const seq = ++inboxSeq.current;
     setLoadingList(true); setListError("");
     try {
+      if (!demo && filter === "at_risk") {
+        const flagged = await loadRisk() ?? [];
+        const needle = search.trim().toLowerCase();
+        const ids = [...new Set(flagged.map((entry) => entry.case_id))];
+        const rows = (await Promise.all(ids.map((id) => fetchSummary(request, id))))
+          .filter((row) => !needle || [row.title, row.order_reference ?? ""].some((value) => value.toLowerCase().includes(needle)));
+        if (seq !== inboxSeq.current) return;
+        setInbox({ items: rows, total: rows.length, limit: Math.max(rows.length, 1), offset: 0 });
+        setSelected((previous) => previous ?? rows[0]?.id ?? null);
+        return;
+      }
+      if (!demo) void loadRisk();
       const result = demo ? await request<Page<CaseView>>(`/resolution-cases?limit=${CASE_PAGE}&offset=${offset}`)
         : await request<Page<CaseView>>("/resolution-cases/inbox?" + new URLSearchParams({
           limit: String(CASE_PAGE), offset: String(offset), filter_by: filter, q: search.trim(),
@@ -192,7 +230,7 @@ export function Workspace({ mode, initialCaseId = null }: { mode: "demo" | "merc
       if (!offset) setSelected((previous) => previous ?? rows[0]?.id ?? null);
     } catch (failure) { if (seq === inboxSeq.current) setListError(errorText(failure)); }
     finally { if (seq === inboxSeq.current) setLoadingList(false); }
-  }, [demo, filter, request, search]);
+  }, [demo, filter, loadRisk, request, search]);
 
   const updateOperations = useCallback((id: string, operations: Operations) => {
     setInbox((previous) => ({ ...previous, items: previous.items.map((row) => row.id === id ? { ...row, operations } : row) }));
@@ -206,11 +244,12 @@ export function Workspace({ mode, initialCaseId = null }: { mode: "demo" | "merc
       const result = await fetchCase(request, id);
       if (seq !== detailSeq.current) return;
       setDetail(result);
+      void loadRisk();
       setInbox((previous) => ({ ...previous, items: previous.items.map((item) => item.id === id ? result.item : item) }));
     } catch (failure) {
       if (seq === detailSeq.current) { setDetail(null); setDetailError(errorText(failure)); }
     }
-  }, [request]);
+  }, [loadRisk, request]);
 
   const loadReview = useCallback(async (offset = 0) => {
     const seq = ++reviewSeq.current;
@@ -420,6 +459,11 @@ export function Workspace({ mode, initialCaseId = null }: { mode: "demo" | "merc
   }
 
   const desk = item && <CaseDesk item={item} tab={tab} setTab={setTab} request={request} demo={demo} onBack={() => setMobileCase(false)}
+    assistant={demo ? undefined : <div className="ai-stack" aria-label="AI and promise checks">
+      <PromiseExtractionPanel key={"extract-" + item.id} caseId={item.id} request={request} onUse={(draft) => setDialog({ kind: "promise", draft })} />
+      <details className="details-card"><summary>Automatic investigation details</summary>
+        <InvestigationReviewPanel key={item.id} caseId={item.id} request={request} /></details>
+    </div>}
     onLinkPayment={() => setDialog({ kind: "payment-link", item })}
     onManage={() => item.operations && setDialog({ kind: "operations", id: item.id, fields: item.operations })}
     onOperations={updateOperations}
@@ -427,8 +471,8 @@ export function Workspace({ mode, initialCaseId = null }: { mode: "demo" | "merc
     onAdd={() => setDialog({ kind: "promise" })} onEdit={(edit) => setDialog({ kind: "promise", edit })}
     onEvidence={(promise) => setDialog({ kind: "evidence", promise })} onRefresh={checkProvider} onExport={exportEvidence}
     refreshing={refreshing} error={detailError || actionError} verifiedMessage={refundNotice}
-    payment={{ basis: paymentBasis, approval: active, execution: latestExecution, nextMessage, canReview, canSubmit,
-      busy: paymentBusy || !!refreshing || !current, error: current?.paymentError, onReview: () => void reviewRefund(),
+    payment={{ basis: paymentBasis, captured: current?.payment?.payment.captured_amount ?? null, approval: active, execution: latestExecution, nextMessage, canReview, canSubmit,
+      busy: paymentBusy || !!refreshing || !current, error: current?.paymentError, onReview: (amount) => void reviewRefund(amount),
       onSubmit: () => active && setDialog({ kind: "execute", approval: active }),
       onRefresh: () => refund && void checkProvider(refund), onCheckExecution: checkExecution,
       onSimulateOutside: demo && item.id === demoPrimary ? simulateOutsideRefund : undefined }} />;
@@ -448,6 +492,7 @@ export function Workspace({ mode, initialCaseId = null }: { mode: "demo" | "merc
         <button type="button" aria-label="Case inbox" className={nav === "inbox" ? "rail-active" : ""} onClick={() => { setNav("inbox"); setMobileCase(false); }} aria-current={nav === "inbox" ? "page" : undefined}>
           <Inbox size={18} /> <span>Case inbox</span><ChevronRight className="rail-chevron" size={15} /></button>
         {!demo && <Link href="/workspace/orders" className="rail-link"><Package size={18} /> <span>Orders</span><ChevronRight className="rail-chevron" size={15} /></Link>}
+        {!demo && <Link href="/workspace/settings" className="rail-link"><Settings2 size={18} /> <span>Settings</span><ChevronRight className="rail-chevron" size={15} /></Link>}
         <button type="button" aria-label="Review queue" className={nav === "review" ? "rail-active" : ""} onClick={() => { setNav("review"); setMobileCase(false); }} aria-current={nav === "review" ? "page" : undefined}>
           <ClipboardList size={18} /> <span>Review queue</span><ChevronRight className="rail-chevron" size={15} /></button>
       </div>
@@ -475,7 +520,7 @@ export function Workspace({ mode, initialCaseId = null }: { mode: "demo" | "merc
       </div>
       <div className="workspace">
         <div className="workspace-intro">
-          <div><div className="eyebrow intro-eyebrow"><span /> MERCHANT OPERATIONS</div>
+          <div><div className="eyebrow intro-eyebrow"><span /> Merchant operations</div>
             <h1>{nav === "inbox" ? "Resolution workspace" : "Review queue"}</h1>
             <p>{nav === "inbox" ? "Track promises, verify outcomes, and resolve every case with evidence." : "Follow up on cases that need a closer look."}</p></div>
           <div className="intro-actions"><Button variant="ghost" className="icon-button reload-button" aria-label="Reload workspace" title="Reload workspace"
@@ -489,12 +534,8 @@ export function Workspace({ mode, initialCaseId = null }: { mode: "demo" | "merc
           <div className={`case-board ${mobileCase && item ? "mobile-detail" : ""}`}>
             <InboxPane cases={inbox.items} selected={selected} select={select} filter={filter} setFilter={setFilter} search={search}
               setSearch={setSearch} more={inbox.offset + CASE_PAGE < inbox.total} onMore={() => loadInbox(inbox.offset + CASE_PAGE)}
-              loading={loadingList} onNew={() => setDialog({ kind: "case" })} demo={demo} />
-            <div className="desk-pane">{desk || <Empty title={loadingList ? "Loading case workspace…" : "Select a case"} detail={loadingList ? "Reading your cases from the local backend." : "Open a case from the inbox to see its promises and evidence."} />}{!demo && item && <PromiseHealthPanel key={"health-" + item.id} caseId={item.id} request={request}
-                refreshKey={current?.basis?.state_fingerprint} canRefund={canReview && !active && !paymentBusy} blockedReason={active ? "an approval is already recorded." : nextMessage}
-                onRefund={(amount) => void reviewRefund(amount)} />}
-              {!demo && item && <InvestigationReviewPanel key={item.id} caseId={item.id} request={request} />}
-              {!demo && item && <PromiseExtractionPanel key={"extract-" + item.id} caseId={item.id} request={request} onUse={(draft) => setDialog({ kind: "promise", draft })} />}</div>
+              loading={loadingList} onNew={() => setDialog({ kind: "case" })} demo={demo} risk={risk} />
+            <div className="desk-pane">{desk || <Empty title={loadingList ? "Loading case workspace…" : "Select a case"} detail={loadingList ? "Reading your cases from the local backend." : "Open a case from the inbox to see its promises and evidence."} />}</div>
           </div>
           {demo && <div className="demo-tools"><span><FlaskConical size={17} /> Demo controls</span><p>Try the normal refund, or approve first and simulate a refund made outside Resolve.</p>
             <a className="button button-secondary small-button" href="/customer?demo=1" target="_blank" rel="noreferrer">Customer demo</a>

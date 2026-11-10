@@ -100,21 +100,21 @@ export function CustomerView() {
       <div className="customer-account-nav"><a href="/customer/account">My cases</a><span className="provider-chip"><LockKeyhole size={13} /> {demo ? "Sample case" : "Private case access"}</span></div></header>
     <main className="customer-main">
       {intake ? <IntakeForm order={intake} onSubmit={submitIntake} /> : !item ? <section className="section-card customer-welcome">
-        <div className="eyebrow">CASE STATUS</div><h1>Track your resolution</h1>
+        <div className="eyebrow">Case status</div><h1>Track your resolution</h1>
         {error && <Notice>{error}</Notice>}
         <Empty title={loading || !started ? "Opening customer portal…" : error ? "Case link unavailable" : "Have a private link?"}
           detail={loading ? "Checking access to your case." : error ? "Ask the merchant for a new link if you need access." : noLink}
           action={!loading && !error ? <a className="button button-secondary" href="/customer?demo=1">View a sample case <ArrowUpRight size={15} /></a> : undefined} />
       </section> : <>
         <section className="customer-hero">
-          <div className="customer-hero-text"><div className="eyebrow">YOUR CASE</div><h1>{item.title}</h1>
+          <div className="customer-hero-text"><div className="eyebrow">Your case</div><h1>{item.title}</h1>
             <p>{item.order_reference ? `Order ${item.order_reference}` : "Your agreed remedy and the latest confirmed progress."}</p></div>
           <Badge outcome={item.outcome} label={customerLabels[item.outcome]} />
         </section>
         {error && <Notice>{error}</Notice>}
         {demo && <Notice tone="info">This is a sample. Messages stay in this demo and no money moves.</Notice>}
         <section className="section-card customer-status">
-          <div className="section-head"><div><div className="eyebrow">RESOLUTION SUMMARY</div><h3>What happens next</h3></div>
+          <div className="section-head"><div><div className="eyebrow">Resolution summary</div><h3>What happens next</h3></div>
             <div className="customer-summary-actions customer-print-hide">
               {!demo && <Button className="small-button" onClick={refresh} disabled={loading}><RefreshCw size={15} className={loading ? "spin" : ""} /> Refresh status</Button>}
               <Button className="small-button" onClick={() => window.print()}><Printer size={15} /> Print summary</Button>

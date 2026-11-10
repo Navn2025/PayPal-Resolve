@@ -20,7 +20,7 @@ export function IntakeForm({ order, onSubmit }: { order: string; onSubmit: (issu
     finally { setBusy(false); }
   }
   return <section className="section-card customer-intake">
-    <div className="eyebrow">ORDER SUPPORT</div><h1>Request help with your order</h1><p>Order <strong>{order}</strong></p>
+    <div className="eyebrow">Order support</div><h1>Request help with your order</h1><p>Order <strong>{order}</strong></p>
     <form onSubmit={submit}>
       {error && <Notice>{error}</Notice>}
       <label className="field"><span>What happened?</span><select name="issue" defaultValue="" required>
@@ -51,7 +51,7 @@ export function EvidencePanel({ files, onUpload, onDownload }: {
     } catch (failure) { setError(message(failure)); } finally { setBusy(false); }
   }
   return <section className="section-card customer-evidence-panel customer-print-hide">
-    <div className="section-head"><div><div className="eyebrow">SUPPORTING DOCUMENTS</div><h3>Customer evidence</h3></div><Paperclip size={17} /></div>
+    <div className="section-head"><div><div className="eyebrow">Supporting documents</div><h3>Customer evidence</h3></div><Paperclip size={17} /></div>
     {error && <Notice>{error}</Notice>}
     {!files.length && <p className="muted">No customer evidence attached yet.</p>}
     <ul className="evidence-files">{files.map((file) => <li key={file.id}><FileText size={16} />
@@ -75,7 +75,7 @@ const milestoneLabels: Record<CustomerMilestone["source"], string> = {
 export function CustomerTimeline({ milestones, next }: { milestones: CustomerMilestone[]; next: CustomerNextStep }) {
   const actors = { customer: "Your turn", merchant: "Waiting on merchant", paypal: "Waiting on PayPal", none: "No action needed" };
   return <section className="section-card customer-timeline">
-    <div className="section-head"><div><div className="eyebrow">CASE PROGRESS</div><h3>Status timeline</h3></div></div>
+    <div className="section-head"><div><div className="eyebrow">Case progress</div><h3>Status timeline</h3></div></div>
     <div className="customer-next"><strong>{actors[next.actor]}</strong><p>{next.action}</p>
       {next.due_at && <small className={next.overdue ? "overdue" : ""}>{next.overdue ? "Overdue · " : "Due "}{timeText(next.due_at)}</small>}</div>
     <ol className="event-list">{milestones.map((event, index) => <li key={index}>

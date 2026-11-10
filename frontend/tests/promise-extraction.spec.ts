@@ -58,11 +58,16 @@ test("promise suggestions pre-fill the existing promise form and save only throu
   await expect(panel.getByText("Suggestions only. Nothing is saved or paid until you confirm.")).toBeVisible();
   await panel.getByRole("button", { name: "Extract promises from conversation" }).click();
   await expect(panel.getByRole("status")).toContainText("cached, 0 tokens");
+  // Suggestions stay collapsed as a count until the merchant opens them.
+  await expect(panel.getByRole("article")).toHaveCount(0);
+  await expect(panel.locator(".suggestion-toggle")).toContainText("3 suggestions");
+  await panel.getByRole("button", { name: "Review", exact: true }).click();
 
   const returned = panel.getByRole("article", { name: "Suggested Return milestone" });
   await expect(returned.locator("mark")).toHaveText("We'll email you a prepaid return label today.");
-  await expect(returned.getByText("Merchant message m2")).toBeVisible();
-  await expect(returned.getByText("Also in m4")).toBeVisible();
+  // Mocked IDs are not in the stored conversation, so no sender/time is known and no ID is shown.
+  await expect(returned.locator("footer")).toHaveText("Merchant message");
+  await expect(returned.getByText("Also confirmed in 1 later message")).toBeVisible();
   await expect(returned.getByText("once you send a photo")).toBeVisible();
   await expect(returned.getByText("by Friday")).toBeVisible();
   const refund = panel.getByRole("article", { name: "Suggested Refund" });
@@ -74,7 +79,7 @@ test("promise suggestions pre-fill the existing promise form and save only throu
   await expect(subscription).toHaveCount(0);
   const flags = panel.getByRole("note", { name: "Suspicious buyer instructions" });
   await expect(flags.getByText("Suspicious instruction ignored")).toBeVisible();
-  await expect(flags.getByText(/RG-INJ-001 · Fake system or admin message · buyer message m1/)).toBeVisible();
+  await expect(flags.getByText(/RG-INJ-001 · Fake system or admin message · Buyer message$/)).toBeVisible();
   await expect(flags.getByText(/RG-INJ-003/)).toBeVisible();
   await panel.getByText("1 not suggested").click();
   await expect(panel.getByText(/came from a buyer message/i)).toBeVisible();

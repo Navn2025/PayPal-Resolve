@@ -759,3 +759,16 @@ cite { display: block; margin-top: 4px; font-size: 10px; font-style: normal; col
 .settings-grid > *, .settings-section > *, .code-block, .sdk-key-example { min-width: 0; }
 .code-block pre, .sdk-setup textarea { max-width: 100%; overflow-x: auto; }
 .settings-facts dd { overflow-wrap: anywhere; }
+
+/* Next step: one column. Title and reason, the action buttons, ordered steps, then the summary. */
+.next-step-head { display: flex; align-items: flex-start; gap: var(--sp-3); }
+.next-step-head .action-copy h3 { font-size: var(--fs-lg); margin: 2px 0 var(--sp-1); }
+.next-step-head .action-copy p { font-size: var(--fs-base); color: var(--text); }
+.next-step-actions { display: flex; flex-wrap: wrap; gap: var(--sp-2); padding-left: 50px; }
+.next-step-block .checklist, .next-step-block .explain { padding-top: var(--sp-3); border-top: 1px solid var(--line); }
+.next-step-block .checklist ol { margin: 0; padding-left: var(--sp-5); display: grid; gap: var(--sp-1); }
+.next-step-block .checklist li { font-size: var(--fs-base); padding-left: var(--sp-1); }
+.next-step-block .checklist li::marker { color: var(--muted); font-weight: 700; }
+.next-step-block .explain h4 { margin: 0; font-size: var(--fs-sm); color: var(--ink); }
+.advisory { margin-top: var(--sp-1); color: var(--muted); font-size: var(--fs-xs); }
+@container (max-width: 640px) { .next-step-actions { padding-left: 0; } }

@@ -3191,6 +3191,118 @@ states. It also fixes the 390px top-bar overflow.
 - The colours `badge-broken` and `health-*` added in CHG-047 remain as they
   were.
 
+### CHG-050 - One next step, one money summary, collapsed details, inbox risk
+
+**Date:** 10 November 2026 (Asia/Calcutta). Branch `feat/ai-part`. Frontend only;
+no backend or API change; existing colour tokens only (a grep of the new CSS
+block finds no colour literal).
+
+**Objective:** make the case page answer "what do I do now?" first, show money
+once, collapse finished and diagnostic detail, and surface broken promises in
+the inbox.
+
+**Files and resulting behavior:**
+
+- `frontend/components/case-checks.tsx` (new): `useCaseChecks()` loads
+  `GET .../promise-health` and `GET .../next-action` once per case and
+  reconciliation fingerprint, and runs `POST .../ai/explain-next-action` on
+  request. It is shared by the Next step block, the money summary and the
+  promise check. An explanation is kept per case and per code summary, which
+  preserves the CHG-048 race fix. The file also holds `dueLabel()`, which
+  returns "Due Nov 13" or "Overdue since Nov 13" plus the rule for the
+  tooltip (agreed due date, or the N-day window).
+- `frontend/components/case-desk.tsx`:
+  - **Next step block:** one block at the top of Case summary (region
+    "Next step") replaces the Next action card and the AI Next step card. It
+    shows the action title, the reason (the existing reconciliation sentence)
+    and the existing buttons, with only one of them primary.
+    - **Cases without a linked payment:** "Link payment record".
+    - **Linked payment, no refund promise:** "Record promise".
+    - **Merchant mode extras:** the "Missing before refund" checklist ("Nothing
+      missing ✓" when empty), the code summary and "Explain with AI".
+    - **Pre-filled review:** "Review refund" passes the promise-health
+      suggestion to the existing review. The workspace still caps it at the
+      backend's recommended amount; this replaces the separate "Refund
+      remaining $X" button.
+  - **Money summary:** the only amounts on the overview, using the same labels
+    Payment, Promised, Refunded and Remaining (`.money-confirmed` and
+    `.money-outstanding` kept). It shows the worst promise status pill, the
+    due label with its tooltip, days since the promise, and the provider chip.
+    It replaces the Refund reconciliation tiles.
+  - **Timeline:** in both the overview list and the full tab, the actor is
+    shown only when it changes from the event above.
+- `frontend/components/promise-health.tsx`: now `PromiseCheckList`, one line
+  per promise (text, due label, days, status pill), with no amounts and a note
+  pointing to the money summary. A kept promise is a single line.
+- `frontend/components/workspace.tsx`:
+  - **AI area:** the AI slot holds the suggestions and a collapsed
+    "Automatic investigation details" `<details>`.
+  - **Inbox risk:** in merchant mode the workspace reads
+    `GET /resolution-cases/promise-health?limit=200` on inbox and detail
+    loads. Each flagged row gets an At risk or Broken pill, an Overdue pill,
+    and "$X at risk" (the sum of remaining amounts on that case).
+  - **"At risk" filter (merchant only):** it lists the cases from that
+    endpoint, loading each with the existing summary calls and searching on
+    the client.
+  - `PaymentActions` gained `captured` and an optional pre-fill on `onReview`.
+- `frontend/components/promise-extraction.tsx`:
+  - **Collapsed by default:** results show as "N suggestions · Review" until
+    opened (stays open for later runs).
+  - **Message names:** the panel reads the existing `customer-messages`
+    thread and names messages "Merchant · Nov 7, 9:24" (UTC). IDs not in the
+    thread show as "Merchant message" or "Buyer message", without the ID.
+    Restatements read "Also confirmed in N later messages".
+  - The saved promise draft is unchanged.
+- `frontend/components/investigation-review.tsx` (display text only):
+  - **Plain words:** internal status, state, next-step, missing-evidence and
+    failure codes are replaced. For example "missing · revision 3 · blocked"
+    becomes "Evidence missing · needs your review", and "inference disabled"
+    becomes "Automatic analysis is turned off".
+  - **Removed from display:** the reviewer ID is no longer shown.
+  - **Unchanged:** the actions and the "Review: … No payment authorized."
+    status.
+- **Sentence case:** all `.eyebrow` labels across the components, so only the
+  three area titles stay uppercase (by CSS).
+- `frontend/app/globals.css`: grey disabled buttons using `--soft-line`,
+  `--line` and `--muted`, plus styles for the Next step block, checklist,
+  money status, check rows, suggestion toggle, details card and inbox risk
+  amount.
+- **Tests:**
+  - `promise-health.spec.ts`: asserts the money summary, the Next step region
+    and the checklist, and pre-fills through "Review refund".
+  - `promise-extraction.spec.ts`: opens "Review", and checks the new message
+    names and the restatement text.
+  - `investigations.spec.ts`: opens the details and checks the plain
+    "automatic analysis is turned off" wording.
+
+**Reason and decision IDs:** DEC-086.
+
+**Validation actually performed:**
+
+- `npm run check`: passed.
+- The three changed spec files: 6 passed. After the first run, one assertion
+  still expected "buyer message m1" in the flag list; it was updated to the
+  new label.
+- **Screenshots:** before (`aaffaee`) and after at 1280, 768 and 390px of the
+  workspace inbox and case, with a scratch Playwright script against the
+  isolated fixture backend. The AI suggestions are a browser-level mock
+  (synthetic). `scrollWidth` equals the viewport at every width, and the
+  390px case page went from 3,613 to about 2,560 px tall. The screenshots
+  aren't committed.
+- **Full Playwright suite** (`PLAYWRIGHT_CHROMIUM_EXECUTABLE=<system Chrome> npx
+  playwright test`): 18 passed, 5 skipped, 0 failed.
+- **Backend:** not changed, so not re-run.
+
+**Known limitations and follow-up:**
+
+- Panels show on the Overview tab only (as since CHG-049).
+- The "At risk" filter lists up to 200 flagged promises and has no paging.
+- Message times are shown in UTC without a suffix, as requested; the full
+  timestamp is not in a tooltip.
+- The buyer receipt and customer portal keep their buyer-facing wording
+  ("Refund agreed", "Still owed").
+- Finding lines in the investigation panel still show evidence IDs.
+
 ## Decision register
 
 ### DEC-001 - Keep FastAPI/Pydantic and the existing uv project
@@ -3976,6 +4088,16 @@ recommendation read as one assistant area. Money is right-aligned in
 label/value rows so amounts can be compared at a glance; the one-line summary
 it replaces carried the same values.
 
+### DEC-086 - One answer to "what now?", one place for money
+
+The case overview shows a single next step with one primary action, and lists
+what is missing as that step's checklist. Amounts appear once, in a money
+summary with fixed labels; the promise check, inbox and AI explanation point
+to it instead of repeating figures in other formats. Detail that is finished
+or diagnostic (kept promises, empty checklists, the automatic investigation,
+unopened suggestions) is collapsed, so the page stays short without hiding
+anything a test or merchant needs.
+
 ## Open work and boundaries
 
 1. Verify import (if needed), SSL connection, migration startup, and worker
@@ -4001,7 +4123,7 @@ it replaces carried the same values.
 ## Template for the next entry
 
 ```text
-### CHG-050 - Concrete change title
+### CHG-051 - Concrete change title
 Date:
 Objective:
 Files and resulting behavior:

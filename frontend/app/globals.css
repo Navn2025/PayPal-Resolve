@@ -687,3 +687,47 @@ cite { display: block; margin-top: 4px; font-size: 10px; font-style: normal; col
   .sidebar .rail-link span { display: none; }
   .sidebar .rail-link { justify-content: center; padding: 8px; }
 }
+
+/* Next step first: one action, one money summary, collapsed details. Existing colour tokens only. */
+.eyebrow { font-size: var(--fs-xs); letter-spacing: .01em; font-weight: 700; }
+.area-title { text-transform: uppercase; }
+.button:disabled, .button:disabled:hover { background: var(--soft-line); border-color: var(--line); color: var(--muted); box-shadow: none; opacity: 1; }
+.next-step-block { background: var(--blue-soft); border: 1px solid var(--line); border-left: 3px solid var(--blue); border-radius: var(--radius); padding: var(--sp-4); display: grid; gap: var(--sp-3); min-width: 0; }
+.next-step-done { background: var(--green-soft); border-left-color: var(--green); }
+.next-step-main { display: flex; align-items: flex-start; gap: var(--sp-3); }
+.next-step-main .action-copy h3 { font-size: var(--fs-lg); margin: 2px 0 var(--sp-1); }
+.next-step-main .action-copy p { font-size: var(--fs-base); }
+.next-step-main .action-buttons { align-items: flex-end; gap: var(--sp-2); }
+.next-step-detail { display: grid; gap: var(--sp-3); grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); padding-top: var(--sp-3); border-top: 1px solid var(--line); }
+.checklist, .explain { display: grid; gap: var(--sp-2); align-content: start; min-width: 0; }
+.checklist h4 { margin: 0; font-size: var(--fs-sm); color: var(--ink); }
+.checklist ul { margin: 0; padding-left: var(--sp-4); }
+.checklist li { font-size: var(--fs-base); margin-block: 2px; }
+.checklist-done { color: var(--green); font-weight: 650; font-size: var(--fs-base); }
+.explain-text { font-size: var(--fs-base); color: var(--text); }
+.explain .ai-label { justify-self: start; }
+.money-grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.money-stat small { display: block; text-align: right; color: var(--muted); font-size: var(--fs-xs); margin-top: 2px; }
+.money-status { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--sp-2); color: var(--muted); font-size: var(--fs-sm); }
+.due-label { text-decoration: underline dotted; text-underline-offset: 3px; cursor: help; color: var(--ink); font-weight: 650; }
+.check-list { list-style: none; margin: 0; padding: 0; display: grid; }
+.check-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--sp-2) var(--sp-3); padding: var(--sp-2) 0 var(--sp-2) var(--sp-3); border-bottom: 1px solid var(--soft-line); border-left: 3px solid var(--line); }
+.check-row.health-kept { border-left-color: var(--green); }
+.check-row.health-at_risk, .check-row.health-partially_kept { border-left-color: var(--amber); }
+.check-row.health-broken { border-left-color: var(--amber); }
+.check-text { font-size: var(--fs-base); font-weight: 650; min-width: 0; }
+.check-meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); color: var(--muted); font-size: var(--fs-sm); }
+.check-row .notice { flex-basis: 100%; }
+.suggestion-toggle { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); padding: var(--sp-2) var(--sp-3); border: 1px solid var(--line); border-radius: 8px; background: var(--canvas); font-size: var(--fs-base); font-weight: 650; }
+.details-card { background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+.details-card > summary { cursor: pointer; padding: var(--sp-3) var(--sp-4); font-size: var(--fs-base); font-weight: 700; color: var(--ink); }
+.details-card[open] > summary { border-bottom: 1px solid var(--soft-line); }
+.details-card > .investigation-panel { border: 0; box-shadow: none; }
+.case-row-risk { font-size: var(--fs-xs); font-weight: 700; color: var(--amber); font-variant-numeric: tabular-nums; }
+@container (max-width: 640px) {
+  .money-grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .next-step-main { flex-wrap: wrap; }
+  .next-step-main .action-copy { flex-basis: calc(100% - 50px); }
+  .next-step-main .action-buttons { margin-left: 50px; align-items: flex-start; }
+  .money-summary .section-head { flex-wrap: wrap; }
+}

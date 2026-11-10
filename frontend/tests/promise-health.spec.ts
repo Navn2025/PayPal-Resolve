@@ -27,29 +27,36 @@ test("promise check reads the real backend through the proxy", async ({ page }) 
   const gate = new Promise<void>((resolve) => { release = resolve; });
   await page.route("**/api/resolve/cases/*/reconciliation", async (route) => { await gate; await route.continue(); });
   await page.getByRole("button", { name: /Connected refund fixture/ }).click();
-  const panel = page.getByRole("region", { name: "Promise check" });
+  const step = page.getByRole("region", { name: "Next step" });
+  const check = page.getByRole("region", { name: "Promise check" });
   // Fixture: accepted $30 refund promise, nothing refunded yet, gated behind a return milestone.
-  // Money is shown as right-aligned label/value rows.
-  await expect(panel.locator(".money-rows")).toHaveText(/^Promised\s*\$30\.00\s*Refunded\s*\$0\.00\s*At risk\s*\$30\.00\s*Days since promise\s*0 days$/);
-  await expect(panel.getByRole("button", { name: "Refund remaining $30.00" })).toBeDisabled();
-  await expect(panel.getByText(/Refund review is not available yet/)).toBeVisible();
+  // Amounts appear once, in the money summary; the promise check shows status and timing only.
+  await expect(page.locator(".money-outstanding")).toContainText("$30.00");
+  await expect(page.locator(".money-confirmed")).toContainText("$0.00");
+  await expect(check.getByLabel("Promise At risk")).toContainText(/Due [A-Z][a-z]{2} \d{1,2}/);
+  await expect(check.getByLabel("Promise At risk")).toContainText("0 days since promise");
+  await expect(check.locator(".money-rows")).toHaveCount(0);
+  // One next step: the refund review is not offered while the return is unconfirmed.
+  await expect(step.getByRole("heading", { name: "Check before approving" })).toBeVisible();
+  await expect(step.getByRole("button", { name: "Review refund" })).toHaveCount(0);
+  await expect(step.getByRole("button", { name: "Refresh evidence" })).toBeVisible();
 
-  // Missing information and the next step are written by code from the same case.
-  const missing = panel.locator(".missing-list li");
+  // Missing information is the next step's checklist, written by code from the same case.
+  const missing = step.locator(".checklist li");
   await expect(missing.filter({ hasText: "The refund promise has no due date." })).toHaveCount(1);
   await expect(missing.filter({ hasText: "The return is not confirmed yet." })).toHaveCount(1);
   const summary = "Promised $30.00 after return; $0.00 refunded; $30.00 remaining; return not confirmed → confirm the return before any refund.";
-  await expect(panel.getByText(summary)).toBeVisible();
+  await expect(step.getByText(summary)).toBeVisible();
   // The fixture backend has AI extraction off, so the explanation falls back to the same template.
   const reloaded = page.waitForResponse((response) => /\/promise-health$/.test(new URL(response.url()).pathname));
-  await panel.getByRole("button", { name: "Explain with AI" }).click();
-  await expect(panel.getByText(/AI explanation not used: AI is turned off on this server/)).toBeVisible();
+  await step.getByRole("button", { name: "Explain with AI" }).click();
+  await expect(step.getByText(/AI explanation not used: AI is turned off on this server/)).toBeVisible();
   release();
   await reloaded;
   await page.waitForTimeout(300);
-  await expect(panel.getByText(/AI explanation not used: AI is turned off on this server/)).toBeVisible();
-  await expect(panel.getByText(summary)).toBeVisible();
-  await expect(panel.getByText("AI explanation – verify before acting")).toHaveCount(0);
+  await expect(step.getByText(/AI explanation not used: AI is turned off on this server/)).toBeVisible();
+  await expect(step.getByText(summary)).toBeVisible();
+  await expect(step.getByText("AI explanation – verify before acting")).toHaveCount(0);
 
   const list = await page.request.get("/api/resolve/resolution-cases/promise-health");
   expect(list.status()).toBe(200);
@@ -63,7 +70,7 @@ test("promise check reads the real backend through the proxy", async ({ page }) 
   expect(await page.evaluate(async (id) => (await fetch(`/api/resolve/resolution-cases/${id}/next-action`, { method: "POST" })).status, caseId)).toBe(404);
 });
 
-test("refund button pre-fills the review but never above the backend cap, and sends nothing", async ({ page }) => {
+test("the next-step refund button pre-fills the review but never above the backend cap, and sends nothing", async ({ page }) => {
   await signIn(page);
   const capture = "SIMHEALTH" + Date.now();
   const payment = await api<{ id: string }>(page, "/cases", {
@@ -93,9 +100,11 @@ test("refund button pre-fills the review but never above the backend cap, and se
 
   await page.reload();
   await page.getByRole("button", { name: /Promise check browser test/ }).click();
-  const panel = page.getByRole("region", { name: "Promise check" });
-  await expect(panel.locator(".money-rows")).toHaveText(/^Promised\s*\$30\.00\s*Refunded\s*\$17\.50\s*At risk\s*\$12\.50\s*Days since promise\s*4 days$/);
-  await panel.getByRole("button", { name: "Refund remaining $12.50" }).click();
+  const step = page.getByRole("region", { name: "Next step" });
+  await expect(page.locator(".money-status")).toContainText("4 days since promise");
+  await expect(page.locator(".money-status")).toContainText("At risk");
+  // The single primary action opens the existing review, pre-filled with the suggested amount.
+  await step.getByRole("button", { name: "Review refund" }).click();
   const dialog = page.getByRole("dialog");
   await expect(dialog.getByLabel("Refund amount (USD)")).toHaveValue("12.50");
   await expect(dialog.getByRole("button", { name: "Approve $12.50" })).toBeVisible();
@@ -105,7 +114,7 @@ test("refund button pre-fills the review but never above the backend cap, and se
   suggested = "45.00";
   await page.reload();
   await page.getByRole("button", { name: /Promise check browser test/ }).click();
-  await panel.getByRole("button", { name: "Refund remaining $45.00" }).click();
+  await step.getByRole("button", { name: "Review refund" }).click();
   await expect(dialog.getByLabel("Refund amount (USD)")).toHaveValue("30.00");
   await dialog.getByRole("button", { name: "Close dialog" }).click();
   expect(posts.filter((path) => /refund-approvals|refund-executions/.test(path))).toEqual([]);
@@ -119,9 +128,9 @@ test("an AI explanation is labelled and changes nothing", async ({ page }) => {
   const posts: string[] = [];
   page.on("request", (request) => { if (request.method() === "POST") posts.push(new URL(request.url()).pathname); });
   await page.getByRole("button", { name: /Connected refund fixture/ }).click();
-  const panel = page.getByRole("region", { name: "Promise check" });
-  await panel.getByRole("button", { name: "Explain with AI" }).click();
-  await expect(panel.getByText("AI explanation – verify before acting")).toBeVisible();
-  await expect(panel.getByText(text)).toBeVisible();
+  const step = page.getByRole("region", { name: "Next step" });
+  await step.getByRole("button", { name: "Explain with AI" }).click();
+  await expect(step.getByText("AI explanation – verify before acting")).toBeVisible();
+  await expect(step.getByText(text)).toBeVisible();
   expect(posts.filter((path) => /refund-approvals|refund-executions|promises/.test(path))).toEqual([]);
 });

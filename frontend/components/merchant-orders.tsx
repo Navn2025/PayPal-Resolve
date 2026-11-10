@@ -120,7 +120,7 @@ export function MerchantOrders() {
         <Button className="small-button" onClick={reload} disabled={loading}><RefreshCw size={15} /> Refresh orders</Button>
       </header>
       <div className="workspace">
-        <div className="workspace-intro"><div><div className="eyebrow intro-eyebrow"><span /> CONNECTED COMMERCE</div><h1>Orders</h1>
+        <div className="workspace-intro"><div><div className="eyebrow intro-eyebrow"><span /> Connected commerce</div><h1>Orders</h1>
           <p>Browse orders from your apps and open a resolution case when an order needs attention.</p></div></div>
         <details className="section-card order-setup">
           <summary><Link2 size={16} /> Connect an app or import existing orders</summary>
@@ -160,7 +160,7 @@ export function MerchantOrders() {
             {!detail ? <Empty title={selected ? detailError ? "Could not open order" : "Loading order…" : "Select an order"}
               detail="See what your app reported, then open a case to verify PayPal evidence." />
               : <>
-                <div className="eyebrow">APP-REPORTED ORDER</div><h2>{detail.order_reference}</h2>
+                <div className="eyebrow">App-reported order</div><h2>{detail.order_reference}</h2>
                 <p className="muted">{detail.source} · Last synced {timeText(detail.synced_at)}</p>
                 <dl className="order-data">
                   <div><dt>Order status</dt><dd>{detail.app.order_status ?? "Not supplied"}</dd></div>

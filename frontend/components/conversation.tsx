@@ -27,7 +27,7 @@ export function Conversation({ messages, viewer, onSend, onRefresh, refreshing, 
     finally { setSending(false); }
   }
   return <section className="section-card customer-conversation customer-print-hide">
-    <div className="section-head"><div><div className="eyebrow">FOLLOW-UP</div><h3>{viewer === "merchant" ? "Customer conversation" : "Messages"}</h3></div>
+    <div className="section-head"><div><div className="eyebrow">Follow-up</div><h3>{viewer === "merchant" ? "Customer conversation" : "Messages"}</h3></div>
       {onRefresh && <Button className="small-button" onClick={onRefresh} disabled={refreshing}><RefreshCw size={15} className={refreshing ? "spin" : ""} /> Refresh messages</Button>}</div>
     {error && <Notice>{error}</Notice>}
     {messages.length === 0 ? <div className="conversation-empty"><MessageCircle size={20} /><p>No messages yet.</p></div> :

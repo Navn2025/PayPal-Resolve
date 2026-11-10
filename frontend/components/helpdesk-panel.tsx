@@ -33,7 +33,7 @@ export function HelpdeskPanel({ caseId, request }: { caseId: string; request: Re
   if (!state?.configured && !error) return null;
   const ticket = state?.ticket;
   return <section className="section-card helpdesk-panel customer-print-hide">
-    <div className="section-head"><div><div className="eyebrow">HELPDESK</div><h3>Zendesk ticket</h3></div><Headphones size={17} /></div>
+    <div className="section-head"><div><div className="eyebrow">Helpdesk</div><h3>Zendesk ticket</h3></div><Headphones size={17} /></div>
     {error && <Notice>{error}</Notice>}
     {ticket && <div className="account-actions">
       <p><strong>#{ticket.ticket_id} · {pretty(ticket.status)}</strong> <small>· Checked {timeText(ticket.checked_at)}</small></p>

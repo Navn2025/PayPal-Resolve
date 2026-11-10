@@ -5,9 +5,11 @@ test("merchant reviews an automatic blocked investigation without approving a re
   await page.getByLabel("Resolve access key").fill("rslv_ui_test_fixture_key_not_a_real_secret");
   await page.getByRole("button", { name: "Sign in with access key" }).click();
   await page.getByRole("button", { name: /Connected refund fixture/ }).click();
+  // Diagnostic detail is collapsed by default.
+  await page.getByText("Automatic investigation details").click();
   const panel = page.getByRole("region", { name: "Automatic investigation" });
   await expect(panel.getByRole("heading", { name: "Automatic investigation", exact: true })).toBeVisible();
-  await expect(panel.getByText(/inference disabled/).first()).toBeVisible();
+  await expect(panel.getByText(/automatic analysis is turned off/i).first()).toBeVisible();
   await expect(panel.getByText(/Payment requires the separate refund approval/)).toBeVisible();
   await panel.getByRole("button", { name: "Approve investigation", exact: true }).click();
   await expect(panel.getByRole("status").filter({ hasText: /Review: approve/ })).toBeVisible();

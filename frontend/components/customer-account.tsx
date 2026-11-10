@@ -108,7 +108,7 @@ export function CustomerAccount() {
     <header className="customer-top"><div><Link href="/" className="site-brand" aria-label="Resolve home"><Brand small /></Link><span>Customer portal</span></div><a className="inline-link" href="/customer">Track a case</a></header>
     <main className="customer-main">
       <section className="section-card customer-intake">
-        <div className="eyebrow">CUSTOMER ACCOUNT</div><h1>My cases</h1>
+        <div className="eyebrow">Customer account</div><h1>My cases</h1>
         {error && <Notice>{error}</Notice>}{notice && <Notice tone="info">{notice}</Notice>}
         {login ? <div className="account-actions"><p>Continue to sign in using the link sent to your email.</p>
           <Button variant="primary" disabled={busy} onClick={signIn}><ShieldCheck size={16} /> Continue to My cases</Button></div>

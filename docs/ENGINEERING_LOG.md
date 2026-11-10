@@ -3523,6 +3523,79 @@ playwright test`): 21 passed, 5 skipped, 0 failed.
   `PUT /cases/{id}/commitment` exists; adding it needs a proxy entry and a
   form.
 
+### CHG-053 - Inbox crash after the main merge: promise-health map passed again
+
+**Date:** 10 November 2026 (Asia/Calcutta). Branch `feat/ai-part`, after merging
+`main` (`13ac7ed`, which includes Navneet's `1158673` refactor). Frontend only.
+
+**Objective:** after the merge, `/workspace` crashed in `InboxPane` at
+`risk.get(item.id)`. The cause: the refactored `Workspace` render no longer
+passed the promise-health map (from CHG-050) to `InboxPane`, so `risk` was
+`undefined`. `tsc` also flagged it, together with a second merge gap.
+
+**Files and resulting behavior:**
+
+- **`frontend/components/workspace.tsx`:**
+  - **Map passed again:** `Workspace` passes its existing `risk` state to
+    `InboxPane` again. The state is filled by the existing `loadRisk()`, which
+    makes one `GET /resolution-cases/promise-health?limit=200` request per
+    inbox load and leaves the map unchanged if the call fails.
+  - **Safe default:** `InboxPane`'s `risk` prop is now optional. It defaults to
+    a shared empty `Map` (`NO_RISK`), so the rows render plainly if the map is
+    ever missing.
+  - **Refactor kept:** Navneet's refactor is otherwise unchanged.
+- **`frontend/components/case-desk.tsx`:** restored the `useEffect`/`useState`
+  import that the merge dropped. Without it, the merged `CaseDesk`
+  (`customerVisited`) fails to type-check. No behavior change.
+- **`frontend/tests/promise-health.spec.ts`:** a new test, "the inbox renders
+  with and without promise-health data". It uses mocked promise-health list
+  responses with synthetic values:
+  - **With data:** a broken, overdue entry for the fixture case. The row shows
+    "$40.00 at risk" and "Overdue".
+  - **Without data:** an HTTP 500 response, then an empty list. The row still
+    renders, with no risk line.
+  - **Throughout:** no page errors.
+
+**Reason and decision IDs:** DEC-089.
+
+**Validation actually performed:**
+
+- `npm run check`: failed before the fix (`TS2741` missing `risk`, `TS2304`
+  `useState`/`useEffect`). It passed after the fix.
+- `npx playwright test tests/promise-health.spec.ts`: 5 passed.
+- **The new test catches the bug:** with `risk={risk}` removed temporarily, it
+  failed (`.case-row-risk` not found). The fix was then restored.
+- **Full Playwright suite** (`PLAYWRIGHT_CHROMIUM_EXECUTABLE=<system Chrome> npx
+  playwright test`): 20 passed, 5 skipped, 4 failed. Rerunning the four
+  failing specs gave the same results. None of the four depend on the inbox
+  risk map, and none could be checked before the merge, because `/workspace`
+  did not compile or render there:
+  - **`platform.spec.ts` and `platform.performance.spec.ts`** (new in
+    `1158673`): `ECONNREFUSED 127.0.0.1:8025`. They belong to
+    `playwright.platform.config.ts`, which starts that backend, but the default
+    config also picks them up.
+    - **Own config not runnable here:** that config doesn't read
+      `PLAYWRIGHT_CHROMIUM_EXECUTABLE`, and the bundled Chromium isn't
+      installed, so the browser didn't launch.
+  - **`investigations.spec.ts`:** times out waiting for the "Automatic
+    investigation details" `<summary>`. After the merge, `Workspace` renders
+    `InvestigationReviewPanel` directly in the desk pane, without the CHG-050
+    collapsed `<details>` wrapper.
+  - **`settings.spec.ts`** (shell test): at 390px `scrollWidth` is 410, so the
+    page overflows horizontally after the merge.
+  - **Not fixed here:** these are outside this inbox fix, and the refactor was
+    to stay as it is.
+- **Backend:** not changed, so not re-run.
+
+**Known limitations and follow-up:**
+
+- **Test data is mocked:** the promise-health values in the new test are
+  mocked and synthetic, and not from a real provider. The inbox list and the
+  case are from the isolated fixture backend.
+- **Load frequency:** promise health still loads once per inbox load (including
+  filter and search changes), as before the merge; it isn't cached across
+  loads.
+
 ## Decision register
 
 ### DEC-001 - Keep FastAPI/Pydantic and the existing uv project
@@ -4336,6 +4409,13 @@ only when they add amounts or progress the steps don't. When the first step
 cannot be done on this page, the card says where it happens instead of
 offering a primary button that skips it.
 
+### DEC-089 - Optional enrichment never blocks the inbox
+
+Promise-health flags only enrich the inbox rows. The inbox gets them as an optional
+prop with an empty default, so a missing prop, a failed call or an empty list
+leaves plain rows instead of a crash. The page loads the data once and passes
+it down; rows never fetch it themselves.
+
 ## Open work and boundaries
 
 1. Verify import (if needed), SSL connection, migration startup, and worker
@@ -4361,7 +4441,7 @@ offering a primary button that skips it.
 ## Template for the next entry
 
 ```text
-### CHG-044 - Concrete change title
+### CHG-054 - Concrete change title
 Date:
 Objective:
 Files and resulting behavior:

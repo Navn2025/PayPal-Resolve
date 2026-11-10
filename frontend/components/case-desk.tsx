@@ -23,7 +23,7 @@ import {
   Wallet,
   type LucideIcon,
 } from "lucide-react";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   dateText,
   money,

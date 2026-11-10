@@ -174,6 +174,9 @@ function StatusMetrics({ cases, total }: { cases: CaseView[]; total: number }) {
   );
 }
 
+// Shared empty default: rows stay plain when promise-health is missing or failed.
+const NO_RISK: Risk = new Map();
+
 function InboxPane({
   cases,
   selected,
@@ -187,7 +190,7 @@ function InboxPane({
   loading,
   onNew,
   demo,
-  risk,
+  risk = NO_RISK,
 }: {
   cases: CaseView[];
   selected: string | null;
@@ -201,7 +204,8 @@ function InboxPane({
   loading: boolean;
   onNew: () => void;
   demo: boolean;
-  risk: Risk;
+  /** Promise-health flags by case id; optional so the inbox renders plain rows if they never load. */
+  risk?: Risk;
 }) {
   const needle = search.trim().toLowerCase();
   const items = cases.filter(
@@ -1504,6 +1508,7 @@ export function Workspace({
                   loading={loadingList}
                   onNew={() => setDialog({ kind: "case" })}
                   demo={demo}
+                  risk={risk}
                 />
                 <div className="desk-pane">
                   {desk || (

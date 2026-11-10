@@ -169,3 +169,38 @@ test("a linked payment with nothing promised shows the action as the title and o
   await expect(step.locator(".button-primary")).toHaveCount(0);
   await expect(step.locator(".explain")).toHaveCount(0);
 });
+
+// The inbox reads merchant-wide promise health once per inbox load. Mocked list responses (synthetic data)
+// prove the rows render with the flags, and still render plainly when the call fails or returns nothing.
+test("the inbox renders with and without promise-health data", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await signIn(page);
+  const inbox = await api<{ items: { id: string; title: string }[] }>(page, "/resolution-cases/inbox?limit=50&offset=0&filter_by=all&q=");
+  const fixture = inbox.items.find((row) => /Connected refund fixture/.test(row.title))!;
+  const row = page.getByRole("button", { name: /Connected refund fixture/ });
+  const healthList = "**/api/resolve/resolution-cases/promise-health?*";
+
+  await page.route(healthList, (route) => route.fulfill({ json: { items: [{
+    case_id: fixture.id, promise_id: "synthetic-promise", promise: "Refund", status: "broken", currency: "USD",
+    promised_amount: "40.00", refunded_amount: "0.00", pending_amount: "0.00", remaining_amount: "40.00",
+    captured_amount: "100.00", suggested_refund_amount: "40.00", deadline: "2026-11-01T00:00:00Z",
+    days_since_promise: 9, overdue: true, ledger_ahead_of_provider: false,
+  }] } }));
+  await page.reload();
+  await expect(row).toBeVisible();
+  await expect(row.locator(".case-row-risk")).toHaveText("$40.00 at risk");
+  await expect(row.getByText("Overdue")).toBeVisible();
+
+  for (const failure of [
+    (route: Parameters<Parameters<Page["route"]>[1]>[0]) => route.fulfill({ status: 500, json: { detail: "synthetic failure" } }),
+    (route: Parameters<Parameters<Page["route"]>[1]>[0]) => route.fulfill({ json: { items: [] } }),
+  ]) {
+    await page.unroute(healthList);
+    await page.route(healthList, failure);
+    await page.reload();
+    await expect(row).toBeVisible();
+    await expect(page.locator(".case-row-risk")).toHaveCount(0);
+  }
+  expect(errors).toEqual([]);
+});

@@ -58,45 +58,56 @@ export function PromiseHealthPanel({ caseId, request, refreshKey, canRefund, blo
     finally { setExplaining(false); }
   }
 
-  return <section className="section-card investigation-panel promise-health" aria-label="Promise check">
-    <div className="section-head"><div><div className="eyebrow">BROKEN-PROMISE CHECK</div><h2>Promise check</h2></div></div>
-    {error && <Notice>{error}</Notice>}
-    {!health && !error && <p className="muted">Checking promises…</p>}
-    {next && (() => { const current = explanation?.forSummary === next.summary ? explanation : null; return <div className="next-step">
-      <h3>Next step</h3>
-      {current?.source === "ai"
-        ? <><span className="badge badge-needs_review ai-label">{current.label}</span><p>{current.text}</p></>
-        : <p>{current?.text ?? next.summary}</p>}
-      {current?.source === "template" && <small className="muted">Written from case facts. AI explanation not used: {fallbackText[current.fallback_reason ?? ""] ?? current.fallback_reason?.replace(/_/g, " ")}.</small>}
-      <div className="health-actions"><Button disabled={explaining} onClick={() => void explainStep()}>{explaining ? "Explaining…" : "Explain with AI"}</Button>
-        <small>Advisory only. It never approves or sends a refund.</small></div>
-    </div>; })()}
-    {!!next?.missing.length && <div className="missing-list"><h3>Missing before refund</h3>
-      <ul>{next.missing.map((item, index) => <li key={item.code + index} data-code={item.code}>{item.text}</li>)}</ul></div>}
-    {health && !health.items.length && <p className="muted">No accepted refund promise on a linked payment to check.</p>}
-    {health?.items.map((item) => {
-      const owed = item.status !== "kept";
-      const suggested = item.suggested_refund_amount;
-      const capped = cents(suggested) < cents(item.remaining_amount);
-      return <article className={`health-card health-${item.status}`} key={item.promise_id} aria-label={`Promise ${statusLabels[item.status]}`}>
-        <div className="health-head"><strong>{item.promise}</strong><span className={`badge ${statusBadge[item.status]}`}><span />{statusLabels[item.status]}</span></div>
-        <p className="health-line">
-          Promised {money(item.promised_amount, item.currency)} · Refunded {money(item.refunded_amount, item.currency)}
-          {owed && <> · <strong>{money(item.remaining_amount, item.currency)} at risk</strong></>} · {days(item.days_since_promise)}
-        </p>
-        <p className="muted">
-          {item.overdue ? `Past its deadline (${new Date(item.deadline).toLocaleDateString()}).`
-            : owed ? `Due by ${new Date(item.deadline).toLocaleDateString()} (${health.overdue_after_days}-day window unless a due date was set).` : "The confirmed refunds cover the promise."}
-          {Number(item.pending_amount) > 0 && ` ${money(item.pending_amount, item.currency)} is still pending with PayPal.`}
-        </p>
-        {item.ledger_ahead_of_provider && <Notice tone="info">More refunds are recorded on the payment than PayPal has confirmed. Check the evidence before refunding again.</Notice>}
-        {owed && cents(suggested) > 0 && <div className="health-actions">
-          <Button variant="primary" disabled={!canRefund} onClick={() => onRefund(suggested)}>Refund remaining {money(suggested, item.currency)}</Button>
-          <small>{canRefund ? "Opens the refund review with this amount. Nothing is sent until you approve and submit."
-            : `Refund review is not available yet: ${blockedReason}`}</small>
-        </div>}
-        {owed && capped && <p className="muted">Limited to {money(suggested, item.currency)} by refunds already recorded or pending and the {money(item.captured_amount, item.currency)} captured.</p>}
-      </article>;
-    })}
+  const loading = !health && !next && !error;
+  const current = next && explanation?.forSummary === next.summary ? explanation : null;
+  return <section className="ai-group promise-health" aria-label="Promise check" aria-busy={loading}>
+    <article className="ai-card">
+      <header className="card-head"><div><div className="eyebrow">BROKEN-PROMISE CHECK</div><h3>Promise check</h3></div></header>
+      {error && <Notice>{error}</Notice>}
+      {loading && <p className="panel-state" role="status">Checking promises…</p>}
+      {health && !health.items.length && <p className="panel-state">No accepted refund promise on a linked payment to check.</p>}
+      {health?.items.map((item) => {
+        const owed = item.status !== "kept";
+        const suggested = item.suggested_refund_amount;
+        const capped = cents(suggested) < cents(item.remaining_amount);
+        return <article className={`health-card health-${item.status}`} key={item.promise_id} aria-label={`Promise ${statusLabels[item.status]}`}>
+          <div className="health-head"><strong>{item.promise}</strong><span className={`badge ${statusBadge[item.status]}`}><span />{statusLabels[item.status]}</span></div>
+          <dl className="money-rows">
+            <div><dt>Promised</dt><dd>{money(item.promised_amount, item.currency)}</dd></div>
+            <div><dt>Refunded</dt><dd>{money(item.refunded_amount, item.currency)}</dd></div>
+            {Number(item.pending_amount) > 0 && <div><dt>Pending with PayPal</dt><dd>{money(item.pending_amount, item.currency)}</dd></div>}
+            {owed && <div className="money-row-total"><dt>At risk</dt><dd>{money(item.remaining_amount, item.currency)}</dd></div>}
+            <div><dt>Days since promise</dt><dd>{days(item.days_since_promise)}</dd></div>
+          </dl>
+          <p className="card-note">
+            {item.overdue ? `Past its deadline (${new Date(item.deadline).toLocaleDateString()}).`
+              : owed ? `Due by ${new Date(item.deadline).toLocaleDateString()} (${health.overdue_after_days}-day window unless a due date was set).` : "The confirmed refunds cover the promise."}
+          </p>
+          {item.ledger_ahead_of_provider && <Notice tone="info">More refunds are recorded on the payment than PayPal has confirmed. Check the evidence before refunding again.</Notice>}
+          {owed && cents(suggested) > 0 && <div className="card-actions">
+            <Button variant="primary" disabled={!canRefund} onClick={() => onRefund(suggested)}>Refund remaining {money(suggested, item.currency)}</Button>
+            <small className={canRefund ? "" : "disabled-reason"}>{canRefund ? "Opens the refund review with this amount. Nothing is sent until you approve and submit."
+              : `Refund review is not available yet: ${blockedReason}`}</small>
+          </div>}
+          {owed && capped && <p className="card-note">Limited to {money(suggested, item.currency)} by refunds already recorded or pending and the {money(item.captured_amount, item.currency)} captured.</p>}
+        </article>;
+      })}
+    </article>
+    <article className="ai-card missing-list">
+      <header className="card-head"><div><div className="eyebrow">BEFORE ANY REFUND</div><h3>Missing before refund</h3></div>
+        {next && <span className={`badge ${next.missing.length ? "badge-needs_review" : "badge-fulfilled"}`}><span />{next.missing.length ? `${next.missing.length} open` : "Complete"}</span>}</header>
+      {loading && <p className="panel-state" role="status">Checking what is missing…</p>}
+      {next && !next.missing.length && <p className="panel-state">Nothing is missing before a refund.</p>}
+      {!!next?.missing.length && <ul>{next.missing.map((item, index) => <li key={item.code + index} data-code={item.code}>{item.text}</li>)}</ul>}
+    </article>
+    <article className="ai-card next-step">
+      <header className="card-head"><div><div className="eyebrow">RECOMMENDATION</div><h3>Next step</h3></div>
+        {current?.source === "ai" && <span className="badge badge-needs_review ai-label"><span />{current.label}</span>}</header>
+      {loading && <p className="panel-state" role="status">Working out the next step…</p>}
+      {next && <p className="next-step-text">{current?.text ?? next.summary}</p>}
+      {current?.source === "template" && <p className="card-note">Written from case facts. AI explanation not used: {fallbackText[current.fallback_reason ?? ""] ?? current.fallback_reason?.replace(/_/g, " ")}.</p>}
+      {next && <div className="card-actions"><Button disabled={explaining} aria-busy={explaining} onClick={() => void explainStep()}>{explaining ? "Explaining…" : "Explain with AI"}</Button>
+        <small>Advisory only. It never approves or sends a refund.</small></div>}
+    </article>
   </section>;
 }

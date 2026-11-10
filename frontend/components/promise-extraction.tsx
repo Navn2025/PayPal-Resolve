@@ -76,12 +76,13 @@ export function PromiseExtractionPanel({ caseId, request, onUse }: {
     finally { setBusy(false); }
   }
   const visible = result?.proposals.map((proposal, index) => ({ proposal, index })).filter(({ index }) => !dismissed.includes(index)) ?? [];
-  return <section className="section-card investigation-panel extraction-panel" aria-label="Promise suggestions">
-    <div className="section-head"><div><div className="eyebrow">AI SUGGESTIONS</div><h2>Promise suggestions</h2></div>
-      <Button disabled={busy} onClick={() => void extract()}>{busy ? "Reading conversation…" : "Extract promises from conversation"}</Button></div>
-    <p>Suggestions only. Nothing is saved or paid until you confirm.</p>
+  return <section className="ai-card extraction-panel" aria-label="Promise suggestions" aria-busy={busy}>
+    <header className="card-head"><div><div className="eyebrow">AI SUGGESTIONS</div><h3>Promise suggestions</h3></div>
+      <Button disabled={busy} onClick={() => void extract()}>{busy ? "Reading conversation…" : "Extract promises from conversation"}</Button></header>
+    <p className="card-note">Suggestions only. Nothing is saved or paid until you confirm.</p>
+    {!result && !error && <p className="panel-state">{busy ? "Reading the stored conversation…" : "No suggestions yet. Extract to read the stored conversation."}</p>}
     {error && <Notice>{error}</Notice>}
-    {result && <p className="muted" role="status">
+    {result && <p className="card-note" role="status">
       {result.cache_hit ? "cached, 0 tokens" : result.skipped_reason ? "No AI call made" : `${result.tokens} tokens`}
       {" · "}{result.proposals.length} {result.proposals.length === 1 ? "suggestion" : "suggestions"}</p>}
     {!!result?.flags?.length && <div className="injection-flags" role="note" aria-label="Suspicious buyer instructions">
@@ -90,26 +91,26 @@ export function PromiseExtractionPanel({ caseId, request, onUse }: {
       <ul>{result.flags.map((flag, index) => <li key={index}>
         <strong>{flag.rule_id}</strong> · {flag.label} · buyer message {flag.message_id}</li>)}</ul>
     </div>}
-    {result?.skipped_reason === "no_merchant_messages" && <p>No merchant messages yet, so there is nothing to suggest.</p>}
+    {result?.skipped_reason === "no_merchant_messages" && <p className="panel-state">No merchant messages yet, so there is nothing to suggest.</p>}
     {!!result?.review_reasons.length && <Notice><strong>Needs your review:</strong> {result.review_reasons.map((reason) => plain(reviewText, reason)).join(" ")}</Notice>}
-    {result && !result.proposals.length && !result.review_reasons.length && !result.skipped_reason && <p>No promises were found in this conversation.</p>}
+    {result && !result.proposals.length && !result.review_reasons.length && !result.skipped_reason && <p className="panel-state">No promises were found in this conversation.</p>}
     <div className="proposal-list">{visible.map(({ proposal, index }) => <article className="proposal-card" key={index}
       aria-label={`Suggested ${remedyLabels[proposal.kind] ?? pretty(proposal.kind)}`}>
-      <div className="proposal-head"><h3>{remedyLabels[proposal.kind] ?? pretty(proposal.kind)}</h3>
+      <div className="proposal-head"><h4>{remedyLabels[proposal.kind] ?? pretty(proposal.kind)}</h4>
         <span className="proposal-badges">
           {proposal.possible_revision && <span className="badge badge-needs_review">Possible revision</span>}
           {!!proposal.supporting_message_ids.length && <span className="badge badge-pending">Also in {proposal.supporting_message_ids.join(", ")}</span>}
           {proposal.needs_review && <span className="badge badge-needs_review">Low confidence</span>}
         </span></div>
       <dl className="proposal-terms">
-        {proposal.amount_cents !== null && <><dt>Amount</dt><dd>{money(proposal.amount_cents / 100)}</dd></>}
+        {proposal.amount_cents !== null && <><dt>Amount</dt><dd className="money-value">{money(proposal.amount_cents / 100)}</dd></>}
         {proposal.action && <><dt>Action</dt><dd>{pretty(proposal.action)}</dd></>}
         {proposal.condition && <><dt>Condition</dt><dd>{proposal.condition}</dd></>}
         {proposal.deadline && <><dt>Deadline</dt><dd>{proposal.deadline}</dd></>}
       </dl>
       <blockquote className="proposal-quote"><mark>{proposal.exact_quote}</mark>
         <footer>Merchant message {proposal.source_message_id}</footer></blockquote>
-      <div className="review-actions">
+      <div className="card-actions">
         <Button variant="primary" onClick={() => onUse(draftFrom(proposal))}>Use this proposal</Button>
         <Button onClick={() => setDismissed((previous) => [...previous, index])}>Dismiss</Button>
       </div>

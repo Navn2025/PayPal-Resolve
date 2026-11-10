@@ -420,6 +420,13 @@ export function Workspace({ mode, initialCaseId = null }: { mode: "demo" | "merc
   }
 
   const desk = item && <CaseDesk item={item} tab={tab} setTab={setTab} request={request} demo={demo} onBack={() => setMobileCase(false)}
+    assistant={demo ? undefined : <div className="ai-stack" aria-label="AI and promise checks">
+      <PromiseExtractionPanel key={"extract-" + item.id} caseId={item.id} request={request} onUse={(draft) => setDialog({ kind: "promise", draft })} />
+      <PromiseHealthPanel key={"health-" + item.id} caseId={item.id} request={request}
+        refreshKey={current?.basis?.state_fingerprint} canRefund={canReview && !active && !paymentBusy} blockedReason={active ? "an approval is already recorded." : nextMessage}
+        onRefund={(amount) => void reviewRefund(amount)} />
+      <InvestigationReviewPanel key={item.id} caseId={item.id} request={request} />
+    </div>}
     onLinkPayment={() => setDialog({ kind: "payment-link", item })}
     onManage={() => item.operations && setDialog({ kind: "operations", id: item.id, fields: item.operations })}
     onOperations={updateOperations}
@@ -490,11 +497,7 @@ export function Workspace({ mode, initialCaseId = null }: { mode: "demo" | "merc
             <InboxPane cases={inbox.items} selected={selected} select={select} filter={filter} setFilter={setFilter} search={search}
               setSearch={setSearch} more={inbox.offset + CASE_PAGE < inbox.total} onMore={() => loadInbox(inbox.offset + CASE_PAGE)}
               loading={loadingList} onNew={() => setDialog({ kind: "case" })} demo={demo} />
-            <div className="desk-pane">{desk || <Empty title={loadingList ? "Loading case workspace…" : "Select a case"} detail={loadingList ? "Reading your cases from the local backend." : "Open a case from the inbox to see its promises and evidence."} />}{!demo && item && <PromiseHealthPanel key={"health-" + item.id} caseId={item.id} request={request}
-                refreshKey={current?.basis?.state_fingerprint} canRefund={canReview && !active && !paymentBusy} blockedReason={active ? "an approval is already recorded." : nextMessage}
-                onRefund={(amount) => void reviewRefund(amount)} />}
-              {!demo && item && <InvestigationReviewPanel key={item.id} caseId={item.id} request={request} />}
-              {!demo && item && <PromiseExtractionPanel key={"extract-" + item.id} caseId={item.id} request={request} onUse={(draft) => setDialog({ kind: "promise", draft })} />}</div>
+            <div className="desk-pane">{desk || <Empty title={loadingList ? "Loading case workspace…" : "Select a case"} detail={loadingList ? "Reading your cases from the local backend." : "Open a case from the inbox to see its promises and evidence."} />}</div>
           </div>
           {demo && <div className="demo-tools"><span><FlaskConical size={17} /> Demo controls</span><p>Try the normal refund, or approve first and simulate a refund made outside Resolve.</p>
             <a className="button button-secondary small-button" href="/customer?demo=1" target="_blank" rel="noreferrer">Customer demo</a>

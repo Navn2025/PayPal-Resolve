@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowDownToLine, ArrowLeft, ArrowLeftRight, ArrowRight, ArrowUpRight, CalendarDays, Check, ChevronDown, ClipboardCheck, Clock3, FileText, Fingerprint, ListChecks, PackageCheck, Plus, Printer, RefreshCw, ShieldCheck, Wallet, type LucideIcon } from "lucide-react";
+import type { ReactNode } from "react";
 import { dateText, money, outcomeLabels, pretty, remedyLabels, shortId, sourceLabels, timeText, type Approval, type CaseView, type Execution, type PromiseView, type Reconciliation, type Requester, type Timeline } from "@/lib/domain";
 import { Badge, Brand, Button, Empty, Notice, remedyIcons } from "./ui";
 import { MerchantCustomer } from "./merchant-customer";
@@ -32,6 +33,8 @@ interface DeskProps {
   onEvidence: (p: PromiseView) => void; onRefresh: (p: PromiseView) => void; onExport: () => void;
   onBack: () => void; refreshing: string | null; error?: string; verifiedMessage?: string;
   onManage: () => void; onLinkPayment: () => void; onOperations: (id: string, operations: Operations) => void;
+  /** Merchant-only AI and check panels, shown in the overview's promises area. */
+  assistant?: ReactNode;
 }
 
 function Metric({ label, value, style, Icon }: { label: string; value: string; style: string; Icon: LucideIcon }) {
@@ -132,15 +135,36 @@ const eventNames: Record<string, string> = {
   case_created: "Case opened", promise_recorded: "Promise recorded", promise_revised: "Promise revised", merchant_evidence: "Evidence recorded",
   provider_observation: "Provider evidence checked", verification_failed: "Verification needs review", refund_approved: "Refund approved",
   approved: "Refund approved", completed: "Refund completed", verified: "Provider verification", invalidated: "Approval invalidated",
+  "case.created": "Payment case opened",
 };
 
-function EventTimeline({ timeline, timelineError, loadMore, loadingTimeline, onExport }: Pick<DeskProps, "timeline" | "timelineError" | "loadMore" | "loadingTimeline" | "onExport">) {
-  const events = [
+function caseEvents(timeline: Timeline | null) {
+  return [
     ...(timeline?.items ?? []).map((event) => ({ ...event, time: event.recorded_at, actor: sourceLabels[event.source], checked: event.source === "provider_confirmed" })),
     ...(timeline?.refund_items ?? []).map((event) => ({ ...event, time: event.occurred_at,
       actor: event.actor_kind === "merchant" ? "Merchant recorded" : event.source.endsWith("_verification") ? "Provider confirmed" : "Resolve",
       checked: event.source.endsWith("_verification") })),
   ].sort((a, b) => Date.parse(b.time) - Date.parse(a.time));
+}
+
+const RECENT_EVENTS = 6;
+// Overview preview of the already-loaded events: title, source and time only. Details stay in the timeline tab.
+function RecentActivity({ timeline, timelineError, onOpen }: Pick<DeskProps, "timeline" | "timelineError"> & { onOpen: () => void }) {
+  const events = caseEvents(timeline);
+  return <div className="section-card activity-card">
+    {timelineError && <p className="panel-state">Events could not be loaded. Open the evidence timeline to retry.</p>}
+    {!timeline && !timelineError && <p className="panel-state" role="status">Loading events…</p>}
+    {timeline && !events.length && <p className="panel-state">No events recorded yet.</p>}
+    {!!events.length && <ol className="event-list event-list-compact">{events.slice(0, RECENT_EVENTS).map((event) =>
+      <li key={event.id}><span className={`event-dot ${event.checked ? "event-provider" : ""}`} aria-hidden="true" />
+        <div><strong>{eventNames[event.event_type] ?? pretty(event.event_type)}</strong>
+          <small>{event.actor} · <time dateTime={event.time}>{timeText(event.time)}</time></small></div></li>)}</ol>}
+    {!!events.length && <Button variant="ghost" className="small-button" onClick={onOpen}>See all events <ArrowRight size={14} /></Button>}
+  </div>;
+}
+
+function EventTimeline({ timeline, timelineError, loadMore, loadingTimeline, onExport }: Pick<DeskProps, "timeline" | "timelineError" | "loadMore" | "loadingTimeline" | "onExport">) {
+  const events = caseEvents(timeline);
   return <section className="section-card timeline-card">
     <div className="section-head"><div><div className="eyebrow">AUDIT TRAIL</div><h3>Evidence timeline</h3></div>
       <Button onClick={onExport} className="small-button"><ArrowDownToLine size={15} /> Export evidence</Button></div>
@@ -199,11 +223,25 @@ export function CaseDesk(props: DeskProps) {
     <div className="desk-content">
       {error && <Notice>{error}</Notice>}
       {verifiedMessage && <Notice tone="success">{verifiedMessage}</Notice>}
-      {tab === "overview" && <>{!item.refund_case_id && <div className="section-card linked-panel customer-print-hide">
-        <span className="section-icon"><Wallet size={19} /></span><div><strong>No payment linked</strong><p>Link the payment if this case needs a refund.</p></div>
-        <Button className="small-button" onClick={props.onLinkPayment}>Link payment record</Button></div>}
-        <PaymentPanel {...props} /><PromiseCards {...props} />
-        {!demo && <HelpdeskPanel key={item.id} caseId={item.id} request={props.request} />}</>}
+      {tab === "overview" && <div className="case-overview">
+        <section className="desk-area area-summary" aria-labelledby="area-summary-title">
+          <h3 className="area-title" id="area-summary-title">Case summary</h3>
+          {!item.refund_case_id && <div className="section-card linked-panel customer-print-hide">
+            <span className="section-icon"><Wallet size={19} /></span><div><strong>No payment linked</strong><p>Link the payment if this case needs a refund.</p></div>
+            <Button className="small-button" onClick={props.onLinkPayment}>Link payment record</Button></div>}
+          <PaymentPanel {...props} />
+        </section>
+        <section className="desk-area area-promises" aria-labelledby="area-promises-title">
+          <h3 className="area-title" id="area-promises-title">Promises &amp; AI</h3>
+          <PromiseCards {...props} />
+          {props.assistant}
+          {!demo && <HelpdeskPanel key={item.id} caseId={item.id} request={props.request} />}
+        </section>
+        <section className="desk-area area-timeline" aria-labelledby="area-timeline-title">
+          <h3 className="area-title" id="area-timeline-title">Timeline</h3>
+          <RecentActivity {...props} onOpen={() => setTab("timeline")} />
+        </section>
+      </div>}
       {tab === "timeline" && <EventTimeline {...props} />}
       {tab === "receipt" && <Receipt item={item} demo={demo} />}
       {tab === "customer" && <MerchantCustomer key={item.id} item={item} request={props.request} demo={demo} onOperations={props.onOperations} />}

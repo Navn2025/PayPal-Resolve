@@ -3093,6 +3093,104 @@ the existing extraction settings. OpenAPI regenerated (+431 lines).
   several.
 - Time to verified resolution is only measured on synthetic data so far.
 
+### CHG-049 - Structured workspace layout with the existing colours
+
+**Date:** 10 November 2026 (Asia/Calcutta). Branch `feat/ai-part`. Frontend only;
+no backend or API change.
+
+**Objective:** make the merchant workspace easier to scan without changing its
+colours. That means one spacing scale, one type scale, clear case areas,
+consistent cards and status pills, and clear empty, loading and disabled
+states. It also fixes the 390px top-bar overflow.
+
+**Files and resulting behavior:**
+
+- `frontend/app/globals.css`: a "Layout system" block at the end.
+  - **Scales:**
+    - Spacing tokens `--sp-1` to `--sp-6` (4–32px).
+    - Type tokens `--fs-xs` to `--fs-xl` (11–26px).
+    - One `--radius`.
+  - **Smaller headings:** page 26px, case 20px, cards 15px.
+  - **Colours:** every colour in the block is an existing token (`--ink`,
+    `--muted`, `--line`, `--soft-line`, `--canvas`, `--white`, `--amber`,
+    `--green`, `--green-soft`, `--shadow`); a grep of the block finds no
+    colour literal.
+  - **Overview grid:** `.case-overview` with three named areas, Case summary,
+    Promises & AI and Timeline. The timeline sits beside promises when the
+    case panel is at least 900px wide (container query) and below it
+    otherwise.
+  - **AI cards:** `.ai-card` is one card shape for Promise suggestions,
+    Promise check, Missing before refund and Next step. The automatic
+    investigation panel keeps its markup and only gets spacing and type.
+  - **Money:** `.money-rows` shows right-aligned label/value rows. Amount
+    values and money tiles are right-aligned too.
+  - **Status pills:** one `.badge` shape; pills without a dot element get
+    one through `::before`.
+  - **States:** `.panel-state` is the shared empty or loading block (dashed,
+    muted; italic when it's a status). A disabled refund button shows its
+    reason in `--amber`.
+  - **390px top bar:** below 520px the Settings, Sign out and Connect buttons
+    become icon-only, and their labels stay in the accessibility tree through
+    a clipped span. The skip link is clipped until it's focused.
+  - **Collapsed sidebar:** the "Orders" label is now hidden like the other
+    rail labels, and the next-action card wraps properly on phones.
+- `frontend/components/case-desk.tsx`:
+  - **Areas:** the overview tab renders the three areas.
+  - **Timeline area:** `RecentActivity` lists the six latest loaded events
+    (title, source, time) with "See all events", which opens the existing
+    evidence timeline tab. Its loading, empty and error states are explicit.
+  - **Shared builder:** event building moved into `caseEvents()`, used by both
+    the area and the tab. `case.created` is labelled "Payment case opened".
+  - **AI slot:** a new optional `assistant` prop renders the AI panels inside
+    Promises & AI.
+- `frontend/components/workspace.tsx`: the three merchant panels are passed to
+  `CaseDesk` as `assistant`, in the order Suggestions, Promise check
+  (including Missing before refund and Next step), then Automatic
+  investigation. They used to be stacked below the desk.
+  - **Behaviour change:** they now show on the Overview tab only, instead of
+    under every tab.
+- `frontend/components/promise-health.tsx`: the same "Promise check" region
+  now holds three cards, in this order: Promise check, Missing before refund
+  (with an open-count pill, or "Nothing is missing before a refund.") and
+  Next step (with the AI label shown as a pill). Money moved from the
+  one-line summary into right-aligned rows (Promised, Refunded, Pending with
+  PayPal, At risk, Days since promise). The text, reasons and buttons are
+  unchanged.
+- `frontend/components/promise-extraction.tsx`:
+  - **Card shape:** the panel is now a card with an h3 heading, and the
+    proposal titles are h4.
+  - **New "before" state:** "No suggestions yet. Extract to read the stored
+    conversation." While a request is running it reads "Reading the stored
+    conversation…".
+  - **Amounts:** the amount is right-aligned.
+- `frontend/tests/promise-health.spec.ts`: two assertions now read the money
+  rows instead of the removed one-line summary. No other test changed.
+
+**Reason and decision IDs:** DEC-085.
+
+**Validation actually performed:**
+
+- `npm run check`: passed. A grep of the new CSS block finds no colour
+  literals.
+- **Screenshots:** before and after at 1280, 768 and 390px, workspace inbox
+  and case, with a scratch Playwright script against the isolated fixture
+  backend. The AI suggestions are a browser-level mock (synthetic). The
+  connected page's `scrollWidth` at 390px went from 410 to 390. The
+  screenshots aren't committed.
+- **Full Playwright suite** (`PLAYWRIGHT_CHROMIUM_EXECUTABLE=<system Chrome> npx
+  playwright test`): 18 passed, 5 skipped, 0 failed.
+  `investigations.spec.ts`, which had failed its 390px width check (410) in
+  CHG-047 and CHG-048, now passes.
+- **Backend:** not changed, so not re-run.
+
+**Known limitations and follow-up:**
+
+- Older rules earlier in `globals.css` still carry their own pixel values. The
+  new block overrides them for the workspace instead of rewriting the file.
+- The customer portal, orders and settings pages weren't restructured.
+- The colours `badge-broken` and `health-*` added in CHG-047 remain as they
+  were.
+
 ## Decision register
 
 ### DEC-001 - Keep FastAPI/Pydantic and the existing uv project
@@ -3868,6 +3966,16 @@ approval; otherwise the code template is shown. It shares extraction's off
 switch, data policy, cache, token cap and daily budget, so it adds no new
 provider path, and its output can never authorize a refund.
 
+### DEC-085 - Restructure with layout tokens, not new colours
+
+Structure comes from spacing, type size, grouping and alignment, so the
+existing palette stays exactly as it is. The AI and check panels sit with the
+promises they act on, inside the case overview, rather than below the whole
+case, and they share one card shape so suggestions, checks and the
+recommendation read as one assistant area. Money is right-aligned in
+label/value rows so amounts can be compared at a glance; the one-line summary
+it replaces carried the same values.
+
 ## Open work and boundaries
 
 1. Verify import (if needed), SSL connection, migration startup, and worker
@@ -3893,7 +4001,7 @@ provider path, and its output can never authorize a refund.
 ## Template for the next entry
 
 ```text
-### CHG-049 - Concrete change title
+### CHG-050 - Concrete change title
 Date:
 Objective:
 Files and resulting behavior:

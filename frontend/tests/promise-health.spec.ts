@@ -29,7 +29,8 @@ test("promise check reads the real backend through the proxy", async ({ page }) 
   await page.getByRole("button", { name: /Connected refund fixture/ }).click();
   const panel = page.getByRole("region", { name: "Promise check" });
   // Fixture: accepted $30 refund promise, nothing refunded yet, gated behind a return milestone.
-  await expect(panel.getByText(/Promised \$30\.00 · Refunded \$0\.00 · \$30\.00 at risk · 0 days/)).toBeVisible();
+  // Money is shown as right-aligned label/value rows.
+  await expect(panel.locator(".money-rows")).toHaveText(/^Promised\s*\$30\.00\s*Refunded\s*\$0\.00\s*At risk\s*\$30\.00\s*Days since promise\s*0 days$/);
   await expect(panel.getByRole("button", { name: "Refund remaining $30.00" })).toBeDisabled();
   await expect(panel.getByText(/Refund review is not available yet/)).toBeVisible();
 
@@ -93,7 +94,7 @@ test("refund button pre-fills the review but never above the backend cap, and se
   await page.reload();
   await page.getByRole("button", { name: /Promise check browser test/ }).click();
   const panel = page.getByRole("region", { name: "Promise check" });
-  await expect(panel.getByText("Promised $30.00 · Refunded $17.50 · $12.50 at risk · 4 days")).toBeVisible();
+  await expect(panel.locator(".money-rows")).toHaveText(/^Promised\s*\$30\.00\s*Refunded\s*\$17\.50\s*At risk\s*\$12\.50\s*Days since promise\s*4 days$/);
   await panel.getByRole("button", { name: "Refund remaining $12.50" }).click();
   const dialog = page.getByRole("dialog");
   await expect(dialog.getByLabel("Refund amount (USD)")).toHaveValue("12.50");

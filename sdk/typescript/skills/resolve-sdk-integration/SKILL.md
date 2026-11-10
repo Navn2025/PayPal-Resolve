@@ -5,11 +5,29 @@ description: Integrate the Resolve Evidence SDK into a merchant's Node.js app. U
 
 # Integrate the Resolve SDK
 
+## Choose the customer workflow
+
+When the goal is order support, implement SDK 0.6's complete flow rather than
+stopping after `syncOrder`: an authenticated buyer reports an issue with
+`openIssue({orderId,requestId,reason,message,requestedResolution})`, reads
+`getOrderResolution(orderId)`, and explicitly opens `createSupportLink(orderId)`
+for messages, offers and returns. Verify the signed-in customer's order ownership
+on the merchant server before every call; derive orderId/source from trusted
+records, not arbitrary browser parameters. Keep a durable UUID for retries.
+
+Use an owner-generated **support integration key** under **Operations → Connections**
+with the app's stable source. Existing order-only keys do not gain this permission.
+Status polling creates no case and calls no provider. Unknown/unverified refund
+amounts are null and must not be displayed as zero or completed. Creating a portal
+session replaces the prior case link; do it on a deliberate user action, not each
+page load. A requested remedy is not an approved promise or payment authorization.
+See `docs/SDK_AFTERCARE.md` in the Resolve checkout for the full contract.
+
 ## Connect the app
 
 1. Inspect the target app's package manager, server runtime, order model, and trusted code path that persists order or payment changes. Reuse its checkout, database access, and retry mechanism. Resolve's SDK needs Node.js 22.12+ and runs only on the server.
-2. Reuse `@resolve-paypal/sdk` if it already supports `createResolve().syncOrder()`. Otherwise, install the supplied SDK preview archive in the app's server package using its package manager, for example `npm install path/to/resolve-paypal-sdk-0.5.0.tgz`. This preview is not published to npm. If the Resolve source is available and the archive is missing, run `npm ci` then `npm pack` in its `sdk/typescript` directory. If neither is available, identify the missing archive instead of substituting another package.
-3. Have the merchant sign in with their Resolve access key and open **Workspace → Settings → SDK keys → Generate SDK key → Copy SDK setup**. Use the generated commerce key in the app's server environment. Add placeholders to an existing environment example if needed:
+2. Reuse `@resolve-paypal/sdk` if it already supports the methods needed for the selected workflow. Otherwise, install the supplied SDK preview archive in the app's server package using its package manager, for example `npm install path/to/resolve-paypal-sdk-0.7.0.tgz`. This preview is not published to npm. If the Resolve source is available and the archive is missing, run `npm ci` then `npm pack` in its `sdk/typescript` directory. If neither is available, identify the missing archive instead of substituting another package.
+3. For customer support, have the owner open **Operations → Connections → Customer support inside your store**, choose the stable app source, and generate a support integration key. For order sync only, use **Workspace → Settings → SDK keys → Generate SDK key → Copy SDK setup**. Keep the selected key in the app's server environment. Add placeholders to an existing environment example if needed:
 
    ```dotenv
    RESOLVE_API_URL=https://YOUR-RESOLVE-HOST/api/sdk
@@ -44,3 +62,20 @@ Replace the sample values with the app's persisted order ID and status. Use a se
 ## Verify the integration
 
 Run the app's relevant checks. With a local or authorized test workspace, sync one synthetic order, repeat the exact request, and verify it appears once under the expected source in **Workspace → Orders**. If wiring updates, change the order in the app and check that the same row advances to the next version. If testing PayPal comparison, use Sandbox evidence and distinguish a saved app order from a verified provider result. If the package, connection, or workspace is unavailable, say what was verified locally and what remains for the developer to test.
+
+
+## SDK 0.7 aftercare reliability
+
+Use getRefundJourney for processor progress; never describe completed processor
+refunds as verified bank receipts. getSupportContext reuses the original issue
+and public conversation. For ambiguous issue outcomes retain the original UUID
+and recover with lookupIssue. Use getReturnEligibility before requestOrderReturn;
+policy_enabled false and a null fee mean the merchant must confirm terms.
+Return labels are merchant-uploaded PDFs, not purchased postage.
+
+pullEvents is an authenticated state reconciliation feed, not an outbound webhook.
+For PostgreSQL apps use PostgresResolutionConsumer with a stable consumer ID and
+write app state using the callback transaction; put external effects in the app
+outbox. Support calls require the app's own customer/order authorization.
+Full-key policy, dispute and inspection helpers require direct FastAPI and the
+matching staff role. Read docs/AFTERCARE_RELIABILITY.md for scope and limitations.

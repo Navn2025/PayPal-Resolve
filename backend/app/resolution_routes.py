@@ -1,3 +1,4 @@
+from .platform_connections import paypal_for
 """Merchant API for shared resolution cases and promise evidence."""
 
 from uuid import UUID
@@ -104,7 +105,7 @@ def refresh_case_evidence(
 ):
     """Check linked PayPal Sandbox records; report incomplete checks without removing prior facts."""
     return EvidenceWorkspace(store).refresh(
-        case_id, merchant.id, request.app.state.paypal_client
+        case_id, merchant.id, paypal_for(request, merchant.id)
     )
 
 
@@ -186,7 +187,7 @@ def refresh_promise(
         case_id,
         promise_id,
         merchant.id,
-        request.app.state.paypal_client,
+        paypal_for(request, merchant.id),
         payload.expected_revision,
     )
 

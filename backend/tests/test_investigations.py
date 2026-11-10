@@ -80,11 +80,12 @@ def test_labeled_http_simulations_and_hard_gates(client, label):
             assert "tools" not in request
             if request["model"] == cfg.openrouter_model:
                 assert request["provider"] == {
-                    "only": ["anthropic"],
+                    "only": ["phala"],
                     "allow_fallbacks": False,
                     "require_parameters": True,
                     "data_collection": "deny",
                     "zdr": True,
+                    "max_price": {"completion": 0.74},
                 }
             else:
                 assert request["reasoning_effort"] == "low"
@@ -663,6 +664,16 @@ def test_policy_model_route_and_call_budget_fail_closed_without_network():
         )
         for cfg, adapter in [
             (InvestigationSettings(**base, groq_model="unapproved"), GroqProvider),
+            (
+                InvestigationSettings(**base, openrouter_model="google/gemini-3.8-flash"),
+                OpenRouterProvider,
+            ),
+            (
+                InvestigationSettings(
+                    **base, openrouter_model="anthropic/claude-sonnet-5.5"
+                ),
+                OpenRouterProvider,
+            ),
             (InvestigationSettings(**base, openrouter_routes=()), OpenRouterProvider),
         ]:
             with pytest.raises(InferenceUnavailable):
@@ -671,6 +682,70 @@ def test_policy_model_route_and_call_budget_fail_closed_without_network():
             GroqProvider(InvestigationSettings(**base), http).complete(
                 Triage, {}, Budget(remaining=0)
             )
+
+
+@pytest.mark.parametrize(
+    "model,routes,expected_provider",
+    [
+        ("xingchen-agi/xing4.0-29b-a4b:free", ("phala",), "Phala"),
+        ("openai/gpt-oss-120b", ("phala",), "Phala"),
+    ],
+)
+@pytest.mark.parametrize("valid_provider", [True, False])
+def test_budget_openrouter_models_keep_route_and_privacy_controls(
+    model, routes, expected_provider, valid_provider
+):
+    cfg = InvestigationSettings(
+        enabled=True,
+        data_policy="minimized_standard_retention",
+        openrouter_key="synthetic",
+        openrouter_model=model,
+        openrouter_routes=routes,
+    )
+
+    def respond(request):
+        payload = json.loads(request.content)
+        assert payload["model"] == model
+        assert payload["provider"] == {
+            "only": list(routes),
+            "allow_fallbacks": False,
+            "require_parameters": True,
+            "data_collection": "deny",
+            "zdr": True,
+            "max_price": {"completion": 0.74},
+        }
+        assert payload["response_format"]["json_schema"]["strict"] is True
+        if model == "openai/gpt-oss-120b":
+            assert payload["reasoning_effort"] == "low"
+        else:
+            assert "reasoning_effort" not in payload
+        wrong_provider = "Anthropic"
+        return httpx.Response(
+            200,
+            json={
+                "provider": expected_provider if valid_provider else wrong_provider,
+                "choices": [
+                    {
+                        "finish_reason": "stop",
+                        "message": {
+                            "content": json.dumps(
+                                {"issue_type": "refund", "escalate": False, "reads": []}
+                            )
+                        },
+                    }
+                ],
+            },
+        )
+
+    with httpx.Client(transport=httpx.MockTransport(respond)) as http:
+        adapter = OpenRouterProvider(cfg, http)
+        if valid_provider:
+            result, metadata = adapter.complete(Triage, {}, Budget())
+            assert result.issue_type == "refund"
+            assert metadata["model"] == model
+        else:
+            with pytest.raises(InferenceUnavailable, match="unexpected_provider_route"):
+                adapter.complete(Triage, {}, Budget())
 
 
 def test_malformed_persisted_evidence_produces_a_reviewable_block(client):

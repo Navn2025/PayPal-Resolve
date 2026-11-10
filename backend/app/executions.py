@@ -378,6 +378,9 @@ class RefundExecutionService:
                 )
             case = self.store._require_case(connection, case_id, merchant_id)
             require_open(case)
+            from .dispute_guard import held
+            if held(connection, merchant_id, case.payment.capture_id):
+                raise StoreError(409, "A dispute or reimbursement hold blocks another refund POST; reconcile by read instead")
             amount = from_cents(row["amount_cents"])
             body = json.loads(row["provider_request_json"])
             expected = {

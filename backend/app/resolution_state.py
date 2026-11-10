@@ -52,6 +52,13 @@ def observed_state(connection, row, terms):
     provider = latest_proof(connection, row)
     data = json.loads(provider["data_json"]) if provider else {}
     proofs = data.get("proofs", [])
+    for proof in proofs:
+        connection_state = connection.execute(
+            "SELECT enabled,updated_at FROM platform_connections WHERE merchant_id=? AND provider=?",
+            (row["merchant_id"], proof.get("provider")),
+        ).fetchone()
+        if connection_state and (not connection_state["enabled"] or provider["recorded_at"] < connection_state["updated_at"]):
+            return "needs_review", "system", "Refresh provider evidence after the connection change", provider["recorded_at"], []
     if manual_return(terms):
         finding = latest_finding(connection, row)
         if finding:
@@ -141,6 +148,24 @@ def refund_promise_gate(connection, case):
             relevant.add(reference)
             stack.extend(dependencies[reference])
     outcome = dependency_state(terms, prior)
+    offer = None
+    for candidate in connection.execute(
+        "SELECT * FROM platform_offers WHERE case_id=? ORDER BY revision DESC",
+        (workspace["id"],),
+    ):
+        if any(c["promise_id"] == target["id"] for c in json.loads(candidate["choices_json"])):
+            offer = candidate
+            break
+    offer_state = None
+    if offer:
+        choices = json.loads(offer["choices_json"])
+        # A buyer offer is a separate agreement gate; it never creates an approval.
+        refund_choices = [c for c in choices if c["promise_id"] == target["id"]]
+        if refund_choices:
+            selected = next((c for c in refund_choices if c["id"] == offer["selected_choice"]), None)
+            offer_state = [offer["id"], offer["revision"], offer["status"], offer["selected_choice"]]
+            if offer["status"] != "accepted" or not selected or selected["promise_revision"] != target["revision"]:
+                outcome = "waiting"
     if (
         case.commitment is None
         or case.commitment.status != "accepted"
@@ -154,6 +179,7 @@ def refund_promise_gate(connection, case):
                 target["id"],
                 target["revision"],
                 outcome,
+                offer_state,
                 {key: revisions[key] for key in relevant},
             ],
             sort_keys=True,

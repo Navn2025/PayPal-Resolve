@@ -20,6 +20,52 @@ real customer data.
 
 ## Current implementation
 
+- CHG-051 addresses slow case opening/tab changes: bounded PostgreSQL connection
+  reuse, one identity lookup per browser read with fresh write authorization,
+  progressive case detail, deferred secondary tools, retained customer drafts,
+  timeline reuse and responsive merchant headers. Local port 3000 now serves a
+  compiled preview from `.next-preview`; rebuild/restart after source changes.
+  Backend runs without a reload watcher. See docs/PERFORMANCE.md. No schema/API
+  payload or provider behavior changed; money/approval gates remain authoritative.
+
+- CHG-050 extends SDK 0.7 with return policy/inspection checks, saved PDF labels,
+  reason-specific dispute requirements, capture-wide dispute holds, safe refund
+  journeys/tracing, reusable support context, timeout receipt recovery and a
+  resumable app state feed with transactional PostgreSQL consumption. SQLite is
+  028 and PostgreSQL is 019. Active buyer return terms are shown before request;
+  inactive policies do not quote free returns. Merchant-recorded references do
+  not establish provider outcomes or bank receipt. See docs/AFTERCARE_RELIABILITY.md.
+
+- CHG-049 gives SDK 0.6 an embedded order-support use case: app-authenticated
+  customers report an issue once, read safe resolution progress and explicitly
+  open the buyer portal. Owner-enabled support grants are bound to one app source;
+  commerce-only keys retain existing permissions. Merchant case details show
+  requested remedies separately from promises. SQLite 027/PostgreSQL 018 append
+  support grants and receipts; docs/SDK_AFTERCARE.md has activation and limits.
+- CHG-048 implements the eight merchant operations workflows: Zendesk source
+  imports and signed durable webhook jobs; workspace overdue alerts, owner
+  escalation and customer drafts; exact-version buyer offers; individual staff
+  accounts and roles; self-service workspaces and encrypted per-merchant
+  connections; operational dashboard; guided returns/replacements; and immutable,
+  reviewed dispute evidence exports. API/UI/SDK paths and limitations are in
+  `docs/PLATFORM_EXPANSION.md`. SQLite is 026 and PostgreSQL is 017. Local and
+  simulated tests passed; new live provider integrations were not exercised.
+  Returns record merchant-arranged fulfillment; packages do not submit disputes.
+  The operations worker must run separately and never sends mail or moves money.
+- CHG-047 supersedes CHG-046's model choice: OpenRouter defaults to GPT-OSS 120B
+  through Phala at the checked USD 0.60/million output-token price, with free
+  Xing4.0 optional. Requests filter output pricing to at most USD 0.74/million,
+  meeting the owner's clarified strictly-below-0.75 output-price requirement.
+  Routing/privacy controls and advisory-only investigation behavior are retained.
+  Local Gmail SMTP host/sender settings are prepared; no email delivery was tested.
+- CHG-045 adds complete local configuration slots without replacing existing
+  values. Ordinary settings remain in backend/frontend dotenv files; AI uses
+  an explicitly loaded private PowerShell environment template with disabled
+  feature switches and the existing strict data policy.
+- Local setup refreshed on 2026-11-10 (CHG-044): locked backend/frontend
+  dependencies installed; development UI and API started on loopback ports 3000
+  and 8000 with the existing local configuration. Background workers were not
+  started as part of this setup.
 - Python/FastAPI backend with Pydantic validation and an existing uv environment.
 - Case creation/retrieval, payment references, and optional refund commitments.
 - Manual refund observations, idempotent identical replays, and status updates.
@@ -31,8 +77,9 @@ real customer data.
 - Deterministic reconciliation using decimal arithmetic.
 - Reconciliation state fingerprints, explicit merchant refund approvals, 15-minute
   expiry, revocation, invalidation on changed records, and approval event history.
-- Optional sandbox-only OAuth/capture reads, bound to one configured local merchant
-  and expected PayPal seller, with persisted capture observations and approval
+- Optional sandbox-only OAuth/capture reads, bound to the owning merchant's
+  encrypted connection (or the legacy configured binding) and expected PayPal
+  seller, with persisted capture observations and approval
   invalidation when provider evidence is refreshed. Disabled by default.
 - File-backed SQLite by default, with optional PostgreSQL for the same API,
   merchant CLI, workers, and records.
@@ -95,7 +142,7 @@ real customer data.
   Latest live run on synthetic data (CHG-038, gold/hard/injection/held-out):
   precision 0.951, recall 0.992, 0/50 injections, no executed violations;
   held-out 0.966 / 1.000. Repeat-run injection stability is still pending.
-- SQLite migrations through 025 and PostgreSQL migrations through 015.
+- SQLite migrations through 027 and PostgreSQL migrations through 018.
   Transactions protect retries and evidence snapshots on either database.
   CHG-034 adds automatic
   revision-bound investigation jobs, private structured results and merchant
@@ -3530,7 +3577,7 @@ form that could drift from it.
 ## Template for the next entry
 
 ```text
-### CHG-044 - Concrete change title
+### CHG-052 - Concrete change title
 Date:
 Objective:
 Files and resulting behavior:
@@ -3743,3 +3790,997 @@ returned "Operation not permitted" and process-tree termination returned
 normal terminal, stop only this synthetic cluster with
 `& 'C:/Program Files/PostgreSQL/18/bin/pg_ctl.exe' -D 'C:/Users/navne/Desktop/paypal-resolve/.local/pg-ai/data' -m fast -w stop`.
 The `.local` report/databases remain local review evidence and are ignored by Git.
+
+### CHG-044 - Install and start the existing local application
+
+**Date:** 2026-11-10 (Asia/Calcutta).
+
+**Objective:** Set up the existing Resolve application and leave its development
+frontend and API running for the owner.
+
+**Files and resulting behavior:** Refreshed ignored `backend/.venv` using
+`uv sync --locked` and ignored `frontend/node_modules` using
+`npm ci --no-audit --no-fund`. The backend installed three missing packages
+(distro, groq and sniffio); npm installed 86 packages. Dependency manifests and
+lockfiles were unchanged. Updated this log's current-state summary and next-entry
+template. Runtime stdout/stderr and launcher PIDs are in ignored
+`.local/app-runtime/`. Started Uvicorn with reload on `127.0.0.1:8000` and
+Next.js development mode on `127.0.0.1:3000` as hidden background processes.
+
+**Reason and choices:** Reused the installed Node 24.14.0, npm 11.4.2 and uv
+0.10.8 with the repository's locked dependencies. Existing `backend/.env` and
+`frontend/.env.local` were preserved. The backend already selects PostgreSQL;
+normal application startup initialized that configured store successfully.
+Startup runs the existing migration mechanism and may apply pending numbered
+migrations; no migration files, checksums or schema code were edited, and no
+independent before/after database audit was performed. Used the existing
+configuration rather than replacing the owner's database with a new empty one.
+No application/API/data-model implementation changes were needed.
+
+**Validation actually performed:**
+
+- `uv sync --locked`: exit 0; backend environment synchronized to the lockfile.
+- `npm ci --no-audit --no-fund`: exit 0; frontend dependencies installed.
+- `npm run check` in `frontend`: exit 0; TypeScript validation passed.
+- Local HTTP GET `/health` on port 8000 returned 200 and `status=ok`;
+  `/docs` returned 200. Uvicorn reported application startup complete.
+- Local HTTP GET `/`, `/demo`, `/customer`, `/login` and `/api/session` on
+  port 3000 returned 200. The session was unauthenticated, as expected without
+  signing in. An exploratory `/sign-in` request returned 404; the implemented
+  merchant entry point is `/login`, which passed.
+- These are dependency, compilation and HTTP smoke checks against the running
+  local services. No full backend suite, browser visual QA, production build,
+  merchant authentication, PayPal account flow or provider simulation was run.
+
+**Limitations and follow-up:** The servers are development processes and must be
+restarted after shutdown using the existing backend/frontend README commands.
+Existing integration switches were retained; no payment, email, AI or OAuth
+operation was requested. Recovery, follow-up and investigation workers were not
+started. Merchant access uses the owner's existing key or linked PayPal login;
+the credential-free demo is available at `/demo`. No credentials were printed,
+no merchant was provisioned, and no commit, push or deployment was performed.
+
+### CHG-045 - Prepare configuration placeholders for owner-supplied values
+
+**Date:** 2026-11-10 (Asia/Calcutta).
+
+**Objective:** Prepare all supported app environment variables in editable local
+files so the owner can supply values, rather than only explaining the variables.
+
+**Files and resulting behavior:** Appended missing supported settings to ignored
+`backend/.env` and `frontend/.env.local`, preserving their original bytes and
+existing parsed values. Backend slots cover storage override, Sandbox webhook,
+Shopify/EasyPost, automatic refresh, SMTP, Google buyer login and Zendesk. Optional
+credentials and UUIDs use commented empty assignments so unused integrations do
+not break typed settings validation. New feature flags default to false; existing
+switches and credentials are retained. Frontend additions specify the default
+loopback backend, private-HTTP opt-in false, and the existing buyer origin.
+
+Added secret-free tracked `backend/ai-env.example.ps1` and its ignored local copy
+`backend/.env.ai.ps1`: provider keys, extraction controls, investigation controls,
+model/route lists and budgets. The file explicitly assigns process variables when
+dot-sourced; the application still does not read AI settings from dotenv. A
+commented database slot explains that the investigation worker requires the API's
+same database URL in its process environment. Updated `backend/.env.example`,
+root/backend READMEs and this log with activation instructions and the boundary
+between filling settings, enabling features and starting workers.
+
+**Reason and material choices:** Keep application configuration semantics from
+CHG-040 and the investigation process-only policy from CHG-034. A private
+PowerShell template fits this Windows workspace and makes AI configuration
+editable without silently loading credentials or altering app settings code.
+Uncommented blank UUID/numeric placeholders would fail Pydantic parsing, so those
+optional slots stay commented. Preserved `zdr_required`; enabling Groq still needs
+an explicit retention-policy choice. This changes setup files/documentation only;
+no API, data-model, dependency, migration or reconciliation change was made.
+
+**Validation actually performed:**
+
+- A Python preparation check asserted that both original local dotenv files
+  remained byte-for-byte prefixes and every existing parsed value was preserved.
+- From `backend`, `.venv/Scripts/python.exe -` ran inline configuration checks:
+  all 39 `Settings` fields have backend slots, all 18 AI/extraction variables
+  have PowerShell assignments, no duplicate active dotenv keys exist, and actual
+  backend settings parse without initializing storage. The AI template parses
+  through the real settings classes with blank keys, features disabled and the
+  strict policy retained. The local AI file equals the secret-free template.
+- PowerShell's `System.Management.Automation.Language.Parser.ParseFile` reported
+  no syntax errors in the local AI template.
+- `git check-ignore backend/.env backend/.env.ai.ps1 frontend/.env.local`
+  confirmed all three local configuration files are ignored. `git diff --check`
+  passed; Git's LF-to-CRLF notices were non-failing.
+- No full test suite, provider request, background worker, database initialization,
+  credential verification or financial operation was run for this change.
+
+**Limitations and next step:** The owner must fill the desired slots, uncomment
+optional assignments, explicitly choose feature/policy switches, and restart the
+relevant services. AI requires loading the PowerShell file into each server or
+worker environment first. Investigation workers also need matching database
+configuration; optional provider refresh needs its corresponding process settings.
+No workers were started, and nothing was committed, pushed or deployed.
+
+### CHG-046 - Balance OpenRouter capability and cost; prepare Gmail SMTP
+
+**Date:** 2026-11-10 (Asia/Calcutta).
+
+**Objective:** Replace the premium Sonnet selection with a more affordable model,
+retain free/cheaper choices, and answer/configure the owner's Gmail SMTP fields.
+The owner clarified during implementation that stronger capability matters more
+than making a free model the default. Supersedes CHG-034's final Sonnet selection;
+that earlier decision was based on its then-checked schema support and prices.
+
+**Files and resulting behavior:**
+
+- `backend/app/inference.py` defaults to `google/gemini-3.8-flash` on the pinned
+  `google-vertex/global` route with low reasoning effort. The default allowlist
+  includes that model plus `xingchen-agi/xing4.0-29b-a4b:free` and
+  `openai/gpt-oss-120b`; either alternative uses the explicitly selected Phala
+  route. No automatic model/paid fallback was added. Existing strict JSON schema,
+  token/time/call bounds, data-collection denial, ZDR and response-provider checks
+  remain. The Vertex slug explicitly maps to response provider name `Google`;
+  `Google AI Studio` and other unapproved identities still fail closed.
+- `backend/ai-env.example.ps1` and the ignored private `backend/.env.ai.ps1`
+  use matching model/allowlist/route settings. Only those three assignments in
+  the private file were changed; other settings and owner-entered secrets remain.
+- `backend/app/synthetic_investigations.py` returns the selected provider identity
+  from its loopback HTTP stand-in. `backend/scripts/evaluate_investigations.py`
+  offers all three models, selects their matching route, updates known token
+  estimates and now applies CLI model selections to simulated calls as well.
+- `backend/tests/test_investigations.py` checks default routing, both alternatives,
+  response identity, strict output, privacy controls, low reasoning effort and
+  rejection of the former premium model unless explicitly re-approved.
+- Ignored `backend/.env` now has Gmail SMTP host, port 587, STARTTLS configuration,
+  matching login/from mailbox and SMTP transport selection. Other parsed values,
+  including any SMTP password and the existing email enable switch, were
+  preserved. No mailbox address or secret is recorded in this log.
+- Root/backend READMEs and `docs/AI_INVESTIGATIONS.md` describe the final choices,
+  manual switching and evidence limits. Public API/data models and migrations
+  are unchanged; the generated OpenAPI contract was refreshed without a diff.
+
+**Reason, alternatives and evidence:** The current public OpenRouter catalog
+lists Gemini 3.8 Flash as its latest Flash capability option, with a Google
+Vertex global route supporting structured output and reasoning controls. Its
+current discounted route price is USD 0.75 input / 3.75 output per million tokens,
+versus the earlier Sonnet selection's recorded 2 / 10. This is a capability/cost
+selection; no improvement on Resolve cases was measured. Free Xing4.0 through
+Phala lists 0 / 0, and the Phala GPT-OSS 120B route lists 0.15 / 0.60. Free
+GPT-OSS 120B had no endpoints; free NVIDIA Nemotron was not in the ZDR list.
+The public ZDR endpoint listing included all three selected routes. Runtime ZDR
+filters still enforce eligibility; catalog listings do not verify an account's
+quota or real inference. Cheapest GPT-OSS providers were not chosen to avoid
+expanding the route allowlist. Official evidence:
+
+- https://openrouter.ai/api/v1/models/google/gemini-3.8-flash/endpoints
+- https://openrouter.ai/google/gemini-3.8-flash
+- https://openrouter.ai/api/v1/models/xingchen-agi/xing4.0-29b-a4b:free/endpoints
+- https://openrouter.ai/api/v1/models/openai/gpt-oss-120b/endpoints
+- https://openrouter.ai/api/v1/endpoints/zdr
+- https://openrouter.ai/docs/guides/routing/provider-selection
+- https://developers.google.com/workspace/gmail/imap/imap-smtp
+- https://support.google.com/accounts/answer/185833
+
+Google documents `smtp.gmail.com` with port 587 for STARTTLS; this app's
+`RESOLVE_SMTP_SECURE=false` selects mandatory STARTTLS rather than implicit TLS.
+Its password-based SMTP adapter needs an app password; Google requires 2-Step
+Verification for app passwords. No attempt to authenticate or send was made.
+
+**Validation actually performed:**
+
+- `.venv/Scripts/python.exe scripts/isolated.py -m pytest
+  tests/test_investigations.py -q --tb=short -p no:cacheprovider`: **40 passed**
+  on disposable SQLite and loopback HTTP/MockTransport. An earlier intermediate
+  free-default run passed 38 tests before the stronger-model clarification.
+- After explicitly covering Google AI Studio rejection, the targeted
+  `-k budget_openrouter_models` run passed **6 tests**, 34 deselected. The
+  pre-existing HTTPX/Starlette deprecation warning remains.
+- `.venv/Scripts/python.exe scripts/isolated.py
+  scripts/evaluate_investigations.py`: the final Gemini-default offline HTTP
+  evaluator passed all 13 synthetic labels, all four pipeline scores 1.0 and
+  all hard gates true. Report: `.local/ai-evaluation/
+  run-619c46a2e1f6406f98d3694bbe4ad2b6/report.json`. The earlier free-default
+  offline run also passed. These measure pipeline behavior with stand-ins,
+  not live model quality, availability, latency or cost.
+- `uv run python scripts/isolated.py scripts/export_openapi.py` from `backend`
+  exported successfully. The wrapper prevents existing dotenv/storage reads;
+  root-level `git diff --numstat -- postman/contracts/resolve.openapi.json`
+  confirmed no public contract change.
+- Inline local configuration checks confirmed matching private/example/runtime
+  model settings, parsed SMTP settings and matching sender/login. Non-SMTP
+  parsed dotenv values were asserted unchanged. PowerShell ParseFile found no
+  syntax errors. `git diff --check` passed with non-failing CRLF notices.
+
+**Limitations and next step:** Fill keys/app password privately, load the AI
+PowerShell environment and restart the API/worker when ready. Inference and
+worker enablement were not changed. Existing default data policy still blocks
+direct Groq until explicitly selected otherwise. New model quality requires a
+separate synthetic live evaluation before use with real cases. Gmail delivery,
+provider quotas and account-backed inference remain unverified; no email,
+financial request, commit, push or deployment occurred. No database schema or
+reconciliation code was edited; existing runtime reload behavior remains.
+
+### CHG-047 - Keep OpenRouter output-token pricing below USD 0.75 per million
+
+**Date:** 2026-11-10 (Asia/Calcutta).
+
+**Objective and decision:** The owner clarified that the output-token price,
+not the input-token price, must be strictly below USD 0.75 per million tokens.
+Supersedes CHG-046's Gemini default: its 3.75 output price exceeded this clarified
+budget. Select `openai/gpt-oss-120b` through Phala at the publicly checked USD
+0.15 input / 0.60 output per million. Retain optional free Xing4.0 on Phala;
+exclude Gemini from default approved models and evaluator choices. No assertion
+of improved case-level model quality is made.
+
+**Files and behavior:** Updated `backend/app/inference.py`, the private ignored
+`backend/.env.ai.ps1`, tracked `backend/ai-env.example.ps1`, the loopback provider
+in `backend/app/synthetic_investigations.py`, model choices/defaults in
+`backend/scripts/evaluate_investigations.py`, relevant routing tests in
+`backend/tests/test_investigations.py`, root/backend READMEs,
+`docs/AI_INVESTIGATIONS.md` and this log. The request uses Phala, strict schemas,
+ZDR/data-collection restrictions, no fallback and low reasoning effort for paid
+GPT-OSS 120B. Removed the now-unused Vertex provider-name mapping.
+
+Every OpenRouter request also sends `provider.max_price={"completion":0.74}`.
+A fixed filter fits this explicit project budget and stays strictly below 0.75;
+merely changing the model would not protect against a later provider price rise.
+OpenRouter documents the filter units as USD per million tokens and rejects
+routing without an eligible provider. This controls the provider output-token
+tariff, not total account spending or platform fees. Existing keys, SMTP settings,
+feature enablement and all non-model private assignments were preserved. There
+are no API schema, database migration, dependency or reconciliation changes.
+
+**Public verification:** On this date, unauthenticated requests to the official
+[model endpoint catalog](https://openrouter.ai/api/v1/models/openai/gpt-oss-120b/endpoints)
+confirmed Phala's 0.15/0.60 prices and schema parameters; its route was also in
+[OpenRouter's ZDR list](https://openrouter.ai/api/v1/endpoints/zdr).
+The [maximum-price documentation](https://openrouter.ai/docs/guides/routing/provider-selection#max-price)
+confirms the completion filter's units and routing behavior. This checks public
+metadata, not account quota, real billing or inference quality.
+
+**Validation actually performed:**
+
+- From `backend`, `.venv/Scripts/python.exe scripts/isolated.py -m pytest
+  tests/test_investigations.py -q --tb=short -p no:cacheprovider`: **38 passed**,
+  including default/optional model payloads, the 0.74 completion-price filter,
+  provider identity, strict schema/privacy controls and rejection of Gemini and
+  Sonnet. Existing HTTPX/Starlette deprecation warning remains. Two now-removed
+  Gemini-specific cases explain the count change from CHG-046's 40.
+- The isolated offline `scripts/evaluate_investigations.py` passed all 13 labels,
+  four pipeline scores 1.0 and all hard gates true with the GPT-OSS default.
+  Report: `.local/ai-evaluation/run-9b710811b0d04e75818d6c7a9e5244f3/report.json`.
+  This uses disposable SQLite and HTTP stand-ins, not live model calls.
+- `uv run --directory backend python scripts/isolated.py scripts/export_openapi.py`
+  passed; `git diff --numstat -- postman/contracts/resolve.openapi.json` showed
+  no public contract change. Inline checks verified model/allowlist/route
+  agreement across runtime, private file and example; PowerShell parsing and
+  `git diff --check` passed. Existing private non-target assignments were asserted
+  unchanged without printing them.
+
+**Limitations and next step:** Load the updated private PowerShell environment
+and restart the applicable processes before enabling inference. A future price
+or capacity change can block routing rather than exceed the token-price filter.
+Real provider availability, billing enforcement and model quality remain
+unverified; no account-backed AI request, email, payment, commit, push or
+ deployment was performed. Existing disabled feature/worker settings remain.
+
+
+### CHG-048 - Build eight merchant operations workflows with scoped identities and evidence
+
+**Date:** 2026-11-10 (Asia/Calcutta).
+
+**Objective:** Implement the owner's complete eight-addition roadmap in the
+existing FastAPI/Next.js platform: automatic support imports, missed promises,
+buyer offers, staff permissions, merchant onboarding/connections, operations
+metrics, guided returns/replacements, and reviewed dispute evidence packages.
+
+**Files and resulting behavior:**
+
+- `backend/app/platform_identity.py`, `platform_routes.py`, `platform_models.py`,
+  `auth.py`, `merchant_auth.py` and `main.py`: individual owner registration,
+  existing-workspace owner claim, password login, single-use two-day invitations,
+  five roles, session revocation and last-owner protection. Passwords use salted
+  scrypt; opaque eight-hour sessions and invitation tokens are stored hashed.
+  Failed authentication consumes committed throttle slots and non-existing users
+  receive comparable password work. Losing a session between merchant resolution
+  and role checking fails closed, rather than inheriting legacy key authority.
+  Authenticated API writes retain staff UUID/credential pseudonym, request intent
+  and completion status without logging bodies. Legacy full keys and existing
+  key/PayPal sessions remain administrator credentials; scoped commerce keys
+  cannot access the operations API. Owner UI can issue/revoke commerce-only keys.
+- `platform_connections.py`, settings/pyproject/lock and provider call sites in
+  main, commerce/resolution/workspace/customer routes, investigation and recovery
+  workers: encrypted per-merchant PayPal Sandbox, Zendesk, Shopify and EasyPost
+  credentials, optimistic connection revisions, explicit checks, fixed provider
+  hosts, bounded responses and sanitized errors. Cryptography is now an explicit
+  dependency. A stable Fernet key is required; one was generated into the ignored
+  local backend file without replacing prior values or printing secrets. The
+  example contains only a generation instruction/placeholder. Another workspace's
+  legacy Shopify/EasyPost credentials are cleared before rebinding either
+  connector. Saving connections invalidates financial approvals; changed/disabled
+  connections also invalidate old provider proof. A PayPal token check explicitly
+  leaves capture seller ownership unverified. Recovery now selects each owning
+  merchant's credentials while preserving already-approved recovery semantics.
+- `platform_imports.py`, `ai_routes.py`, `operations_worker.py`: authenticated
+  Zendesk ticket/comments/author-role reads with bounded same-origin pagination;
+  immutable source deduplication, private/public labels and source timestamps.
+  Exact external order references resolve only a unique owned case/order; a
+  unique registered order can open a case. Ambiguous matches require merchant
+  confirmation. Changing ticket account/order identity after imports is blocked.
+  Existing optional extraction can consume imported quotes but never silently
+  saves proposals. Signed raw-body HMAC webhooks have timestamp checks, stable
+  invocation/event IDs (including Zendesk timestamp spaces), replay protection,
+  durable leases, bounded retry/backoff and sanitized failure states. The separate
+  operations worker processes imports and scans all workspaces; it sends no mail
+  and makes no payment writes. No worker was started against the owner's data.
+- `platform_operations.py`, `resolution_state.py`: immutable versioned offer
+  terms with current promise revisions, safe buyer projection and exact accepted
+  choice/time. Revoked links, changed promises and expired/replaced offers fail;
+  identical decisions replay safely. Publishing invalidates financial approvals
+  and is blocked during unresolved execution/provider holds. A published refund
+  offer requires current buyer acceptance in the existing financial gate; an
+  unrelated later offer cannot remove that requirement. Acceptance itself never
+  authorizes payment, and other condition/history/balance gates remain.
+- The same operations service scans overdue current commitments across the
+  merchant workspace, deduplicates daily alerts, resolves fulfilled/revised ones,
+  assigns unassigned cases to an active owner label and prepares cautious update
+  drafts. Dashboard metrics distinguish pending/completed/outstanding USD ledger
+  amounts, failed refunds, absent independent verification, shared captures and
+  known closure-time samples. Shared-capture promises are cumulative maxima,
+  rather than summed per case; decimal cents remain exact.
+- Guided returns use registered item quantities, retry IDs, cross-request quantity
+  reservations and ordered merchant-approved receipt/inspection/replacement
+  states. Exact-revision internal milestone attestations can satisfy matching
+  promises with a merchant-recorded source label. Shipment references are entered
+  after fulfillment arranged externally; no label purchase or Shopify mutation
+  is claimed. Duplicate requests cannot reserve or ship extra quantities.
+- Dispute packages retain immutable canonical JSON/SHA-256 snapshots, full case
+  and payment timelines, private support sources and attachment metadata/hashes,
+  missing-evidence checklists, actor/review metadata, and review-gated export.
+  Evidence or connection changes require a fresh package before review/export;
+  historical snapshots remain readable. There is no PayPal submission endpoint.
+- SQLite `migrations/026_merchant_operations.sql` adds thirteen operations tables;
+  PostgreSQL `016_merchant_operations.sql` adds their equivalents and `017` makes
+  their foreign keys deferrable for the existing alphabetical SQLite importer.
+  016 was treated as immutable after creation; the importer fix is a forward
+  migration. All older numbered SQL/checksums remain unchanged. Storage registers
+  SQLite 026; existing schema-version assertions and disposable old-schema
+  reconstruction in PostgreSQL tests were updated for 026/017.
+- Frontend `/account`, `/workspace/operations`, `operations.css`, account/console/
+  case/return/buyer components and the existing merchant/customer integrations
+  provide the actual workflows, role-aware financial controls, secret-only input
+  fields and desktop/mobile layouts. Invitation roles default to agent. New
+  platform/account/buyer BFF routes retain HttpOnly session storage, origin checks,
+  explicit route/method allowlists and private capability handling. The public
+  Zendesk forwarding route preserves only signature headers and bounded raw body.
+- FastAPI's generated `postman/contracts/resolve.openapi.json`, SDK generated types
+  and `sdk/typescript/src/index.ts` expose typed dashboard/watchdog/import/offer/
+  return/package operations (including PUT). Operations require a full key and
+  direct API URL; the commerce gateway remains scoped. SDK integration tests now
+  check the new helpers and tenant isolation against a real disposable FastAPI.
+- New operations API tests, Playwright synthetic fixture/config/test, isolated
+  Python flags, configurable isolated Next source copies, the extended existing
+  Zendesk mock and `postman/simulations/merchant-operations` preserve reusable
+  local verification. README/backend/frontend/SDK/sign-in guides and the new
+  `docs/PLATFORM_EXPANSION.md` document activation and boundaries; historical
+  BUILD_STATUS/PROJECT_STATUS snapshots now point to the later implementation.
+
+**Why this approach / tradeoffs:** Extend existing case, commerce, customer-link,
+financial-gate and worker primitives instead of introducing a second resolution
+engine or queue service. Encrypted merchant connections remove the single-owner
+binding limitation while retaining environment bindings for compatibility. Fixed
+provider domains, one private encryption key and owner-entered tokens fit this
+MVP; distributed key management, provider OAuth installation, token rotation,
+MFA, verified email/password recovery and multi-workspace membership remain
+follow-up work. Existing full administrator keys remain powerful intentionally;
+individual staff should use role-bound accounts. Assignment labels route work;
+permissions come from authenticated staff roles. Financial actions still require
+separate exact review and approved Sandbox execution. Returns coordinate physical
+steps with explicit merchant evidence; external fulfillment and later approved
+PayPal dispute submission were not added implicitly. Dashboard figures disclose
+recorded-ledger scope rather than treating them as verified provider outcomes.
+
+**Validation actually performed (synthetic unless explicitly stated):**
+
+- From backend, `.venv/Scripts/python.exe scripts/isolated.py -m pytest -q
+  --tb=short -p no:cacheprovider`: **379 passed, 60 skipped**. This was the full
+  suite before the final session-revocation race test and final worker/import
+  refinements; opt-in PostgreSQL/provider scenarios are not implied by this run.
+  An earlier full run exposed eleven old hardcoded schema-version expectations;
+  those were corrected for the appended migrations before the passing run.
+- Final SQLite operations suite with the same runner and
+  `tests/test_platform_operations.py`: **15 passed, 1 skipped**. Checks cover
+  current-session revocation races, individual roles/revocation/tenant isolation,
+  stale/revoked version-bound acceptance, approval invalidation, unremovable refund
+  acceptance gates, daily alert escalation/deduplication, return reservations and
+  ordered internal milestone evidence, immutable/stale packages, shared-capture
+  cent precision, duplicate ledger observations, completed/pending/failed refund
+  separation and cross-owner provider credential protection. Real local HTTP
+  stand-ins exercise encrypted Zendesk reads, signed replay/outage/retry behavior;
+  these are not account-backed provider requests.
+- Fresh local PostgreSQL 18 on loopback 56440, disposable UTF8 database and random
+  per-test schemas: isolated runner with `--postgres-operations --storage-postgres
+  -m pytest tests/test_platform_operations.py tests/test_postgres.py -k
+  "not contended_writer"`: **23 passed, 1 skipped, 1 deselected** before the final
+  new race case. Final PostgreSQL operations suite: **15 passed, 1 skipped**.
+  The separately run `-k contended_writer` test passed. The expanded `-k
+  sqlite_import` test passed with real owner session, offer, overdue alert and
+  reserved return rows copied from SQLite, in addition to its existing exact
+  money/attachment/capability/sequence verification. Source bytes stayed intact;
+  imported sessions/terms/returns remained usable. No owner database was used for
+  migration development or these destructive schema fixtures.
+- Final `tests/test_recovery_worker.py`: **9 passed**, including CLI output and
+  merchant bounds. The core financial suites also passed within the full run;
+  tests do not establish new consent or authorization to move real money.
+- `postman simulation run postman/simulations/merchant-operations/merchant-operations.sim.yaml
+  --proxy --proxy-port 7005 --no-history --lift
+  'backend\.venv\Scripts\python.exe backend\scripts\isolated.py --platform-postman
+  -m pytest backend/tests/test_platform_operations.py -k postman -q --tb=short
+  -p no:cacheprovider' --output ndjson`: final **1 passed, 15 deselected**,
+  **8 mocked requests, 0 pass-through**, both comment pages/author roles/repeat
+  import and buyer privacy checked through real TLS interception. Initial use of
+  forward-slash Windows executable spelling failed before application requests;
+  backslashes corrected the launcher. Context records the local evidence and
+  retains real account access as unknown. Owner-workspace discovery was skipped
+  because the CLI was signed out; the existing repository mock was extended.
+- OpenAPI export via `uv run python scripts/isolated.py scripts/export_openapi.py`
+  passed from backend. `npm --prefix sdk/typescript test`: **6 passed, 2 opt-in
+  skipped**, including packaged client/server calls and new operations methods.
+  The SDK's original private request union needed PUT/new input schemas; its
+  helper integration assertion was corrected to the actual catalog `items` field
+  before the final passing run.
+- `npm --prefix frontend run check` passed. Isolated exact-source Next.js 16.4.5
+  `next build --webpack` passed compilation, TypeScript and all 14 static pages,
+  including the new dynamic BFF/workspace/webhook routes. No local dotenv files
+  or service credentials were copied into the build fixture.
+- `npx playwright test -c playwright.platform.config.ts` from frontend:
+  final **1 passed** (1.8 minutes). Actual desktop/mobile browser paths cover
+  workspace creation, promise/dashboard/alert, offer publication, buyer acceptance
+  and item return, merchant return approval, package inspection/review/export,
+  invitation login and restricted SDK-key writes. Checks include 390px mobile
+  overflow. Screenshots in ignored `.local/ui/platform-artifacts` were visually
+  inspected; exhausted return quantities now show a clear message. Fixtures use
+  fresh SQLite on port 8025 and isolated Next source on 3125, not owner records.
+- Ruff format/check passed for the eight new operations Python modules/tests;
+  Python AST parsing and `git diff --check` passed. Existing Starlette/httpx
+  deprecation and development NO_COLOR notices remain; they were not test failures.
+- Restored the owner's local backend with a hidden uvicorn reload launcher at
+  8000, after disposable migration checks. Application startup and `/health`
+  returned 200 with the existing configured database; frontend 3000 `/account`,
+  `/api/session` and `/workspace/operations` returned 200 (unauthenticated page
+  routing, not a signed-in hosted workflow). Additive schema startup is distinct
+  from the disposable test evidence above. No owner account/data was seeded.
+
+**Compatibility, limitations and next step:** Ordinary existing credentials,
+model price limits and disabled AI/email switches were retained; new migrations
+are additive. API/worker processes must share the encryption key and correct
+storage. Owner/password onboarding, invites and connections are implemented, but
+provider installation still accepts merchant-provided tokens; manual invitation
+sharing and password recovery limitations are documented. Start the operations
+worker deliberately to process real jobs. Verify actual Zendesk permissions and
+public signed delivery, provider seller/store bindings and hosted HTTPS sessions
+before production operation. PayPal webhooks retain the existing configured
+endpoint binding; per-merchant reads/recovery use saved connections. Returned
+shipments/replacements are arranged externally; package exports contain private
+source metadata but no embedded raw files, and no dispute is submitted. No live
+provider check, email, new refund, deployment, commit or push was performed.
+
+
+**Final tooling/cleanup:** `postman status` passed last after the simulations:
+CLI 1.82.0, signed out, no initialized shared resources; no remote workspace was
+created or updated. Its optional skill-update/install notices did not block the
+local run. The operations-worker `--help` import check passed. The exact disposable
+PostgreSQL cluster under `.local/pg-operations/data` was stopped cleanly with
+`pg_ctl -m fast -w stop`; its earlier waiting launcher then reported a connection
+refusal on a redundant `createdb` attempt because the test server had deliberately
+stopped. This was cleanup, not a failed migration test. Existing local dotenv
+files remain ignored and no old migration SQL is in the diff.
+
+
+### CHG-049 - Give SDK 0.6 an embedded order-support use case
+
+**Date:** 2026-11-10 (Asia/Calcutta).
+
+**Objective:** Address the owner's feedback that syncing orders alone does not
+make the SDK meaningfully useful. Let a merchant put “Need help with this order?”
+on its existing order page: submit a customer issue, display resolution progress
+and the next action, then open the private messages/offers/returns portal while
+the merchant handles the same case in Resolve.
+
+**Files and behavior:**
+
+- New `backend/app/aftercare.py` and `aftercare_routes.py`, registered in main:
+  bounded private `POST /aftercare/issues`, `/aftercare/status`, `/aftercare/portal`.
+  All use an existing owned commerce order located by source/reference. Status
+  does not create a case or call providers. Issue creation atomically attaches or
+  reuses that order's case, records an app-authenticated customer message and a
+  requested remedy, and returns an idempotent receipt. A UUID reused with changed
+  content conflicts. Requests never become merchant promises or approvals.
+  Existing message throttles/limits apply; each case has a bounded issue count.
+- New immutable SQLite `027_embedded_aftercare.sql` and PostgreSQL
+  `018_embedded_aftercare.sql` add `aftercare_apps` grants and `aftercare_issues`
+  receipts. Foreign keys in 018 are deferrable from creation to fit the verified
+  alphabetical SQLite importer. `storage.py` registers SQLite 027; old numbered
+  migrations and checksums were retained. Existing schema-version tests now
+  expect SQLite 027/PostgreSQL 018. Disposable old-schema reconstruction drops
+  the new tables before rebuilding an earlier schema.
+- `platform_routes.py` exposes owner-only `POST /platform/support-keys`, returns
+  the random secret once, and labels grants in the existing revocable key list.
+  Keys retain commerce scope with an explicit source-specific aftercare grant;
+  ordinary commerce keys do not inherit new access. Source and merchant ownership
+  are checked with the active key inside the operation's transaction. Full keys
+  and permitted individual staff sessions retain their existing authority. The
+  support grant limits aftercare, not the existing general commerce privileges.
+- `platform_identity.py` restricts support-key issuance to owners and recognizes
+  `/aftercare/status` as a read despite its POST transport. It retains staff
+  identity/role enforcement. `commerce_routes.py` applies its existing 32KiB
+  private body boundary to these endpoints. `customer_portal.py` factors its
+  existing issuer into a transaction helper so grant checking, capability issue
+  and audit are atomic. Portal creation explicitly replaces the prior link; status
+  polling does not issue or rotate capabilities. Revoking a server key does not
+  implicitly revoke independent, already-issued buyer links.
+- Status returns only public promise terms, safe next-step text, issue count and
+  selected verified refund facts. It excludes private source notes, conversations,
+  payment identifiers and raw records. Complete history must be within the
+  existing five-minute history window and predate no changed/disabled owning
+  connection before amounts are labeled current. Otherwise completed, pending
+  and remaining amounts are null, not a misleading zero. Merchant-recorded remedy
+  completion remains distinguishable through `provider_confirmed: false`.
+  Current published offers create a review-offer next action; revised/expired
+  offers do not. Every result retains `authorizes_payment: false`.
+- Private `GET /platform/cases/{id}/support-requests` shows the merchant each
+  reported problem, requested remedy, source and date. Case details display
+  “Customer requests from connected apps,” explicitly separate from promises.
+  Support keys cannot read that merchant projection.
+- `sdk/typescript/src/index.ts` adds ergonomic `openIssue`, `getOrderResolution`
+  and `createSupportLink`, using the configured app source and generated schemas.
+  Open-issue input projects only allowed fields and maps camel-case app fields to
+  the reusable API. Stable conflict classification distinguishes a changed issue
+  request ID. Package/lock version advances to 0.6.0; old methods remain compatible.
+  The preview was built/packed at ignored
+  `.local/artifacts/resolve-paypal-sdk-0.6.0.tgz`; nothing was published to npm.
+- Frontend SDK gateway allowlists only these three new aftercare actions in
+  addition to existing commerce actions; it retains server bearer auth, body and
+  query restrictions. Operations Connections UI has the actual support-key/source
+  form, usage example, one-time masked secret and existing revoke action. The
+  platform BFF explicitly allowlists the support-key and merchant projection
+  endpoints. No merchant key is exposed to customers.
+- `examples/checkout-store` now has an actual paid-receipt support form, status
+  refresh and portal entry, backed by the new SDK methods. Its existing HttpOnly
+  browser session verifies the caller owns the order before every support call.
+  The SDK source is fixed to `field-brew-store`; requested remedies are preferences,
+  not approvals. Identical submissions retain a browser-persisted UUID for retry.
+  UI errors stay generic and do not copy provider response bodies or secrets.
+- New backend aftercare tests, SDK client integration test, expanded storefront
+  simulation/browser assertions and the native platform Playwright test exercise
+  the use case. `test_postgres.py` imports populated support grants and receipts
+  alongside prior operations/financial data. FastAPI OpenAPI was regenerated;
+  SDK types come from it. Root/backend/frontend/SDK/store README files,
+  `docs/SDK_AFTERCARE.md`, the bundled integration skill and the existing PayPal
+  simulation context explain the workflow and permission boundary. The old
+  order-sync-only setup remains available and is not silently upgraded.
+
+**Why / choices:** A customer support action gives order syncing a direct outcome
+inside the merchant's existing application. Reuse the existing case, message,
+buyer capability, promise and financial engines so both the app and Resolve refer
+to one resolution. Add explicit grants instead of broadening all existing
+commerce keys, and use server-authenticated support APIs rather than shipping an
+administrator key or accepting unauthenticated order references in a widget.
+Read-only POST keeps order references out of URL logs. Cached status avoids a
+provider call or new case each time an order page is opened. The merchant app
+must authenticate the customer and check its own order ownership; Resolve does
+not infer that identity from a browser-supplied order ID. Individual support
+requests are not legal commitments or authorization to move money.
+
+**Validation actually performed:**
+
+- `.venv/Scripts/python.exe scripts/isolated.py -m pytest -q --tb=short
+  -p no:cacheprovider` from backend: **384 passed, 60 opt-in skipped**. This full
+  regression includes existing local financial/condition/offer/shared-capture
+  tests, aftercare submission/status and ordinary customer portal compatibility.
+  The final merchant request projection was then checked by the targeted suite
+  and native browser test below. No live provider outcomes are implied.
+- Final `tests/test_aftercare.py`: **4 passed** on disposable SQLite, and
+  **4 passed** on fresh-schema disposable local PostgreSQL 18 using
+  `--postgres-operations --storage-postgres`. These verify explicit support grants,
+  source/merchant/key isolation and revocation, unchanged ordinary commerce access,
+  no-case status reads, retry/conflict behavior, private-note exclusion, stale
+  offers, merchant-recorded completion, portal replacement, bounded inputs,
+  merchant request projection and null unverified refund amounts. Customer
+  requests created no promises or refund executions.
+- The targeted SQLite combination with customer-portal and platform operations
+  tests also passed **22 tests, 1 opt-in skipped**. The PostgreSQL aftercare/schema
+  suite initially had **13 passed, 1 failed** because its expanded import fixture
+  shadowed an existing `issue` helper with a response. Renamed that fixture local;
+  the corrected `test_postgres.py -k sqlite_import` then **passed**. It verified
+  new support grants/receipts were copied into PostgreSQL, the support key still
+  worked, existing owner sessions/offer/return/money/capabilities/attachment bytes
+  and sequence remained usable, and the SQLite source bytes were unchanged.
+  Migration development/tests used only the disposable cluster and random schemas.
+- `npm --prefix sdk/typescript test` for SDK **0.6.0**: **7 passed, 2 opt-in skipped**.
+  Actual packaged-client/FastAPI calls cover the three new methods, explicit
+  grant enforcement, source isolation, idempotent issues/conflict codes, portal
+  conversation and general merchant access denial. Unknown extra input fields
+  are not forwarded. Generation/build passed; `npm pack --pack-destination
+  ../../.local/artifacts --silent` created the local preview archive.
+- Existing PayPal simulation, with `RESOLVE_RUN_CHECKOUT_STORE_SIMULATION=1`,
+  `NODE_USE_ENV_PROXY=1` and loopback NO_PROXY: `postman simulation run
+  postman/simulations/paypal-read/paypal-read.sim.yaml --proxy --proxy-port 7006
+  --no-history --lift 'npm --prefix examples/checkout-store test' --output ndjson`:
+  **2 browser tests passed, 19 mocked requests, 0 pass-through**. The actual store
+  captured one simulated order, detected an external USD 5 completed refund,
+  submitted a damaged-item support report twice with one stored issue/message,
+  returned the current verified refund amount, denied a different browser session,
+  and issued a usable buyer link. No support/status call caused another payment
+  write. A harmless proxy socket-reset notice occurred during teardown; the run
+  exited successfully. Existing mock/schema were reused; no provider behavior was
+  invented or changed. Context now records this additional local claim.
+- `npx playwright test -c playwright.platform.config.ts`: final **1 passed**
+  (2.3 minutes). Real Next/FastAPI/browser paths include generating a support key,
+  syncing an order and calling all three actions through `/api/sdk`, duplicate
+  suppression, inaccessible merchant gateway paths, the merchant request panel,
+  individual staff permission checks, and 390px mobile overflow. Existing owner/
+  offer/buyer/return/package flow still passed. An earlier run caught UTF-8 text
+  mis-decoding in edited files; text was repaired using explicit UTF-8 and the
+  final run passed. The support integration mobile screenshot was visually
+  inspected; synthetic key remains masked.
+- `npm --prefix frontend run check` passed. Isolated exact-source Next 16.4.5
+  production `next build --webpack` passed compilation, TypeScript and all
+  14 static pages, without copied local dotenv files. The exported OpenAPI and
+  SDK types include the final merchant request projection.
+- `uv run python scripts/isolated.py scripts/export_openapi.py` from backend
+  passed; final Ruff checks of changed aftercare/platform modules/tests and
+  `git diff --check` passed. Existing Starlette/httpx deprecation and development
+  color notices remain. They did not fail the checks.
+- After disposable migration/import validation, the local backend was restored
+  with the existing configuration using a hidden reload launcher on 8000. Startup
+  completed and `/health` returned 200; frontend 3000 `/account` returned 200.
+  This startup applied additive migrations to the existing configured storage,
+  distinct from synthetic behavior tests. No owner support key, customer issue,
+  account, provider request or worker was created/run there. The exact disposable
+  PostgreSQL cluster was stopped cleanly after validation.
+- `postman status` was run last after simulations: CLI 1.82.0, signed out, no
+  initialized shared resources. The existing local mock was reused; remote owner
+  discovery was unavailable and no remote Postman resource was created. Optional
+  plugin/skill update notices were not required for the successful local run.
+
+**Limits / next step:** Connect the merchant app's real order authorization and
+persistent retry mechanism, issue a support integration key for its existing
+source, and configure the portal's hosted origin before giving links to customers.
+The sample's browser storage is a demonstration retry mechanism, not a replacement
+for a production app's durable job state. SDK remains server-side Node.js preview;
+no npm publication, hosted deployment, real customer interaction or account-backed
+provider check was performed. Physical fulfillment remains merchant-arranged;
+PayPal verification/execution remains Sandbox, with the existing explicit gates.
+No refund automation, email send, financial permission expansion, commit or push
+was performed. CHG-048's broader provider/onboarding limitations still apply.
+
+
+**Sample launcher completion:** `examples/checkout-store/scripts/local_sandbox.py`
+now explicitly grants its newly issued commerce key aftercare access for
+`field-brew-store` and records a local-launcher audit event. This keeps the
+standalone example's report/status actions usable with the new opt-in boundary.
+Its isolated runner `--help` passed; the real Sandbox launcher was not run because
+it reads actual provider credentials. The grant storage/authorization paths were
+already exercised by the PostgreSQL/SDK/browser checks above. The sample README
+clarifies that its random-port isolated API needs a separately configured matching
+customer frontend/public origin for navigable portal links; the launcher does not
+silently repoint the owner's frontend. No provider request was made by this check.
+
+
+### CHG-050 - Build merchant, buyer and SDK aftercare assurance
+
+**Date:** 2026-11-10 (Asia/Calcutta).
+
+**Objective:** Implement practical workflows for the nine researched problems:
+return costs/abuse, dispute evidence, overlapping remedies, refund uncertainty,
+repeated explanations, disconnected return labels, duplicate/stale app events,
+missed updates and ambiguous network outcomes. Extends CHG-048/049; their provider
+and deployment boundaries remain in force.
+
+**Files and resulting behavior:**
+
+- New `backend/app/return_assurance.py`, `dispute_guard.py`, `dispute_evidence.py`,
+  `resolution_assurance.py`, `sdk_events.py` and `assurance_routes.py`; registration
+  in `main.py`, ownership/role rules in `platform_identity.py`, and integration in
+  `platform_operations.py`, `platform_models.py`, `aftercare.py`, `case_workspace.py`,
+  `executions.py` and `operations_worker.py`. New source-granted `/aftercare`
+  methods read refund journeys/context, recover issue receipts, check/request
+  returns, retrieve guides/labels and pull owned state events. `/platform`
+  methods configure policy, record inspection/trace/dispute evidence and holds.
+  Buyer capability routes retrieve safe guides, labels, journeys and public policy.
+- Versioned return policies disclose windows, shipping payer, fees and review
+  requirements. Eligibility checks quantities, dates, exclusions, evidence and
+  repeated requests; approval and inspection enforce current revisions and role-
+  restricted exceptions. Hard quantity reservations cannot be overridden. An
+  inactive policy exposes a null fee; buyers see a cost-confirmation message.
+  No fee is charged. Owned PDF labels are bounded to 2 MiB/10 per return, validated,
+  SHA-deduplicated and available for download/save later. Existing labels are
+  reusable even at capacity. No postage purchase or carrier pickup is performed.
+- Stable dispute event IDs and versions reject conflicting replays, ignore older
+  updates and invalidate financial approvals on changes. Active/reimbursed
+  disputes hold all cases sharing the capture, including execution/recovery POST
+  claims. A reimbursement cannot be erased by a later manual close. Current
+  provider-confirmed active dispute evidence cannot be cleared by a manual status.
+  Read-only reconciliation is retained. Reason-specific package checklists include
+  classified owned evidence, return reviews and label hashes; changed sources make
+  packages stale. Replacement delivery is not original-delivery evidence.
+- Refund journeys separate processor completion from bank receipt, preserve
+  evidence timestamps/null amounts and label ARN/STAN/RRN/bank references as
+  merchant-recorded. Private tracing notes stay private. Buyer acknowledgement is
+  buyer-reported and changes no financial ledger. Shared context contains the
+  original request, public messages/promises and next action, with pagination.
+- A write-transaction snapshot journal records monotonic order revisions and an
+  authenticated merchant/source cursor. Pulls and the operations worker refresh
+  up to 100 least-recently checked connected orders per source, including unchanged
+  orders so larger workspaces progress. Snapshot payloads exclude private notes,
+  imported private support messages and PDF bytes.
+- SDK `src/index.ts` and new `src/events.ts`, version/package locks 0.7.0, generated
+  OpenAPI types: new customer and direct full-key merchant helpers, bounded retries
+  preserving payload/UUID identity, receipt lookup, and PostgresResolutionConsumer.
+  The host supplies its writable SQL pool; explicit initialization creates two SDK
+  tables. Scope checks, advisory/row locks, stale-revision checks and transaction-
+  bound callbacks commit app projections and cursors together or roll back both.
+  No runtime `pg` dependency or financial POST retry was introduced.
+- Frontend `components/assurance.tsx`, `buyer-resolution.tsx`, `return-workflow.tsx`,
+  `case-operations.tsx`, `operations-console.tsx`, platform/buyer/SDK BFF allowlists
+  and `lib/server.ts`: usable policy, guide, mobile label save, inspection, dispute,
+  tracing and classified-evidence forms. Label uploads alone receive the larger
+  3 MiB encoded request bound; ordinary body limits remain. Buyer return terms are
+  disclosed before submitting and private catalog exclusions are not exposed.
+- Checkout store server/browser/test files add owned-order refund guidance, return
+  options and previous-report retrieval. Client text is rendered with textContent.
+  Updated root/backend/frontend/store/SDK READMEs, SDK integration skill and new
+  `docs/AFTERCARE_RELIABILITY.md`; simulation context records the actual store run.
+  FastAPI contract regenerated at `postman/contracts/resolve.openapi.json`.
+
+**Data and compatibility:** Added immutable SQLite
+`028_resolution_assurance.sql` and PostgreSQL `019_resolution_assurance.sql`,
+registered in `storage.py`; prior migrations untouched. Ten additive tables store
+policy, guides, labels, eligibility/inspection reviews, disputes/events, traces,
+buyer acknowledgements, safe projections and state events. PostgreSQL FKs are
+initially deferrable to support the existing alphabetical SQLite importer.
+Persistence/PostgreSQL tests use schema counts 28/19; disposable rewind fixtures
+remove the new dependent tables first. All existing key scopes and customer/order
+ownership requirements remain; support actions require explicit source grants.
+SDK 0.7 is a local preview package, with no npm publication.
+
+**Decisions, alternatives and limits:** Reused existing case, payment, role and
+worker engines rather than a parallel financial ledger. Return flags require
+review instead of pretending to detect fraud. Dispute references for Stripe/banks
+are merchant records, not live connectors. Provider completion never establishes
+bank credit. Saved existing PDFs solve print-later usability without inventing a
+postage integration. A pull reconciliation journal was chosen over new outbound
+webhook subscriptions: it recovers current state without requiring an externally
+reachable endpoint, but does not guarantee every transient transition. Domain
+history retains original records. External callback effects need the host app's
+transactional outbox and separate idempotency; SQL cannot make remote side effects
+exactly-once. A newly recorded hold cannot recall a payment POST already sent.
+No new financial permission, automatic refund, customer notification, dispute
+submission, deployment, commit or push is part of this change.
+
+**Validation actually performed:**
+
+- Isolated full backend `python scripts/isolated.py -m pytest ...`: **388 passed,
+  60 skipped**, before the final additional provider-active-hold test and public
+  policy polish. Subsequent targeted financial/assurance checks of
+  `test_assurance.py`, `test_refund_approvals.py`, `test_refund_executions.py` and
+  `test_recovery_worker.py`: **83 passed**. Earlier broader resolution/financial
+  check: **86 passed**. These exercise decimal precision, duplicate/pending/failed
+  refunds, shared balances, acceptance/condition/approval gates and uncertain
+  execution recovery. The new test initially lacked a required source_note; the
+  fixture was corrected before the successful 83-test result.
+- Final public-policy/assurance suite on SQLite: **5 passed**. Same five tests
+  against disposable PostgreSQL with `--postgres-operations --storage-postgres`:
+  **5 passed**. Earlier combined PostgreSQL aftercare/assurance/storage suite:
+  **18 passed**. Expanded populated SQLite-to-PostgreSQL import: **1 passed,
+  9 deselected**; owned support grants, projection cursors and exact PDF bytes
+  survived import and the source SQLite bytes were unchanged. No owner database
+  was used for these behavior/import tests.
+- SDK `RESOLVE_RUN_EVENT_CONSUMER_PG=1 npm test`: **9 passed, 2 skipped** (11 total).
+  Tests include a real FastAPI response discarded after commit, retry with the
+  same issue identity and one stored issue, plus receipt lookup; PostgreSQL
+  callback rollback, concurrent deduplication and stale revision handling passed.
+  Provider-backed opt-ins remain skipped. `npm pack --pack-destination
+  ../../.local/artifacts --silent` produced `resolve-paypal-sdk-0.7.0.tgz`.
+- Existing owned PayPal simulation, `postman simulation run
+  postman/simulations/paypal-read/paypal-read.sim.yaml --proxy --proxy-port 7006
+  --no-history --lift 'npm --prefix examples/checkout-store test' --output ndjson`
+  with the existing opt-in/proxy variables: **2 browser tests passed, 19 mocked
+  requests, 0 pass-through**. New refund guidance, previous report and inactive
+  policy cost message passed. The mock/provider contract was reused unchanged.
+  A teardown ECONNRESET notice did not fail the successful run. No bank receipt
+  or new live account integration was verified.
+- Isolated exact-source Next 16.4.5 production `next build --webpack` passed
+  compilation, TypeScript and all 14 static pages without copying owner dotenv.
+  `npm --prefix frontend run check` passed. OpenAPI regenerated using
+  `uv run python scripts/isolated.py scripts/export_openapi.py` and SDK types/build
+  passed. Ruff formatted the new Python modules; `ruff check --select F,E9`
+  passed for assurance/aftercare/operations modules and relevant tests. The wider
+  default Ruff invocation also reports import-order/UTC-style findings; no claim
+  is made that this style-only invocation passed. Existing Starlette/httpx
+  deprecation and development color notices remain.
+
+**Activation and remaining verification:** New workflows are available through
+Operations/case/private buyer UI and the SDK; enable the return policy explicitly,
+arrange labels externally and run the operations worker separately for periodic
+refresh. Production needs the app's own order authorization and durable request/
+outbox state, hosted origins, real provider accounts and account-backed checks.
+Local startup, final browser validation and cleanup are recorded below.
+
+
+**Final observed browser/startup/cleanup results:**
+
+- `npx playwright test -c playwright.platform.config.ts`: **1 passed (2.8 minutes;
+  test 1.9 minutes)** after public-policy disclosure changes. Real isolated
+  Next/FastAPI/browser paths include owner signup, buyer offers and return request,
+  saved instructions, PDF upload and mobile download with correct filename,
+  capture hold/close, pending-refund tracing without exposing the private note,
+  package review/export, policy setup, support-key gateway/context/events and
+  invited-agent restrictions. The 390px buyer screenshot was visually inspected:
+  instructions, saved label action and cost-confirmation text fit without overflow.
+  Earlier runs corrected role-based test selectors for textarea/select controls
+  and a cold-route load timeout; the final run passed. Browser checks use synthetic
+  accounts and disposable databases, not the owner's merchant records.
+- A final post-format SQLite assurance run passed **5 tests**. `git diff --check`
+  passed. The SDK 0.7 archive exists locally (46,038 bytes); it was not published.
+- Restored the existing configured backend with a hidden reload launcher after
+  disposable migration/import checks. Startup completed, backend `/health` and
+  frontend 3000 `/account` returned **200**. This startup applies the additive
+  migrations to configured storage, distinct from disposable behavior evidence.
+  No owner account, support key, case, refund, worker run or provider request was
+  created as part of this startup check. The existing frontend was retained.
+- The exact disposable PostgreSQL cluster at `.local/pg-operations/data` was
+  stopped cleanly after all SQL checks. No unrelated database process was stopped.
+- Final Postman action after simulations: `postman status`, CLI **1.82.0**, signed
+  out and no initialized shared resources. Existing local mocks were sufficient;
+  no remote Postman workspace/resource was created. Optional plugin/skill-update
+  notices were not required for the successful local simulation.
+
+
+### CHG-051 - Reduce case-opening latency and make tab navigation responsive
+
+**Date:** 2026-11-10 (Asia/Calcutta).
+
+**Objective:** Fix the owner's reported lag, specifically opening cases and
+switching tabs, while preserving payment freshness, permissions and buyer privacy.
+Supersedes CHG-044's always-development frontend runtime for daily local viewing;
+`npm run dev` remains the editing workflow.
+
+**Findings and decisions:** Public warm HTML was already quick, but the frontend
+was running `next dev` and each case eagerly mounted independent tools (including
+closed sections). Linked payment/timeline requests blocked detail completion;
+customer-tab reads formed a waterfall and remounted on each return. Operations
+repeated identity lookup and sequential reads on every tab. PostgreSQL opened a
+new network connection for each transaction, and browser authorization repeatedly
+looked up the same session. Read-only SELECT 1 profiling of configured hosted
+storage took **3.330, 3.359, 3.182 seconds**. No customer records or credentials
+were printed or changed by that measurement.
+
+Chose psycopg-pool's bounded lifecycle rather than a custom connection cache,
+persisted response cache or shared authentication cache. Pool contexts retain
+commit/rollback behavior documented by Psycopg:
+https://www.psycopg.org/psycopg3/docs/advanced/pool.html . Installed Next 16.4.5
+lazy-loading, production checklist and distDir documentation were read before
+frontend changes. Local source changes remain uncommitted; no agents were spawned.
+
+**Files and resulting behavior:**
+
+- `backend/app/postgres.py`, `pyproject.toml`, `uv.lock`: psycopg-pool **3.3.3**, lazy
+  per-store/process pool, maximum 8 connections/32 queued borrowers, checkout and
+  reconnect deadlines 8 seconds, excess-idle limit 60 seconds and lifetime 600
+  seconds. Pool failures return the existing sanitized 503 rather than replaying
+  operations. Read setup uses one round trip with transaction-local repeatable-
+  read/read-only mode and schema; writes retain their advisory transaction lock
+  and existing boundaries. Raw admin connection helper stays compatible.
+- `storage.py` adds a no-op resource-close contract; `main.py` closes the store at
+  application shutdown. `tests/conftest.py` closes disposable PostgreSQL pools
+  after cleanup. New `test_postgres.py` cases verify reuse, commit/rollback,
+  read-only and schema settings, local-setting reset, broken connection discard
+  and reopening a closed store. No SQL migration was created or modified.
+- `auth.py`, `merchant_auth.py`, `platform_identity.py`: resolve legacy/staff
+  sessions within one read transaction and join merchant identity to the staff
+  lookup. Reuse the verified identity within a GET request. Writes explicitly
+  recheck the current session before enforcing roles, preserving the existing
+  mid-authorization revocation test. Each new request checks storage again;
+  there is no cross-request role/session cache. Added a regression asserting one
+  read lookup and immediate denial after revocation on the next request.
+- `frontend/components/workspace.tsx`, `case-desk.tsx`, `merchant-customer.tsx`:
+  publish case summary before linked financial reads finish; absent payment/basis
+  keeps financial controls ineligible. Timeline reads wait for the timeline tab,
+  are reused within the case, and invalidate on detail refresh. Existing sequence
+  guards reject late old-case responses. Customer reads run together and the
+  mounted customer panel retains a heading draft across main tab changes; changing
+  cases resets its state. Explicit message refresh remains available.
+- New `components/deferred-details.tsx`, plus `case-operations.tsx`, `assurance.tsx`,
+  `helpdesk-panel.tsx`: closed offers, returns, packages, dispute controls, guides,
+  Zendesk and investigation tools defer data work until opened. Connected-app
+  support requests still load in the overview. Role comes from the existing
+  workspace identity instead of another `/me` call. Investigation code is split
+  and its poller unmounts when closed; other closed tools retain form state.
+  Unconfigured Zendesk now gives a clear connection message after expansion.
+- `operations-console.tsx`: identity loads independently once per mount; independent
+  connection/import reads run together, tab data renders as available, explicit
+  loading status appears and obsolete responses cannot overwrite current-tab data.
+- `app/globals.css`: wraps narrow merchant header/actions and case introduction,
+  permits local tab-strip scrolling and removes case-grid min-width expansion.
+  A new mobile regression caught **501px** body width at a **390px** viewport;
+  layout constraints were corrected, rather than hiding page overflow.
+- `frontend/scripts/preview.mjs`, package scripts, `next.config.ts`, `.gitignore`
+  and generated `tsconfig.json` include paths: `build:preview` compiles into the
+  dedicated ignored `.next-preview`; `preview` serves it only on loopback port
+  3000 (or validated PORT). This avoids sharing development build output. Source
+  changes need rebuild/restart. Existing local dotenv is used by the normal local
+  preview; server credentials remain server-side.
+- New `tests/platform.performance.spec.ts`, platform config, isolated Next runner,
+  investigation spec/config: synthetic race/request-budget/draft/mobile checks;
+  optional isolated production build mode without owner dotenv; Windows-compatible
+  investigation fixture command and explicit expansion of the deferred panel.
+- Root/backend/frontend READMEs and new `docs/PERFORMANCE.md` explain daily preview,
+  development mode, deferred tools, pool bounds, freshness and evidence limits.
+
+**Validation actually performed:**
+
+- After pooling plus read-setup batching, the same hosted SELECT 1 probe took
+  **2.939 seconds cold, 1.211 and 1.182 seconds warm**. Earlier pooling-only probe
+  was 3.340 cold / 1.478 / 1.473 warm. This measures network/transaction overhead,
+  not whole-page latency, provider performance or a production load test.
+- Isolated full backend: `python scripts/isolated.py -m pytest -q --tb=short
+  -p no:cacheprovider`: **390 passed, 62 skipped** in 148.75 seconds. Separate
+  authentication/operations checks: **50 passed, 2 skipped**. An early optimization
+  failed the mid-authorization revocation test; write-time fresh checking was
+  restored. An overly broad replacement briefly denied writes; the explicit
+  None-only denial guard was corrected before these final successful runs.
+- Disposable PostgreSQL native storage/import/pool suite:
+  `scripts/isolated.py --postgres-operations -m pytest tests/test_postgres.py ...`:
+  **12 passed**. Pooled operations/assurance suite with `--storage-postgres`:
+  **21 passed, 1 skipped**. This includes quantity/revision/offer permissions,
+  shared-capture dashboard decimal precision, pending/failed amounts and dispute
+  holds. Existing PostgreSQL financial concurrency/reconciliation paths in the
+  native suite passed along with new rollback/isolation/broken-connection tests.
+- An exploratory run forced the SQLite-oriented approval/execution/recovery
+  modules onto PostgreSQL: **82 passed, 1 skipped, 17 failed**. All 17 failures
+  explicitly accessed SQLite-only `store.path`/sqlite3 fixtures. This invocation
+  is not claimed to pass; those SQLite restart/trigger tests passed in the full
+  SQLite suite, and the supported native PostgreSQL suite above passed. No fixture
+  failures were hidden through application changes or broad skips.
+- Development browser checks: full merchant/buyer workflow passed (45.5-second
+  test); final focused case performance check passed (11.0-second test), reporting
+  **5 distinct initial API paths**, no unopened secondary-panel calls, one timeline
+  read across return visits, no customer-panel refetch on return, preserved draft,
+  ignored delayed old-case result and 390px body width. Development Strict Mode
+  doubled an initial effect; the first assertion was corrected to measure distinct
+  paths instead of pretending development effect duplication cannot occur.
+- Final compiled synthetic browser run:
+  `RESOLVE_UI_PRODUCTION_TEST=1 npx playwright test -c playwright.platform.config.ts`:
+  **2 passed (42.1 seconds including isolated build/start)**. The focused case
+  test took 4.1 seconds and full merchant/buyer flow 6.3 seconds against synthetic
+  SQLite. Production request observations were again five distinct initial paths,
+  one timeline read and zero customer-panel refetches on a tab return. These test
+  durations are not asserted as real hosted-user page timings.
+- Investigation browser regression: **1 passed (28.1 seconds including startup)**;
+  advisory review, absence of financial approval/execution and mobile layout passed.
+  The initial Windows fixture command used forward slashes and failed to launch;
+  its command was corrected. The mobile screenshot was visually inspected after
+  layout correction: header/buttons wrap and the page fits the 390px viewport.
+- `npm --prefix frontend run build:preview`: final build passed compilation,
+  TypeScript and all 14 static pages; `npm --prefix frontend run check` passed.
+  `uv run python scripts/isolated.py scripts/export_openapi.py` regenerated the
+  contract with **identical SHA-256**, confirming no API/model change. Targeted
+  Ruff `--select F,E9` and `git diff --check` passed. Existing Starlette/httpx
+  deprecation and development color notices did not fail checks.
+
+**Runtime and remaining limits:** After dependency/auth/storage validation, the
+owner's existing backend was restored without a reload watcher on 8000. After
+final build/browser checks, the exact owned `next dev` process tree was replaced
+with a hidden compiled-preview launcher on 3000. Startup reported ready in 329ms;
+`/health`, `/account` and `/demo` returned **200** (sample request durations 0.051,
+0.222, 0.037 seconds respectively, not a benchmark guarantee). Existing session
+cookies and configured storage were retained. No owner account, key, case, refund,
+notification, provider action or worker was created/run. The exact disposable
+PostgreSQL cluster was stopped cleanly; unrelated services were untouched.
+
+Hosted database network latency still applies, and large-workspace query scaling
+has not been load-tested. Pool budgets are per process; account for replicas and
+workers before scaling. Message refresh is explicit and all financial action
+checks remain fresh/backend-authoritative. Daily compiled viewing now requires
+rebuilding after source/configuration changes; development reload remains opt-in
+through `npm run dev`. No deployment, commit or push was performed.

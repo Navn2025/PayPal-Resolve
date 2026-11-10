@@ -1,5 +1,23 @@
 # Field Brew Supply
 
+
+Aftercare assurance (SDK 0.7) adds refund tracing, reusable support context and
+return policy/label workflows. See [the workflow guide](../../docs/AFTERCARE_RELIABILITY.md).
+
+The paid receipt now includes **Need help with this order?**: a customer submits
+an issue, checks its resolution, and opens the private messages/offers/returns
+portal. The store uses SDK 0.6's `openIssue`, `getOrderResolution` and
+`createSupportLink` after checking the receipt's HttpOnly session. Generate a
+support integration key for **field-brew-store** in Operations → Connections;
+order-only keys cannot perform support actions. Existing local full-key setup
+also works for development. See the [complete workflow](../../docs/SDK_AFTERCARE.md).
+Support requests require merchant review and do not authorize a refund.
+The local Sandbox launcher creates the explicit support grant for its isolated
+workspace. Its random-port API is separate from the owner's running backend.
+Portal links require a customer frontend configured for that same API and a
+matching public origin; otherwise the receipt shows a clear configuration message.
+The launcher does not start a second frontend automatically.
+
 A small coffee gear shop with six products. It creates PayPal Sandbox orders,
 captures an approved payment, and sends the store order and items to Resolve
 through the same Evidence SDK used by an external merchant app. Nothing ships.

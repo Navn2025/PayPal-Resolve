@@ -75,7 +75,7 @@ export function MerchantLogin({ notice, next }: { notice?: string; next: "/works
         </aside>
         <section className="access-card" aria-label="Merchant sign in">
           <p className="site-kicker"><span /> WORKSPACE ACCESS</p>
-          <h2>Merchant sign in</h2><p>Sign in to your existing Resolve workspace.</p>
+          <h2>Merchant sign in</h2><p>Sign in to your existing Resolve workspace.</p><p><Link href="/account">Use your staff account or create a workspace</Link></p>
           {notice && notices[notice] && !error && <Notice>{notices[notice]}</Notice>}
           {error && <Notice>{error}</Notice>}
           {session?.merchant && <Link className="site-button site-button-primary access-wide" href="/workspace">Continue to workspace <ArrowRight size={17} /></Link>}

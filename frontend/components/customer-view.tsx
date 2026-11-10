@@ -6,6 +6,7 @@ import { ArrowUpRight, CheckCircle2, ClipboardCheck, Clock3, LockKeyhole, Printe
 import { ApiError, dateText, money, remedyLabels, uuid } from "@/lib/domain";
 import { customerLabels, customerRequest, demoCustomer, downloadFile, issueLabels, saveBlob, uploadCustomerFile, type CustomerCase, type Evidence, type IntakeView, type Message } from "@/lib/customer";
 import { Badge, Brand, Button, Empty, Notice, remedyIcons } from "./ui";
+import { BuyerResolution } from "./buyer-resolution";
 import { Conversation } from "./conversation";
 import { CustomerTimeline, EvidencePanel, IntakeForm } from "./customer-actions";
 
@@ -137,6 +138,7 @@ export function CustomerView() {
           })}</ul>
           {!item.promises.length && <p className="muted">The merchant has not recorded an agreed remedy yet.</p>}
         </section>
+        {!demo && <BuyerResolution key={token.current + ":" + version.current} token={token.current} />}
         <CustomerTimeline milestones={item.timeline} next={item.next_step} />
         <EvidencePanel files={item.evidence} onUpload={upload} onDownload={async (file) => {
           if (demo) { const blob = demoFiles.current.get(file.id); if (blob) saveBlob(blob, file.filename); }

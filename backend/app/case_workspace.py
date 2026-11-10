@@ -27,6 +27,9 @@ def require_open(case):
 
 
 def provider_hold(connection, merchant_id, capture_id, *, exclude_event=None):
+    from .dispute_guard import held
+    if held(connection, merchant_id, capture_id):
+        return True
     return (
         connection.execute(
             """SELECT 1 FROM review_exceptions WHERE merchant_id=? AND capture_id=?

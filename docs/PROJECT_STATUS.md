@@ -1,5 +1,8 @@
 # Resolve project status
 
+Historical 7 November snapshot. The [merchant operations guide](PLATFORM_EXPANSION.md)
+and CHG-048 describe the later eight-feature implementation and validation limits.
+
 Updated: 2026-11-07.
 
 The backend now handles case lifecycle, evidence attachments, exception review,

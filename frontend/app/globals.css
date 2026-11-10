@@ -547,3 +547,14 @@ cite { display: block; margin-top: 4px; font-size: 10px; font-style: normal; col
 .proposal-quote footer { color: var(--muted); font-size: 12px; margin-top: 4px; }
 .proposal-dropped { margin-top: 10px; }
 .investigation-panel .review-actions { flex-wrap: wrap; gap: 8px; }
+
+/* Secondary tools should not widen the case grid or crowd narrow screens. */
+.desk-pane, .case-desk, .desk-content, .desk-pane > details { min-width: 0; }
+.desk-pane > details > summary { padding: 10px 12px; cursor: pointer; font-weight: 650; }
+@media (max-width: 700px) {
+  .topbar { flex-wrap: wrap; align-items: flex-start; }
+  .topbar-actions { flex: 1 1 240px; min-width: 0; flex-wrap: wrap; justify-content: flex-end; }
+  .workspace-intro, .intro-actions, .linked-panel { flex-wrap: wrap; }
+  .case-tabs { max-width: 100%; overflow-x: auto; }
+  .case-tabs button { flex-shrink: 0; }
+}

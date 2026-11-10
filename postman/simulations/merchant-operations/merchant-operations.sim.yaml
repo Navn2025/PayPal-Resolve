@@ -1,0 +1,7 @@
+simulation: merchant-operations
+routing: path
+mocks:
+  - name: zendesk-followup
+    routeKey: zendesk
+    origin: resolve-helpdesk.zendesk.com
+    path: postman/mocks/zendesk-followup

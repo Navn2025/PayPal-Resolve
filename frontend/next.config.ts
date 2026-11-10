@@ -6,7 +6,7 @@ const config: NextConfig = {
   logging: {
     incomingRequests: { ignore: [/^\/api\/customer-account\/google\/callback/, /^\/api\/auth\/paypal\/callback/] },
   },
-  distDir: process.env.RESOLVE_UI_TEST_SERVER === "1" ? ".next-test" : ".next",
+  distDir: process.env.RESOLVE_UI_TEST_SERVER === "1" ? ".next-test" : process.env.RESOLVE_UI_PREVIEW === "1" ? ".next-preview" : ".next",
   turbopack: { root: process.cwd() },
   async headers() {
     return [{

@@ -32,11 +32,10 @@ export function MerchantCustomer({ item, request, demo, onOperations }: {
     const version = ++latest.current;
     setLoading(true); setError("");
     try {
-      const [status, files, operations] = await Promise.all([
+      const [status, files, operations, thread] = await Promise.all([
         request<CustomerLink>(root + "/customer-link"), request<Evidence[]>(root + "/customer-evidence"),
-        request<Operations>(root + "/operations"),
+        request<Operations>(root + "/operations"), request<Message[]>(root + "/customer-messages"),
       ]);
-      const thread = await request<Message[]>(root + "/customer-messages");
       if (version !== latest.current) return;
       setLink(status); setMessages(thread); setEvidence(files); setVisibleWatermark(operations.message_watermark);
       onOperations(item.id, operations);

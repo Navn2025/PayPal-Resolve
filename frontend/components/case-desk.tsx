@@ -1,10 +1,12 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { ArrowDownToLine, ArrowLeft, ArrowLeftRight, ArrowRight, ArrowUpRight, CalendarDays, Check, ChevronDown, ClipboardCheck, Clock3, FileText, Fingerprint, ListChecks, PackageCheck, Plus, Printer, RefreshCw, ShieldCheck, Wallet, type LucideIcon } from "lucide-react";
 import { dateText, money, outcomeLabels, pretty, remedyLabels, shortId, sourceLabels, timeText, type Approval, type CaseView, type Execution, type PromiseView, type Reconciliation, type Requester, type Timeline } from "@/lib/domain";
 import { Badge, Brand, Button, Empty, Notice, remedyIcons } from "./ui";
 import { MerchantCustomer } from "./merchant-customer";
 import { workflowLabels, type Operations } from "@/lib/customer";
+import { DeferredDetails } from "./deferred-details";
 import { HelpdeskPanel } from "./helpdesk-panel";
 
 export type DeskTab = "overview" | "timeline" | "receipt" | "customer";
@@ -178,6 +180,8 @@ function Receipt({ item, demo }: { item: CaseView; demo: boolean }) {
 
 export function CaseDesk(props: DeskProps) {
   const { item, tab, setTab, demo, onBack, error, verifiedMessage } = props;
+  const [customerVisited,setCustomerVisited] = useState(false);
+  useEffect(()=>{if(tab === "customer")setCustomerVisited(true);},[tab]);
   const ops = item.operations;
   const due = ops?.due_at ?? ops?.promise_due_at;
   return <section className="case-desk" aria-label="Selected case">
@@ -203,10 +207,10 @@ export function CaseDesk(props: DeskProps) {
         <span className="section-icon"><Wallet size={19} /></span><div><strong>No payment linked</strong><p>Link the payment if this case needs a refund.</p></div>
         <Button className="small-button" onClick={props.onLinkPayment}>Link payment record</Button></div>}
         <PaymentPanel {...props} /><PromiseCards {...props} />
-        {!demo && <HelpdeskPanel key={item.id} caseId={item.id} request={props.request} />}</>}
+        {!demo && <DeferredDetails key={item.id} title="Zendesk ticket"><HelpdeskPanel caseId={item.id} request={props.request} /></DeferredDetails>}</>}
       {tab === "timeline" && <EventTimeline {...props} />}
       {tab === "receipt" && <Receipt item={item} demo={demo} />}
-      {tab === "customer" && <MerchantCustomer key={item.id} item={item} request={props.request} demo={demo} onOperations={props.onOperations} />}
+      {(tab === "customer" || customerVisited) && <div hidden={tab !== "customer"}><MerchantCustomer key={item.id} item={item} request={props.request} demo={demo} onOperations={props.onOperations} /></div>}
     </div>
   </section>;
 }

@@ -33,41 +33,47 @@ Implementation details, model policy, commands and validation follow below.
 
 ## Model decision and official evidence
 
-Catalogs/documentation were checked on 2026-11-08 using public, unauthenticated
-pages. This is capability research, not account-backed inference validation.
+The current OpenRouter selection was checked on 2026-11-10 using public,
+unauthenticated catalogs and the ZDR endpoint listing (CHG-047). The owner
+requires output pricing strictly below USD 0.75 per million tokens. This
+supersedes CHG-046's Gemini default, which exceeded that output-price limit.
 
 | Candidate and route | Structured output | Published input/output USD per million tokens | Decision |
 | --- | --- | --- | --- |
-| Groq `openai/gpt-oss-20b`, direct Groq | Strict JSON schema | 0.075 / 0.30 | Default triage and linked-read selection |
-| Groq `openai/gpt-oss-120b`, direct Groq | Strict JSON schema | 0.15 / 0.60 | Configurable triage comparison; greater cost |
-| OpenRouter `anthropic/claude-sonnet-5.5`, `anthropic` | Endpoint lists `structured_outputs`, `response_format`, `max_tokens`, `reasoning_effort` | 2 / 10 | Final default selective deeper investigation |
-| OpenRouter `anthropic/claude-sonnet-4.5`, `anthropic` | Endpoint lists `structured_outputs`, `response_format`, `max_tokens` | 3 / 15 | Provisional choice retained for comparison |
-| OpenRouter `openai/gpt-4.1-mini`, `openai` | Endpoint lists structured outputs and response format | 0.40 / 1.60 | Lower-cost synthetic evaluation candidate |
+| Groq `openai/gpt-oss-20b`, direct Groq | Strict JSON schema | 0.075 / 0.30 (previous catalog check) | Unchanged default triage |
+| Groq `openai/gpt-oss-120b`, direct Groq | Strict JSON schema | 0.15 / 0.60 (previous catalog check) | Unchanged optional triage model |
+| OpenRouter `openai/gpt-oss-120b`, `phala` | Endpoint lists `structured_outputs`, `response_format`, `max_tokens`, `reasoning_effort` | 0.15 / 0.60 | Default deeper investigation; low reasoning effort |
+| OpenRouter `xingchen-agi/xing4.0-29b-a4b:free`, `phala` | Endpoint lists `structured_outputs`, `response_format`, `max_tokens` | 0 / 0 | Optional free model, manual selection |
 
-[Groq's catalog](https://console.groq.com/docs/models) lists 20B throughput at
-1000 tokens/second and 120B at 500; these are advertised throughput, not measured
-request latency. Triage requests use the documented `low` reasoning effort
-([Groq API reference](https://console.groq.com/docs/api-reference)).
-The listed developer limits are 250K TPM/1K RPM for both;
-[account and model limits](https://console.groq.com/docs/rate-limits) can differ.
-[Strict output support](https://console.groq.com/docs/structured-outputs) is
-documented for both. We select 20B for small, bounded decisions and reserve a
-different provider/model family for ambiguous review. No evidence here proves
-one model grounds evidence or abstains better than another.
+The [GPT-OSS 120B route catalog](https://openrouter.ai/api/v1/models/openai/gpt-oss-120b/endpoints)
+confirmed Phala's exact prices and schema parameters; the
+[ZDR endpoint listing](https://openrouter.ai/api/v1/endpoints/zdr) included that
+route. GPT-OSS 120B is the larger reasoning-capable paid choice within the
+specified budget; this is not measured evidence of better quality on Resolve.
+The [free Xing4.0 route catalog](https://openrouter.ai/api/v1/models/xingchen-agi/xing4.0-29b-a4b:free/endpoints)
+provides the optional zero-token-price alternative on the same pinned provider.
 
-OpenRouter's public [Sonnet 5.5 route catalog](https://openrouter.ai/api/v1/models/anthropic/claude-sonnet-5.5/endpoints)
-confirms the exact Anthropic endpoint and required parameters. The final default
-supersedes the provisional 4.5 choice: its published token prices are lower and
-the required schema parameters are present. We use `low` reasoning effort to
-bound this stage. This is a capability/cost choice, not measured quality.
-The [Sonnet 4.5 route catalog](https://openrouter.ai/api/v1/models/anthropic/claude-sonnet-4.5/endpoints)
-supports the retained baseline. Other advertised
-routes include Azure, AWS, Google and regional variants; they are excluded by
-default. The [4.1 Mini route catalog](https://openrouter.ai/api/v1/models/openai/gpt-4.1-mini/endpoints)
-confirms the OpenAI and Azure alternatives. Compare all candidates on the fixed
-rubric before enabling inference; published model descriptions establish no
-quality ordering here. [OpenRouter limits](https://openrouter.ai/docs/api/reference/limits)
-depend on the key/account and upstream; no account quota was read in this run.
+Runtime defaults and the private `.env.ai.ps1` select `openai/gpt-oss-120b` with
+`RESOLVE_AI_OPENROUTER_ROUTES` set to `["phala"]`. For free use, manually set
+`RESOLVE_AI_OPENROUTER_MODEL` to `xingchen-agi/xing4.0-29b-a4b:free`. The default
+allowlist contains only these two choices. Gemini and Sonnet are excluded.
+No automatic model fallback is permitted.
+
+Each OpenRouter request includes `provider.max_price={"completion":0.74}`.
+OpenRouter documents these values in USD per million tokens in its
+[maximum-price routing controls](https://openrouter.ai/docs/guides/routing/provider-selection#max-price).
+This keeps the requested output token tariff strictly below 0.75 even if a
+provider raises its listed price. When no route satisfies pricing, privacy or
+schema requirements, the existing adapter blocks the investigation. This is a
+provider token-price filter, not a total-account-spend or platform-fee limit.
+Account-backed billing and real model quality have not been verified.
+
+Groq triage is unchanged; its [catalog](https://console.groq.com/docs/models),
+[strict schema documentation](https://console.groq.com/docs/structured-outputs)
+and [rate limits](https://console.groq.com/docs/rate-limits) describe its controls.
+Use the fixed synthetic evaluator for each new OpenRouter model before enabling
+real inference. Offline simulation validates the pipeline and routing, not the
+quality, latency or real availability of these models.
 
 [OpenRouter structured output documentation](https://openrouter.ai/docs/guides/features/structured-outputs)
 and [routing controls](https://openrouter.ai/docs/guides/routing/provider-selection)

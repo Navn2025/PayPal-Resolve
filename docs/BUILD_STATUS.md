@@ -1,5 +1,9 @@
 # Resolve - build status and handoff
 
+This is the 7 November snapshot. For subsequent investigations and the eight
+merchant operations additions, see [AI investigations](AI_INVESTIGATIONS.md),
+[merchant operations](PLATFORM_EXPANSION.md) and CHG-048 in the engineering log.
+
 **Reviewed:** 7 November 2026 (Asia/Calcutta) · **Code snapshot:** Evidence SDK baseline `9eaa616` plus commerce and merchant orders and SDK key setup (CHG-029–032) · **SDK:** `@resolve-paypal/sdk@0.5.0`
 
 Resolve connects a buyer's issue, the merchant's promise, and the records that

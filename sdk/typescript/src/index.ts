@@ -2,7 +2,39 @@ import { PostgresCommerce, projectCommerceSnapshot } from "./commerce.js";
 import type { PostgresReader, PostgresCommerceOptions } from "./commerce.js";
 export { PostgresCommerce, CommerceSourceError } from "./commerce.js";
 export type { PostgresReader, PostgresCommerceOptions, CommerceBackfillOptions } from "./commerce.js";
-import type { paths } from "./generated.js";
+import type { paths, components } from "./generated.js";
+
+export interface OpenIssueInput {
+  orderId: string;
+  requestId: string;
+  reason: components["schemas"]["IssueInput"]["reason"];
+  message: string;
+  requestedResolution?: components["schemas"]["IssueInput"]["requested_resolution"];
+}
+export type IssueReceipt = components["schemas"]["IssueReceipt"];
+export type OrderResolution = components["schemas"]["OrderResolution"];
+
+export { PostgresResolutionConsumer } from "./events.js";
+export type { EventSqlClient, EventSqlPool, EventHandler, ResolutionEvent, ResolutionEventPage } from "./events.js";
+export type RefundJourney = components["schemas"]["RefundJourney"];
+export type SupportContext = components["schemas"]["ContextView"];
+export type ReturnEligibility = components["schemas"]["EligibilityView"];
+export type ReturnGuide = components["schemas"]["ReturnGuideView"];
+export type ReturnLabelFile = components["schemas"]["ReturnLabelFile"];
+type AssuranceInputs = components["schemas"]["ContextRequest"] | components["schemas"]["LookupIssue"] | components["schemas"]["EventPull"] | components["schemas"]["EligibilityInput"] | components["schemas"]["SupportReturn"] | components["schemas"]["ReturnLocator"] | components["schemas"]["LabelLocator"] | components["schemas"]["PolicyUpdate"] | components["schemas"]["GuideInput"] | components["schemas"]["InspectionInput"] | components["schemas"]["LabelInput"] | components["schemas"]["TraceInput"] | components["schemas"]["DisputeEvent"] | components["schemas"]["DisputeDocument"];
+
+export type OperationsDashboard = components["schemas"]["Dashboard"];
+export type MissedPromiseAlerts = components["schemas"]["AlertPage"];
+export type SupportImport = components["schemas"]["TicketDetail"];
+export type ResolutionOfferInput = components["schemas"]["OfferCreate"];
+export type ResolutionOffer = components["schemas"]["OfferView"];
+export type ReturnWorkflow = components["schemas"]["ReturnCatalog"];
+export type GuidedReturnInput = components["schemas"]["ReturnCreate"];
+export type GuidedReturnUpdate = components["schemas"]["ReturnUpdate"];
+export type GuidedReturn = components["schemas"]["ReturnView"];
+export type DisputePackageInput = components["schemas"]["PackageCreate"];
+export type DisputePackageReceipt = components["schemas"]["PackageReceipt"];
+export type DisputePackage = components["schemas"]["PackageDetail"];
 
 type Auth = paths["/auth/me"]["get"];
 type Cases = paths["/resolution-cases"];
@@ -55,6 +87,8 @@ export interface ResolveClientOptions {
   apiKey: string;
   /** Overall request timeout in milliseconds. Defaults to 10,000. */
   timeoutMs?: number;
+  /** Total attempts for retry-safe actions. Default 3; portal link rotation is never retried. */
+  retryAttempts?: number;
   /** Stable app label used by syncOrder and the PostgreSQL adapter. */
   source?: string;
 }
@@ -72,7 +106,7 @@ export interface RequestOptions {
 
 export class ResolveApiError extends Error {
   readonly status: number;
-  readonly code: "case_reference_conflict" | "record_conflict" | "evidence_event_conflict" | "refresh_conflict" | "commerce_conflict" | undefined;
+  readonly code: "case_reference_conflict" | "record_conflict" | "evidence_event_conflict" | "refresh_conflict" | "commerce_conflict" | "issue_conflict" | undefined;
 
   constructor(status: number, code?: ResolveApiError["code"]) {
     const messages: Record<number, string> = {
@@ -88,6 +122,7 @@ export class ResolveApiError extends Error {
       record_conflict: "The record conflicts with the linked payment or source, or the case reached its link limit.",
       evidence_event_conflict: "The source event ID is already used with different evidence.",
       refresh_conflict: "The linked records changed during refresh. Try again.",
+      issue_conflict: "This support request ID already has different content.",
       commerce_conflict: "The app revision is stale or conflicts with an existing order, case, or payment link.",
     };
     super(code ? conflict[code] : messages[status] ?? `Resolve returned HTTP ${status}.`);
@@ -147,6 +182,7 @@ export class ResolveClient {
   #apiKey: string;
   #timeoutMs: number;
   #source: string;
+  #retryAttempts: number;
 
   constructor(options: ResolveClientOptions) {
     if (typeof window !== "undefined" && typeof window.document !== "undefined") {
@@ -161,6 +197,8 @@ export class ResolveClient {
     if (!/^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$/.test(this.#source)) {
       throw new TypeError("Set a valid RESOLVE_APP_SOURCE, such as my-store.");
     }
+    this.#retryAttempts = options.retryAttempts ?? 3;
+    if (!Number.isInteger(this.#retryAttempts) || this.#retryAttempts < 1 || this.#retryAttempts > 4) throw new TypeError("Use retryAttempts between 1 and 4.");
     this.#timeoutMs = options.timeoutMs ?? 10_000;
     if (!Number.isInteger(this.#timeoutMs) || this.#timeoutMs < 1 || this.#timeoutMs > 120_000) {
       throw new TypeError("Set timeoutMs to an integer between 1 and 120,000.");
@@ -174,6 +212,89 @@ export class ResolveClient {
       ...fields, source: this.#source, order_reference: id, revision: version ?? 1,
       ...(status !== undefined ? { order_status: status } : {}),
     }, options);
+  }
+
+  /** Open a customer issue from an authenticated order page. Requires an enabled support key. */
+  openIssue(input: OpenIssueInput, options?: RequestOptions): Promise<IssueReceipt> {
+    const { orderId, requestId, reason, message, requestedResolution } = input;
+    return this.#request("POST", "/aftercare/issues", options, {
+      source: this.#source, order_reference: orderId, request_id: requestId, reason, message,
+      ...(requestedResolution !== undefined ? { requested_resolution: requestedResolution } : {}),
+    });
+  }
+
+  /** Customer-safe progress for an order. Never opens a case or calls PayPal. */
+  getOrderResolution(orderId: string, options?: RequestOptions): Promise<OrderResolution> {
+    return this.#request("POST", "/aftercare/status", options, { source: this.#source, order_reference: orderId });
+  }
+
+  /** Replace the existing private case link only on an explicit customer action. */
+  createSupportLink(orderId: string, options?: RequestOptions): Promise<IssuedCustomerLink> {
+    return this.#request("POST", "/aftercare/portal", options, { source: this.#source, order_reference: orderId });
+  }
+
+  getRefundJourney(orderId: string, options?: RequestOptions): Promise<RefundJourney> {
+    return this.#request("POST", "/aftercare/journey", options, {source:this.#source,order_reference:orderId});
+  }
+
+  getSupportContext(orderId: string, page: { beforeSequence?: number } = {}, options?: RequestOptions): Promise<SupportContext> {
+    return this.#request("POST", "/aftercare/context", options, {source:this.#source,order_reference:orderId,...(page.beforeSequence !== undefined ? {before_sequence:page.beforeSequence}:{})});
+  }
+
+  lookupIssue(orderId: string, requestId: string, options?: RequestOptions): Promise<IssueReceipt> {
+    return this.#request("POST", "/aftercare/issues/lookup", options, {source:this.#source,order_reference:orderId,request_id:requestId});
+  }
+
+  acknowledgeRefundReceived(orderId: string, options?: RequestOptions): Promise<RefundJourney> {
+    return this.#request("POST", "/aftercare/received", options, {source:this.#source,order_reference:orderId});
+  }
+
+  pullEvents(page: {afterSequence?: number;limit?: number} = {}, options?: RequestOptions): Promise<components["schemas"]["EventPage"]> {
+    return this.#request("POST", "/aftercare/events", options, {source:this.#source,...(page.afterSequence!==undefined?{after_sequence:page.afterSequence}:{}),...(page.limit!==undefined?{limit:page.limit}:{})});
+  }
+
+  getReturnEligibility(orderId: string, input: {items: components["schemas"]["ReturnItem"][];deliveredAt?:string}, options?:RequestOptions):Promise<ReturnEligibility> {
+    return this.#request("POST", "/aftercare/returns/eligibility", options, {source:this.#source,order_reference:orderId,items:input.items,...(input.deliveredAt?{delivered_at:input.deliveredAt}:{})});
+  }
+
+  getOrderReturns(orderId: string, options?:RequestOptions):Promise<ReturnWorkflow> {
+    return this.#request("POST", "/aftercare/returns", options, {source:this.#source,order_reference:orderId});
+  }
+
+  requestOrderReturn(orderId:string,input:{requestId:string;items:components["schemas"]["ReturnItem"][];reason:string;deliveredAt?:string},options?:RequestOptions):Promise<GuidedReturn> {
+    return this.#request("POST", "/aftercare/returns/request", options, {source:this.#source,order_reference:orderId,request_id:input.requestId,items:input.items,reason:input.reason,...(input.deliveredAt?{delivered_at:input.deliveredAt}:{})});
+  }
+
+  getReturnGuide(orderId:string,returnId:string,options?:RequestOptions):Promise<ReturnGuide> {
+    casePath(returnId);
+    return this.#request("POST", "/aftercare/returns/guide", options, {source:this.#source,order_reference:orderId,return_id:returnId});
+  }
+
+  downloadReturnLabel(orderId:string,returnId:string,labelId:string,options?:RequestOptions):Promise<ReturnLabelFile> {
+    casePath(returnId);casePath(labelId);
+    return this.#request("POST", "/aftercare/returns/label", options, {source:this.#source,order_reference:orderId,return_id:returnId,label_id:labelId});
+  }
+
+  saveReturnPolicy(input:components["schemas"]["PolicyUpdate"],options?:RequestOptions):Promise<components["schemas"]["PolicyView"]> {
+    return this.#request("PUT","/platform/return-policy",options,input);
+  }
+  recordDispute(caseId:string,input:components["schemas"]["DisputeEvent"],options?:RequestOptions):Promise<{accepted:boolean;outcome:string;duplicate:boolean}> {
+    return this.#request("POST",casePath(caseId).replace("/resolution-cases/","/platform/cases/")+"/disputes",options,input);
+  }
+  recordRefundTrace(caseId:string,input:components["schemas"]["TraceInput"],options?:RequestOptions):Promise<{id:string;source:"merchant_recorded"}> {
+    return this.#request("POST",casePath(caseId).replace("/resolution-cases/","/platform/cases/")+"/refund-traces",options,input);
+  }
+  recordDisputeEvidence(caseId:string,input:components["schemas"]["DisputeDocument"],options?:RequestOptions):Promise<{id:string;source:"merchant_recorded"}> {
+    return this.#request("POST",casePath(caseId).replace("/resolution-cases/","/platform/cases/")+"/dispute-documents",options,input);
+  }
+  saveReturnGuide(caseId:string,returnId:string,input:components["schemas"]["GuideInput"],options?:RequestOptions):Promise<ReturnGuide> {
+    casePath(returnId);return this.#request("PUT",casePath(caseId).replace("/resolution-cases/","/platform/cases/")+`/returns/${returnId}/guide`,options,input);
+  }
+  uploadReturnLabel(caseId:string,returnId:string,input:components["schemas"]["LabelInput"],options?:RequestOptions):Promise<{id:string;filename:string;sha256:string}> {
+    casePath(returnId);return this.#request("POST",casePath(caseId).replace("/resolution-cases/","/platform/cases/")+`/returns/${returnId}/labels`,options,input);
+  }
+  recordReturnInspection(caseId:string,returnId:string,input:components["schemas"]["InspectionInput"],options?:RequestOptions):Promise<{id:string;recorded:boolean}> {
+    casePath(returnId);return this.#request("POST",casePath(caseId).replace("/resolution-cases/","/platform/cases/")+`/returns/${returnId}/inspection`,options,input);
   }
 
   /** Publish a routine order to the merchant dashboard without opening a case. */
@@ -231,6 +352,55 @@ export class ResolveClient {
     return this.#request("GET", casePath(caseId) + "/investigations", options);
   }
 
+  /** Operations methods require a full merchant key and the direct FastAPI URL. */
+  getOperationsDashboard(options?: RequestOptions): Promise<OperationsDashboard> {
+    return this.#request("GET", "/platform/dashboard", options);
+  }
+
+  getMissedPromises(options?: RequestOptions): Promise<MissedPromiseAlerts> {
+    return this.#request("GET", "/platform/watchdog", options);
+  }
+
+  scanMissedPromises(options?: RequestOptions): Promise<MissedPromiseAlerts> {
+    return this.#request("POST", "/platform/watchdog/scan", options);
+  }
+
+  importZendeskTicket(ticketId: number, options?: RequestOptions): Promise<SupportImport> {
+    if (!Number.isSafeInteger(ticketId) || ticketId < 1) throw new Error("Use a positive Zendesk ticket number");
+    return this.#request("POST", "/platform/imports/zendesk", options, { ticket_id: ticketId });
+  }
+
+  confirmSupportImport(importId: string, caseId: string, options?: RequestOptions): Promise<SupportImport> {
+    casePath(importId); casePath(caseId);
+    return this.#request("PUT", `/platform/imports/${importId}/match`, options, { case_id: caseId });
+  }
+
+  publishResolutionOffer(caseId: string, input: ResolutionOfferInput, options?: RequestOptions): Promise<ResolutionOffer> {
+    return this.#request("POST", casePath(caseId).replace("/resolution-cases/", "/platform/cases/") + "/offers", options, input);
+  }
+
+  getReturnWorkflow(caseId: string, options?: RequestOptions): Promise<ReturnWorkflow> {
+    return this.#request("GET", casePath(caseId).replace("/resolution-cases/", "/platform/cases/") + "/returns", options);
+  }
+
+  requestReturn(caseId: string, input: GuidedReturnInput, options?: RequestOptions): Promise<GuidedReturn> {
+    return this.#request("POST", casePath(caseId).replace("/resolution-cases/", "/platform/cases/") + "/returns", options, input);
+  }
+
+  updateReturn(caseId: string, returnId: string, input: GuidedReturnUpdate, options?: RequestOptions): Promise<GuidedReturn> {
+    casePath(returnId);
+    return this.#request("PUT", casePath(caseId).replace("/resolution-cases/", "/platform/cases/") + "/returns/" + returnId, options, input);
+  }
+
+  prepareDisputePackage(caseId: string, input: DisputePackageInput, options?: RequestOptions): Promise<DisputePackageReceipt> {
+    return this.#request("POST", casePath(caseId).replace("/resolution-cases/", "/platform/cases/") + "/dispute-packages", options, input);
+  }
+
+  reviewDisputePackage(caseId: string, packageId: string, options?: RequestOptions): Promise<DisputePackage> {
+    casePath(packageId);
+    return this.#request("POST", casePath(caseId).replace("/resolution-cases/", "/platform/cases/") + `/dispute-packages/${packageId}/review`, options);
+  }
+
   /** Records advisory review only. Never creates refund authorization. */
   reviewInvestigation(caseId: string, investigationId: string, input: InvestigationReviewInput, options?: RequestOptions): Promise<InvestigationReviewReceipt> {
     casePath(investigationId); // Reuse strict identifier validation before constructing a URL.
@@ -276,10 +446,10 @@ export class ResolveClient {
   }
 
   async #request<T>(
-    method: "GET" | "POST" | "DELETE",
+    method: "GET" | "POST" | "PUT" | "DELETE",
     path: string,
     options?: RequestOptions,
-    input?: CreateCaseInput | CustomerLinkInput | UpsertCaseInput | LinkRecordInput | AddEvidenceInput | InvestigationReviewInput | ReturnType<typeof projectCommerceSnapshot>,
+    input?: CreateCaseInput | CustomerLinkInput | UpsertCaseInput | LinkRecordInput | AddEvidenceInput | InvestigationReviewInput | ReturnType<typeof projectCommerceSnapshot> | ResolutionOfferInput | GuidedReturnInput | GuidedReturnUpdate | DisputePackageInput | components["schemas"]["TicketImport"] | components["schemas"]["ImportMatch"] | components["schemas"]["IssueInput"] | components["schemas"]["OrderLocator"] | AssuranceInputs,
   ): Promise<T> {
     const body = input === undefined ? undefined : JSON.stringify(input);
     const deadline = AbortSignal.timeout(this.#timeoutMs);
@@ -289,15 +459,31 @@ export class ResolveClient {
       Authorization: "Bearer " + this.#apiKey,
     };
     if (body !== undefined) headers["Content-Type"] = "application/json";
-    let response: Response;
+    const safe = method === "GET" || ["/commerce/orders/register","/commerce/orders/sync","/aftercare/issues","/aftercare/status","/aftercare/journey","/aftercare/context","/aftercare/issues/lookup","/aftercare/events","/aftercare/returns","/aftercare/returns/eligibility","/aftercare/returns/request","/aftercare/returns/guide","/aftercare/returns/label","/aftercare/received"].includes(path);
+    let response: Response | undefined;
+    const attempts = safe ? this.#retryAttempts : 1;
+    for (let attempt=0; attempt<attempts; attempt++) {
     try {
       response = await fetch(this.#base + path, {
         method, headers, ...(body === undefined ? {} : { body }),
         signal, redirect: "manual", credentials: "omit", cache: "no-store",
       });
     } catch {
-      throw new ResolveTransportError(signal.aborted ? (signal.reason === deadline.reason ? "timeout" : "aborted") : "network");
+      if (signal.aborted || attempt === attempts-1) throw new ResolveTransportError(signal.aborted ? (signal.reason === deadline.reason ? "timeout" : "aborted") : "network");
+      response = undefined;
     }
+    if (response && (![429,500,502,503,504].includes(response.status) || attempt === attempts-1)) break;
+    if (response) void response.body?.cancel().catch(() => {});
+    const retryAfter = response?.headers.get("retry-after");
+    const requested = retryAfter && /^\d+$/.test(retryAfter) ? Number(retryAfter)*1000 : 100*2**attempt;
+    if (requested > 2000 && response) break; // Return long rate limits for the app's durable scheduler.
+    await new Promise<void>((resolve,reject) => {
+      const stop = () => { clearTimeout(timer); reject(new ResolveTransportError(signal.reason === deadline.reason ? "timeout" : "aborted")); };
+      const timer = setTimeout(() => {signal.removeEventListener("abort",stop);resolve();}, Math.min(2000,requested));
+      if (signal.aborted) stop(); else signal.addEventListener("abort",stop,{once:true});
+    });
+    }
+    if (!response) throw new ResolveTransportError("network");
     if (!response.ok) {
       // Don't attach a validation payload: it can include the caller's private input.
       void response.body?.cancel().catch(() => {});
@@ -305,6 +491,7 @@ export class ResolveClient {
         : path.endsWith("/upsert") ? "case_reference_conflict"
         : path.endsWith("/evidence/records") ? "record_conflict"
         : path.endsWith("/evidence/events") ? "evidence_event_conflict"
+        : path === "/aftercare/issues" ? "issue_conflict"
         : (path.endsWith("/evidence/refresh") || path.endsWith("/commerce/refresh")) ? "refresh_conflict" :
         (path === "/commerce/orders/sync" || path === "/commerce/orders/register") ? "commerce_conflict" : undefined;
       throw new ResolveApiError(response.status, conflict);

@@ -118,7 +118,10 @@ const names = {
   currency: "Currency", payment_status: "Payment status",
   captured_amount: "Captured amount", refunded_amount: "Refunded amount",
 };
+let supportOrder = null;
 function paintReceipt(result) {
+  supportOrder = result.id;
+  $("order-support").hidden = !(result.state === "completed" && result.caseId);
   $("receipt").hidden = false;
   $("receipt-details").replaceChildren();
   $("receipt-checks").replaceChildren();
@@ -221,3 +224,55 @@ try {
   $("catalog-error").textContent = error.message;
   $("catalog-error").hidden = false;
 }
+
+
+async function support(action, input = {}) {
+  if (!supportOrder) throw new Error("Open your paid order first.");
+  return api("/api/orders/" + encodeURIComponent(supportOrder) + "/" + action, input);
+}
+function showResolution(result) {
+  $("support-progress").textContent = result.stage === "no_issue" ? "You can report an issue with this order." : result.next_step.action + (result.next_step.overdue ? " This update is overdue." : "");
+}
+$("support-form").addEventListener("submit", async event => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const values = Object.fromEntries(new FormData(form));
+  const storageKey = "field-brew-support:" + supportOrder;
+  let saved = {};
+  try { saved = JSON.parse(readSession(storageKey) || "{}"); } catch { /* Use a new request. */ }
+  const fingerprint = JSON.stringify(values);
+  if (saved.fingerprint !== fingerprint) saved = { fingerprint, requestId: crypto.randomUUID() };
+  writeSession(storageKey, JSON.stringify(saved));
+  form.querySelector("button").disabled = true;
+  try {
+    await support("support", { ...values, requestId: saved.requestId });
+    $("support-progress").textContent = "Your request is with the support team. A requested refund or replacement needs merchant review.";
+  } catch (error) { $("support-progress").textContent = error.message; }
+  finally { form.querySelector("button").disabled = false; }
+});
+$("refresh-support").addEventListener("click", async () => {
+  try { showResolution(await support("resolution")); }
+  catch (error) { $("support-progress").textContent = error.message; }
+});
+$("open-support").addEventListener("click", async () => {
+  try {
+    const link = await support("support-link");
+    if (!link.public_url) throw new Error("The merchant must configure its customer portal URL.");
+    const url = new URL(link.public_url);
+    if (url.protocol !== "https:" && !(url.protocol === "http:" && ["localhost", "127.0.0.1"].includes(url.hostname))) throw new Error("The customer portal URL is unavailable.");
+    location.assign(url.href);
+  } catch (error) { $("support-progress").textContent = error.message; }
+});
+
+$("refund-journey").addEventListener("click",async()=>{
+  try {const journey=await support("refund-journey");$("support-detail").textContent=journey.explanation+" "+journey.traces.map(trace=>trace.reference_type+": "+trace.reference+" (merchant-recorded)").join("; ");}
+  catch(error){$("support-detail").textContent=error.message;}
+});
+$("return-options").addEventListener("click",async()=>{
+  try {const result=await support("return-eligibility");$("support-detail").textContent=(result.decision==="eligible"?"Return request can be reviewed under the configured policy. ":"Merchant review needed: "+result.flags.join("; ")+". ")+(result.policy_enabled?"Return shipping paid by "+result.shipping_paid_by+". Merchant-stated fee: "+result.currency+" "+result.restocking_fee+". ":"The merchant will confirm eligibility, shipping costs and any applicable fees before you ship. ")+result.instructions;}
+  catch(error){$("support-detail").textContent=error.message;}
+});
+$("saved-context").addEventListener("click",async()=>{
+  try {const result=await support("context");$("support-detail").textContent=result.issues.length?result.issues.map(issue=>issue.message+" Requested: "+issue.requested_resolution).join(" "):"No support report has been submitted for this order.";}
+  catch(error){$("support-detail").textContent=error.message;}
+});

@@ -1,13 +1,42 @@
 # Resolve backend
 
+[Embedded order aftercare](../docs/SDK_AFTERCARE.md) adds bounded
+`POST /aftercare/issues`, `/aftercare/status` and `/aftercare/portal` for the
+SDK's customer-support workflow. Owners issue support keys with an explicit app
+source at `/platform/support-keys`. Existing commerce-only keys cannot use these
+new endpoints. Customer ownership must be checked by the merchant app server.
+SQLite 027/PostgreSQL 018 retain key grants and idempotent issue receipts. Polling status does not call providers;
+unverified/stale refund amounts are null, with the last check timestamp exposed.
+
+[Aftercare assurance](../docs/AFTERCARE_RELIABILITY.md) appends SQLite **028**
+and PostgreSQL **019**. New `/aftercare` actions expose safe refund journeys,
+context, return checks/labels, receipt lookup and resumable state updates to
+explicitly granted support keys. `/platform` adds return policies/inspections,
+refund tracing and versioned dispute holds. Buyer capabilities disclose active
+return terms before submission; an inactive policy does not quote a zero fee.
+The operations worker also refreshes source-scoped projections. App consumers
+poll this authenticated stream; it is not an outbound webhook subscription.
+Provider completion remains distinct from bank receipt. No Stripe/bank connector
+or label-purchase API is enabled by these changes.
+
+The [merchant operations guide](../docs/PLATFORM_EXPANSION.md) covers `/platform`:
+account signup/login/invites, roles and audit events, encrypted per-merchant
+connections, Zendesk imports/webhooks, overdue scans, dashboard, buyer offers,
+returns/replacements and dispute packages. CHG-048 introduced SQLite **026** and
+PostgreSQL **017**, followed by the aftercare migrations above. New migrations
+were validated on disposable databases; existing numbered migrations remain
+unchanged. Run `uv run python -m app.operations_worker --loop`
+from this directory to process queued imports and daily alerts. It reads the
+ordinary backend settings and never sends email or executes refunds.
+
 Automatic resolution investigations use a durable evidence revision queue and
 the separate `python -m app.investigation_worker` process. Groq triage and
 OpenRouter recommendations are optional and disabled by default; the default
 strict data policy fails closed for direct Groq. Finished and blocked results
 are private to full merchant credentials. Advisory review has no payment side
 effects. See [configuration, API/SDK, offline tests and synthetic-only live
-evaluation](../docs/AI_INVESTIGATIONS.md). New storage versions are SQLite 025
-and PostgreSQL 015; existing numbered migration SQL/checksums are preserved.
+evaluation](../docs/AI_INVESTIGATIONS.md). The investigation schema was introduced
+in SQLite 025 and PostgreSQL 015; merchant operations append later migrations.
 
 FastAPI backend for recording customer cases, payment references, and refund
 commitments. Cases, refunds, and condition checks persist in SQLite by default
@@ -17,6 +46,15 @@ disabled-by-default client can read PayPal Sandbox capture details and retain a
 scoped verification observation. Separate opt-ins enable approved Sandbox refunds
 and repeated partial execution after order-scoped reconciliation. See the
 [execution contract](../docs/REFUND_EXECUTION.md) and [workflow guide](../docs/PAYPAL_RECONCILIATION.md).
+
+PostgreSQL now reuses a bounded connection pool (up to eight connections per
+store/process) instead of reconnecting for every transaction. Read transactions
+retain repeatable-read/read-only isolation; writes keep their transaction lock,
+rollback and approval rules. Browser read requests resolve the session once;
+write authorization still rechecks the current session. No cross-request session
+or financial-result cache is used. The API closes its pool on shutdown; callers
+using a standalone store can call `store.close()`. See
+[performance and preview details](../docs/PERFORMANCE.md).
 
 ## Run locally
 
@@ -28,6 +66,44 @@ uv run uvicorn app.main:app --reload
 ```
 
 Interactive API documentation: <http://127.0.0.1:8000/docs>.
+
+### Local environment files
+
+Use `backend/.env` for database, PayPal, Google, email and evidence connectors;
+the `.env.example` lists those settings. In the prepared local file, missing
+optional credentials appear as commented `# NAME=` slots. Fill and uncomment
+the slots for an integration, then enable its switch. Existing values are
+preserved. Unused UUID and typed settings must stay commented rather than empty.
+Frontend URLs belong in `frontend/.env.local`; provider secrets stay on the backend.
+
+AI settings deliberately read only process variables. Copy `ai-env.example.ps1`
+to `.env.ai.ps1` (the prepared workspace already has this private file), fill
+the provider keys, and set the desired feature switches. The default OpenRouter
+model is `openai/gpt-oss-120b` through `phala` (currently $0.15 input / $0.60
+output per million tokens). For free use `xingchen-agi/xing4.0-29b-a4b:free`
+with the same route. Requests enforce a $0.74-per-million output price filter,
+strictly below the owner's $0.75 limit. Both models are in the default
+allowlist; model fallback is never automatic. From `backend`, load the file
+explicitly before starting a new API process:
+
+```powershell
+. .\.env.ai.ps1
+uv run uvicorn app.main:app --reload
+```
+
+Stop an existing API before restarting it on the same port. AI stays disabled
+in the template; the default `zdr_required` policy blocks direct Groq. Both
+Groq-based features require an explicit `minimized_standard_retention` policy
+selection to permit that provider's standard retention behavior.
+
+Automatic investigations also need `uv run python -m app.investigation_worker --loop`
+in another configured terminal. That worker reads neither `.env` nor `.env.ai.ps1`
+automatically: load the PowerShell file and inject the same database URL as the
+API using its commented database slot. Optional Sandbox refresh also requires
+the corresponding existing Sandbox process variables. Do not start the worker
+with an unintended default SQLite database. Filling the files does not start
+workers or verify provider credentials. `.env`, `.env.ai.ps1` and frontend local
+settings are ignored by Git; the example files must contain no real secrets.
 
 The [merchant UI](../frontend/README.md) can also connect to this backend
 using the same merchant key. Its built-in demo works without FastAPI.
@@ -44,7 +120,18 @@ uv run python -m app.manage create-merchant --name "My development store"
 
 The command prints a merchant ID, key ID, and `api_key` once. Save the token
 privately; the database retains only its SHA-256 hash. It is a random access
-token, not a password or PayPal credential. No public registration endpoint exists.
+token, not a password or PayPal credential. Merchants can also register individual
+owner accounts at `/account` when `RESOLVE_MERCHANT_SIGNUP_ENABLED=true` (default).
+An existing key-owned workspace can create its first owner at `/account?claim=1`
+after signing in with its full key. Do this to retain the existing workspace;
+creating a new workspace creates a separate tenant. Password sessions last eight
+hours. Owner invitations expire after two days and are shared manually.
+
+Set `RESOLVE_PLATFORM_ENCRYPTION_KEY` before saving provider connections; use a
+Fernet key generated using the command in `.env.example`. The prepared ignored
+local `.env` has a generated key. Preserve it with database backups and share it
+with the operations/investigation/recovery workers; lost keys cannot decrypt
+saved connections. API responses show credential presence, never saved secrets.
 
 In `/docs`, select **Authorize** and paste only the token. Requests use
 `Authorization: Bearer <api_key>`. `GET /auth/me` returns the authenticated merchant.

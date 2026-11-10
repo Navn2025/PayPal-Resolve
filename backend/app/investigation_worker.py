@@ -11,6 +11,7 @@ from .investigations import Investigations
 from .investigation_refresh import refresh_linked
 from .paypal import PayPalSandboxClient
 from .settings import Settings
+from .platform_connections import Connections
 from .storage import configured_store
 
 
@@ -44,7 +45,7 @@ def main():
     with httpx.Client(trust_env=False, follow_redirects=False, timeout=8) as http:
         paypal = PayPalSandboxClient(cfg, http)
         refresh = lambda case, merchant, selection: refresh_linked(
-            store, paypal, case, merchant, selection
+            store, PayPalSandboxClient(Connections(store, cfg).settings_for(merchant), http), case, merchant, selection
         )
         while True:
             print(

@@ -9,7 +9,7 @@ import { createInterface } from "node:readline";
 import { test } from "node:test";
 import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
-import { createResolve, ResolveApiError, ResolveClient, ResolveTransportError } from "@resolve-paypal/sdk";
+import { createResolve, ResolveApiError, ResolveClient, ResolveTransportError, PostgresResolutionConsumer } from "@resolve-paypal/sdk";
 
 const fixtureKey = "rslv_" + "x".repeat(43);
 
@@ -59,6 +59,12 @@ test("packaged client runs a case and private buyer link lifecycle against FastA
   assert.equal((await client.listCases({ limit: 1, offset: 0 })).items[0].id, created.id);
   assert.equal((await client.listCases({ limit: 1, offset: 1 })).items.length, 0);
   assert.equal((await other.listCases()).total, 0);
+  assert.equal((await client.getOperationsDashboard()).case_count, 1);
+  assert.equal((await other.getOperationsDashboard()).case_count, 0);
+  assert.deepEqual((await client.scanMissedPromises()).items, []);
+  assert.deepEqual((await client.getMissedPromises()).items, []);
+  assert.deepEqual((await client.getReturnWorkflow(created.id)).items, []);
+  await assert.rejects(other.getReturnWorkflow(created.id), { status: 404 });
   await assert.rejects(other.getCase(created.id), (error) => error instanceof ResolveApiError && error.status === 404);
   assert.ok(Array.isArray((await client.getCaseTimeline(created.id)).items));
   const investigations = await client.getInvestigations(created.id);
@@ -92,6 +98,60 @@ test("packaged client runs a case and private buyer link lifecycle against FastA
   assert.equal((await buyerView(link.token)).status, 404);
   assert.equal((await client.revokeCustomerLink(created.id)).active, false);
   assert.equal((await buyerView(replacement.token)).status, 404);
+});
+
+test("an app customer opens order support with an opted-in key and receives safe progress", { timeout: 90_000 }, async (t) => {
+  const { baseUrl, key, commerceKey } = await fastApi(t);
+  const response = await fetch(baseUrl + "/platform/support-keys", {
+    method: "POST", headers: { Authorization: "Bearer " + key, "Content-Type": "application/json" },
+    body: JSON.stringify({ source: "sdk-aftercare" }),
+  });
+  assert.equal(response.status, 201);
+  const issued = await response.json();
+  const app = new ResolveClient({ baseUrl, apiKey: issued.api_key, source: "sdk-aftercare" });
+  await app.syncOrder({ id: "SDK-SUPPORT-1", status: "paid", items:[{product_id:"ITEM1",quantity:1}] });
+  assert.equal((await app.getOrderResolution("SDK-SUPPORT-1")).stage, "no_issue");
+  const ordinary = new ResolveClient({ baseUrl, apiKey: commerceKey, source: "sdk-aftercare" });
+  await assert.rejects(ordinary.getOrderResolution("SDK-SUPPORT-1"), { status: 403 });
+  const input = { orderId: "SDK-SUPPORT-1", requestId: crypto.randomUUID(), reason: "damaged_item", message: "The handle arrived broken.", requestedResolution: "replacement", privateInternalNote: "do not forward" };
+  const actualFetch=globalThis.fetch;let committedResponseLost=false;let issue;
+  try {
+    globalThis.fetch=async(url,init)=>{const response=await actualFetch(url,init);if(String(url).endsWith("/aftercare/issues")&&!committedResponseLost){committedResponseLost=true;await response.arrayBuffer();throw new TypeError("Connection lost after the backend committed");}return response;};
+    issue=await app.openIssue(input);
+  } finally {globalThis.fetch=actualFetch;}
+  assert.equal(committedResponseLost,true);
+
+  assert.deepEqual(await app.openIssue(input), issue);
+  await assert.rejects(app.openIssue({ ...input, message: "Changed request" }), { status: 409, code: "issue_conflict" });
+  const progress = await app.getOrderResolution("SDK-SUPPORT-1");
+  assert.equal(progress.stage, "under_review");
+  assert.equal(progress.next_action, "wait");
+  assert.equal(progress.issue_count, 1);
+  assert.equal(progress.authorizes_payment, false);
+  assert.deepEqual(await app.lookupIssue("SDK-SUPPORT-1",input.requestId),issue);
+  assert.equal((await app.getSupportContext("SDK-SUPPORT-1")).messages[0].body,input.message);
+  assert.equal((await app.getRefundJourney("SDK-SUPPORT-1")).bank_receipt_verified,false);
+  assert.equal((await app.getReturnEligibility("SDK-SUPPORT-1",{items:[{product_id:"ITEM1",quantity:1}]})).decision,"eligible");
+  const returned=await app.requestOrderReturn("SDK-SUPPORT-1",{requestId:crypto.randomUUID(),items:[{product_id:"ITEM1",quantity:1}],reason:"Broken handle"});
+  const owner=new ResolveClient({baseUrl,apiKey:key});
+  const guide=await owner.saveReturnGuide(issue.case_id,returned.id,{expected_revision:0,instructions:"Use this saved label and keep the drop-off receipt.",return_address:"Synthetic warehouse",shipping_paid_by:"merchant"});
+  assert.equal(guide.revision,1);
+  const pdf="%PDF-1.4\nSynthetic SDK label\n%%EOF";
+  const saved=await owner.uploadReturnLabel(issue.case_id,returned.id,{filename:"sdk-label.pdf",content_base64:btoa(pdf)});
+  assert.equal((await app.getReturnGuide("SDK-SUPPORT-1",returned.id)).labels[0].id,saved.id);
+  assert.equal(atob((await app.downloadReturnLabel("SDK-SUPPORT-1",returned.id,saved.id)).content_base64),pdf);
+  const feed=await app.pullEvents();
+  assert.equal(feed.items[0].type,"resolution.updated");
+  assert.equal((await app.pullEvents({afterSequence:feed.next_after_sequence})).items.length,0);
+
+  const link = await app.createSupportLink("SDK-SUPPORT-1");
+  assert.equal(new URL(link.public_url).hash.slice(1), link.token);
+  const portal = await fetch(baseUrl + "/customer-portal/view", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token: link.token }) });
+  assert.equal(portal.status, 200);
+  assert.equal((await portal.json()).messages[0].body, input.message);
+  await assert.rejects(app.getCase(issue.case_id), { status: 401 });
+  const wrongSource = new ResolveClient({ baseUrl, apiKey: issued.api_key, source: "other-app" });
+  await assert.rejects(wrongSource.getOrderResolution("SDK-SUPPORT-1"), { status: 403 });
 });
 
 test("ORDER-1042: evidence SDK verifies a partial refund without exposing merchant data", {
@@ -439,4 +499,43 @@ test("createResolve reads the copied server environment and syncOrder sends a ve
   const { items } = await catalog.json();
   assert.equal(items[0].order_status, "shipped");
   await assert.rejects(resolve.syncOrder({ id: "EASY-ORDER-23", status: "paid" }), { status: 409, code: "commerce_conflict" });
+});
+
+
+test("retry-safe support writes retain identity after an ambiguous network outcome", async () => {
+  const original=globalThis.fetch;let calls=0;const bodies=[];
+  try {
+    globalThis.fetch=async(_url,init)=>{calls++;bodies.push(init.body);if(calls===1)throw new TypeError("Connection lost after commit");return new Response(JSON.stringify({issue_id:"synthetic"}),{status:201,headers:{"Content-Type":"application/json"}});};
+    const app=new ResolveClient({baseUrl:"http://127.0.0.1:12345",apiKey:fixtureKey,source:"retry-test"});
+    await app.openIssue({orderId:"ORDER1",requestId:crypto.randomUUID(),reason:"other",message:"Saved issue"});
+    assert.equal(calls,2);assert.equal(bodies[0],bodies[1]);
+    calls=0;globalThis.fetch=async()=>{calls++;throw new TypeError("Unknown link outcome");};
+    await assert.rejects(app.createSupportLink("ORDER1"),{code:"network"});assert.equal(calls,1);
+    calls=0;globalThis.fetch=async()=>{calls++;return new Response("private validation detail",{status:409});};
+    await assert.rejects(app.openIssue({orderId:"ORDER1",requestId:crypto.randomUUID(),reason:"other",message:"Different"}),{status:409});assert.equal(calls,1);
+  } finally {globalThis.fetch=original;}
+});
+
+test("PostgreSQL event consumer rolls back callbacks, deduplicates concurrency and ignores older revisions", {skip:process.env.RESOLVE_RUN_EVENT_CONSUMER_PG!=="1",timeout:90000}, async t=>{
+  const {Pool}=await import("pg");
+  const admin=new Pool({connectionString:"postgresql://resolve_synthetic@127.0.0.1:56440/resolve_operations"});
+  const schema="sdk_consumer_"+crypto.randomUUID().replaceAll("-","");
+  await admin.query('CREATE SCHEMA "'+schema+'"');
+  const pool=new Pool({connectionString:"postgresql://resolve_synthetic@127.0.0.1:56440/resolve_operations",options:"-c search_path="+schema});
+  t.after(async()=>{await pool.end();await admin.query('DROP SCHEMA "'+schema+'" CASCADE');await admin.end();});
+  const merchant=crypto.randomUUID();
+  const consumer=new PostgresResolutionConsumer(pool,{consumerId:"order-page",merchantId:merchant,source:"store"});
+  await consumer.initialize();
+  await pool.query("CREATE TABLE updates (version INTEGER NOT NULL)");
+  const event=(sequence,revision)=>({id:crypto.randomUUID(),sequence,revision,source:"store",order_reference:"ORDER1",snapshot:{resolution:{stage:"under_review"}},created_at:new Date().toISOString(),type:"resolution.updated"});
+  const page=items=>({merchant_id:merchant,source:"store",items,next_after_sequence:items.at(-1)?.sequence??0,has_more:false,reconciled_orders:1});
+  const first=page([event(1,1)]);
+  await assert.rejects(consumer.apply(first,async(e,db)=>{await db.query("INSERT INTO updates VALUES ($1)",[e.revision]);throw new Error("App transaction failed");}),/App transaction failed/);
+  assert.equal(await consumer.cursor(),0);assert.equal((await pool.query("SELECT * FROM updates")).rows.length,0);
+  const results=await Promise.all([consumer.apply(first,async(e,db)=>{await db.query("INSERT INTO updates VALUES ($1)",[e.revision]);}),consumer.apply(first,async(e,db)=>{await db.query("INSERT INTO updates VALUES ($1)",[e.revision]);})]);
+  assert.equal(results.reduce((sum,x)=>sum+x.applied,0),1);assert.equal((await pool.query("SELECT * FROM updates")).rows.length,1);
+  await consumer.apply(page([event(3,3)]),async(e,db)=>{await db.query("INSERT INTO updates VALUES ($1)",[e.revision]);});
+  const stale=await consumer.apply(page([event(4,2)]),async()=>{throw new Error("Older revision must not apply");});
+  assert.equal(stale.skipped,1);assert.equal(await consumer.cursor(),4);
+  await assert.rejects(consumer.apply({...first,merchant_id:crypto.randomUUID()},async()=>{}),/another consumer scope/);
 });

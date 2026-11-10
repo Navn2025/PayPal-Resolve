@@ -5,11 +5,12 @@ const caseId = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
 const report = new RegExp("^resolution-cases/" + caseId + "/commerce$", "i");
 const refresh = new RegExp("^resolution-cases/" + caseId + "/commerce/refresh$", "i");
 const snapshots = new Set(["commerce/orders/register", "commerce/orders/sync"]);
+const aftercare = new Set(["issues", "status", "portal", "journey", "context", "received", "issues/lookup", "events", "returns", "returns/eligibility", "returns/request", "returns/guide", "returns/label"].map(path => "aftercare/" + path));
 type Context = { params: Promise<{ path: string[] }> };
 
 async function handle(request: NextRequest, context: Context, method: "GET" | "POST") {
   const path = (await context.params).path.join("/");
-  const writesSnapshot = method === "POST" && snapshots.has(path);
+  const writesSnapshot = method === "POST" && (snapshots.has(path) || aftercare.has(path));
   if (!(writesSnapshot || (method === "GET" ? report : refresh).test(path))) {
     return error(404, "This action is not available through the SDK gateway.");
   }

@@ -39,10 +39,18 @@ def main():
         os.environ["RESOLVE_DATABASE_PATH"] = str(Path(directory) / "resolve.sqlite3")
         sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
         args = sys.argv[1:]
+        if "--platform-postman" in args:
+            args.remove("--platform-postman")
+            os.environ["RESOLVE_PLATFORM_POSTMAN"] = "1"
         if "--postgres-local" in args:
             args.remove("--postgres-local")
             os.environ["RESOLVE_TEST_DATABASE_URL"] = (
                 "postgresql://resolve_synthetic@127.0.0.1:56439/postgres"
+            )
+        if "--postgres-operations" in args:
+            args.remove("--postgres-operations")
+            os.environ["RESOLVE_TEST_DATABASE_URL"] = (
+                "postgresql://resolve_synthetic@127.0.0.1:56440/resolve_operations"
             )
         if "--storage-postgres" in args:
             args.remove("--storage-postgres")

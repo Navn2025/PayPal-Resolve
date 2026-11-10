@@ -5275,10 +5275,3126 @@
           }
         ]
       }
+    },
+    "/platform/account/signup": {
+      "post": {
+        "tags": [
+          "Merchant operations"
+        ],
+        "summary": "Signup",
+        "operationId": "signup_platform_account_signup_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Signup"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountSession"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/platform/account/login": {
+      "post": {
+        "tags": [
+          "Merchant operations"
+        ],
+        "summary": "Login",
+        "operationId": "login_platform_account_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccountInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountSession"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/platform/account/claim": {
+      "post": {
+        "tags": [
+          "Merchant operations"
+        ],
+        "summary": "Claim Owner",
+        "operationId": "claim_owner_platform_account_claim_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OwnerAccount"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountSession"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ]
+      }
+    },
+    "/platform/account/accept-invite": {
+      "post": {
+        "tags": [
+          "Merchant operations"
+        ],
+        "summary": "Accept Invite",
+        "operationId": "accept_invite_platform_account_accept_invite_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcceptInvite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountSession"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/platform/me": {
+      "get": {
+        "tags": [
+          "Merchant operations"
+        ],
+        "summary": "Me",
+        "operationId": "me_platform_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformIdentity"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ]
+      }
+    },
+    "/platform/team": {
+      "get": {
+        "tags": [
+          "Merchant operations"
+        ],
+        "summary": "Team",
+        "operationId": "team_platform_team_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffPage"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ]
+      }
+    },
+    "/platform/team/invites": {
+      "post": {
+        "tags": [
+          "Merchant operations"
+        ],
+        "summary": "Invite",
+        "operationId": "invite_platform_team_invites_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Invite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Invitation"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ]
+      }
+    },
+    "/platform/team/{staff_id}": {
+      "put": {
+        "tags": [
+          "Merchant operations"
+        ],
+        "summary": "Update Staff",
+        "operationId": "update_staff_platform_team__staff_id__put",
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "staff_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Staff Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StaffUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffPage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/platform/audit": {
+      "get": {
+        "tags": [
+          "Merchant operations"
+        ],
+        "summary": "Audit History",
+        "operationId": "audit_history_platform_audit_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ]
+      }
+    },
+    "/platform/sdk-keys": {
+      "get": {
+        "tags": [
+          "Merchant operations"
+        ],
+        "summary": "Sdk Keys",
+        "operationId": "sdk_keys_platform_sdk_keys_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Merchant operations"
+        ],
+        "summary": "Issue Sdk Key",
+        "operationId": "issue_sdk_key_platform_sdk_keys_post",
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ]
+      }
+    },
+    "/platform/support-keys": {
+      "post": {
+        "tags": [
+          "Merchant operations"
+        ],
+        "summary": "Issue Support Key",
+        "operationId": "issue_support_key_platform_support_keys_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SupportKeyInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SupportKeyReceipt"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ]
+      }
+    },
+    "/platform/sdk-keys/{key_id}": {
+      "delete": {
+        "tags": [
+          "Merchant operations"
+        ],
+        "summary": "Revoke Sdk Key",
+        "operationId": "revoke_sdk_key_platform_sdk_keys__key_id__delete",
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "key_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Key Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/platform/connections": {
+      "get": {
+        "tags": [
+          "Merchant operations"
+        ],
+        "summary": "Connections",
+        "operationId": "connections_platform_connections_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectionPage"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ]
+      }
+    },
+    "/platform/connections/{provider}": {
+      "put": {
+        "tags": [
+          "Merchant operations"
+        ],
+        "summary": "Save Connection",
+        "operationId": "save_connection_platform_connections__provider__put",
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "provider",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Provider"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConnectionInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectionView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/platform/connections/{provider}/check": {
+      "post": {
+        "tags": [
+          "Merchant operations"
+        ],
+        "summary": "Check Connection",
+        "operationId": "check_connection_platform_connections__provider__check_post",
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "provider",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Provider"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectionView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/platform/imports": {
+      "get": {
+        "tags": [
+          "Merchant operations"
+        ],
+        "summary": "Imports",
+        "operationId": "imports_platform_imports_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketPage"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ]
+      }
+    },
+    "/platform/imports/zendesk": {
+      "post": {
+        "tags": [
+          "Merchant operations"
+        ],
+        "summary": "Import Ticket",
+        "operationId": "import_ticket_platform_imports_zendesk_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TicketImport"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ]
+      }
+    },
+    "/platform/imports/{import_id}": {
+      "get": {
+        "tags": [
+          "Merchant operations"
+        ],
+        "summary": "Imported Ticket",
+        "operationId": "imported_ticket_platform_imports__import_id__get",
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "import_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Import Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/platform/imports/{import_id}/match": {
+      "put": {
+        "tags": [
+          "Merchant operations"
+        ],
+        "summary": "Match Ticket",
+        "operationId": "match_ticket_platform_imports__import_id__match_put",
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "import_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Import Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportMatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/platform/dashboard": {
+      "get": {
+        "tags": [
+          "Merchant operations"
+        ],
+        "summary": "Dashboard",
+        "operationId": "dashboard_platform_dashboard_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Dashboard"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ]
+      }
+    },
+    "/platform/watchdog": {
+      "get": {
+        "tags": [
+          "Merchant operations"
+        ],
+        "summary": "Watchdog",
+        "operationId": "watchdog_platform_watchdog_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlertPage"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ]
+      }
+    },
+    "/platform/watchdog/scan": {
+      "post": {
+        "tags": [
+          "Merchant operations"
+        ],
+        "summary": "Scan",
+        "operationId": "scan_platform_watchdog_scan_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlertPage"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ]
+      }
+    },
+    "/platform/cases/{case_id}/offers": {
+      "get": {
+        "tags": [
+          "Merchant operations"
+        ],
+        "summary": "Offers",
+        "operationId": "offers_platform_cases__case_id__offers_get",
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OfferPage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Merchant operations"
+        ],
+        "summary": "Publish Offer",
+        "operationId": "publish_offer_platform_cases__case_id__offers_post",
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OfferCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OfferView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/platform/cases/{case_id}/support-requests": {
+      "get": {
+        "tags": [
+          "Merchant operations"
+        ],
+        "summary": "Case Support Requests",
+        "operationId": "case_support_requests_platform_cases__case_id__support_requests_get",
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SupportRequestPage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/platform/cases/{case_id}/returns": {
+      "get": {
+        "tags": [
+          "Merchant operations"
+        ],
+        "summary": "Returns",
+        "operationId": "returns_platform_cases__case_id__returns_get",
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReturnCatalog"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Merchant operations"
+        ],
+        "summary": "Request Return",
+        "operationId": "request_return_platform_cases__case_id__returns_post",
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReturnCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReturnView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/platform/cases/{case_id}/returns/{return_id}": {
+      "put": {
+        "tags": [
+          "Merchant operations"
+        ],
+        "summary": "Progress Return",
+        "operationId": "progress_return_platform_cases__case_id__returns__return_id__put",
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Case Id"
+            }
+          },
+          {
+            "name": "return_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Return Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReturnUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReturnView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/platform/cases/{case_id}/dispute-packages": {
+      "get": {
+        "tags": [
+          "Merchant operations"
+        ],
+        "summary": "Packages",
+        "operationId": "packages_platform_cases__case_id__dispute_packages_get",
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PackagePage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Merchant operations"
+        ],
+        "summary": "Build Package",
+        "operationId": "build_package_platform_cases__case_id__dispute_packages_post",
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PackageCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PackageReceipt"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/platform/cases/{case_id}/dispute-packages/{package_id}": {
+      "get": {
+        "tags": [
+          "Merchant operations"
+        ],
+        "summary": "Read Package",
+        "operationId": "read_package_platform_cases__case_id__dispute_packages__package_id__get",
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Case Id"
+            }
+          },
+          {
+            "name": "package_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Package Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PackageDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/platform/cases/{case_id}/dispute-packages/{package_id}/review": {
+      "post": {
+        "tags": [
+          "Merchant operations"
+        ],
+        "summary": "Review Package",
+        "operationId": "review_package_platform_cases__case_id__dispute_packages__package_id__review_post",
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Case Id"
+            }
+          },
+          {
+            "name": "package_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Package Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PackageDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/platform/cases/{case_id}/dispute-packages/{package_id}/export": {
+      "get": {
+        "tags": [
+          "Merchant operations"
+        ],
+        "summary": "Export Package",
+        "operationId": "export_package_platform_cases__case_id__dispute_packages__package_id__export_get",
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Case Id"
+            }
+          },
+          {
+            "name": "package_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Package Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/platform/buyer/offers": {
+      "post": {
+        "tags": [
+          "Merchant operations"
+        ],
+        "summary": "Buyer Offers",
+        "operationId": "buyer_offers_platform_buyer_offers_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PortalCredentials"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BuyerOfferPage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/platform/buyer/decision": {
+      "post": {
+        "tags": [
+          "Merchant operations"
+        ],
+        "summary": "Buyer Decision",
+        "operationId": "buyer_decision_platform_buyer_decision_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OfferDecision"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DecisionReceipt"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/platform/buyer/returns": {
+      "post": {
+        "tags": [
+          "Merchant operations"
+        ],
+        "summary": "Buyer Returns",
+        "operationId": "buyer_returns_platform_buyer_returns_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PortalCredentials"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReturnCatalog"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/platform/buyer/returns/request": {
+      "post": {
+        "tags": [
+          "Merchant operations"
+        ],
+        "summary": "Buyer Request Return",
+        "operationId": "buyer_request_return_platform_buyer_returns_request_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BuyerReturn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReturnView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/aftercare/issues": {
+      "post": {
+        "tags": [
+          "Embedded aftercare"
+        ],
+        "summary": "Open Aftercare Issue",
+        "operationId": "open_aftercare_issue_aftercare_issues_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IssueInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IssueReceipt"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ]
+      }
+    },
+    "/aftercare/status": {
+      "post": {
+        "tags": [
+          "Embedded aftercare"
+        ],
+        "summary": "Aftercare Status",
+        "operationId": "aftercare_status_aftercare_status_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrderLocator"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderResolution"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ]
+      }
+    },
+    "/aftercare/portal": {
+      "post": {
+        "tags": [
+          "Embedded aftercare"
+        ],
+        "summary": "Aftercare Portal",
+        "operationId": "aftercare_portal_aftercare_portal_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrderLocator"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IssuedLink"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ]
+      }
+    },
+    "/platform/return-policy": {
+      "get": {
+        "tags": [
+          "Resolution assurance"
+        ],
+        "summary": "Policy",
+        "operationId": "policy_platform_return_policy_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PolicyView"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Resolution assurance"
+        ],
+        "summary": "Policy Save",
+        "operationId": "policy_save_platform_return_policy_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PolicyUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PolicyView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ]
+      }
+    },
+    "/cases/{case_id}/disputes": {
+      "post": {
+        "tags": [
+          "Resolution assurance"
+        ],
+        "summary": "Dispute Record",
+        "operationId": "dispute_record_cases__case_id__disputes_post",
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DisputeEvent"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Resolution assurance"
+        ],
+        "summary": "Dispute List",
+        "operationId": "dispute_list_cases__case_id__disputes_get",
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/platform/cases/{case_id}/disputes": {
+      "get": {
+        "tags": [
+          "Resolution assurance"
+        ],
+        "summary": "Resolution Disputes",
+        "operationId": "resolution_disputes_platform_cases__case_id__disputes_get",
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Resolution assurance"
+        ],
+        "summary": "Resolution Dispute Record",
+        "operationId": "resolution_dispute_record_platform_cases__case_id__disputes_post",
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DisputeEvent"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/platform/cases/{case_id}/refund-traces": {
+      "post": {
+        "tags": [
+          "Resolution assurance"
+        ],
+        "summary": "Trace Record",
+        "operationId": "trace_record_platform_cases__case_id__refund_traces_post",
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TraceInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/platform/cases/{case_id}/dispute-documents": {
+      "post": {
+        "tags": [
+          "Resolution assurance"
+        ],
+        "summary": "Dispute Document",
+        "operationId": "dispute_document_platform_cases__case_id__dispute_documents_post",
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DisputeDocument"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/platform/cases/{case_id}/returns/{return_id}/guide": {
+      "get": {
+        "tags": [
+          "Resolution assurance"
+        ],
+        "summary": "Return Guide",
+        "operationId": "return_guide_platform_cases__case_id__returns__return_id__guide_get",
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Case Id"
+            }
+          },
+          {
+            "name": "return_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Return Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReturnGuideView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Resolution assurance"
+        ],
+        "summary": "Save Return Guide",
+        "operationId": "save_return_guide_platform_cases__case_id__returns__return_id__guide_put",
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Case Id"
+            }
+          },
+          {
+            "name": "return_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Return Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GuideInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReturnGuideView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/platform/cases/{case_id}/returns/{return_id}/inspection": {
+      "post": {
+        "tags": [
+          "Resolution assurance"
+        ],
+        "summary": "Inspect Return",
+        "operationId": "inspect_return_platform_cases__case_id__returns__return_id__inspection_post",
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Case Id"
+            }
+          },
+          {
+            "name": "return_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Return Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InspectionInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/platform/cases/{case_id}/returns/{return_id}/labels": {
+      "post": {
+        "tags": [
+          "Resolution assurance"
+        ],
+        "summary": "Upload Label",
+        "operationId": "upload_label_platform_cases__case_id__returns__return_id__labels_post",
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Case Id"
+            }
+          },
+          {
+            "name": "return_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Return Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LabelInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/aftercare/journey": {
+      "post": {
+        "tags": [
+          "Resolution assurance"
+        ],
+        "summary": "Refund Journey",
+        "operationId": "refund_journey_aftercare_journey_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrderLocator"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefundJourney"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ]
+      }
+    },
+    "/aftercare/context": {
+      "post": {
+        "tags": [
+          "Resolution assurance"
+        ],
+        "summary": "Support Context",
+        "operationId": "support_context_aftercare_context_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContextRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContextView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ]
+      }
+    },
+    "/aftercare/received": {
+      "post": {
+        "tags": [
+          "Resolution assurance"
+        ],
+        "summary": "Received Refund",
+        "operationId": "received_refund_aftercare_received_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrderLocator"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefundJourney"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ]
+      }
+    },
+    "/aftercare/issues/lookup": {
+      "post": {
+        "tags": [
+          "Resolution assurance"
+        ],
+        "summary": "Issue Lookup",
+        "operationId": "issue_lookup_aftercare_issues_lookup_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LookupIssue"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IssueReceipt"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ]
+      }
+    },
+    "/aftercare/events": {
+      "post": {
+        "tags": [
+          "Resolution assurance"
+        ],
+        "summary": "Event Pull",
+        "operationId": "event_pull_aftercare_events_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EventPull"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventPage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ]
+      }
+    },
+    "/aftercare/returns/eligibility": {
+      "post": {
+        "tags": [
+          "Resolution assurance"
+        ],
+        "summary": "Check Eligibility",
+        "operationId": "check_eligibility_aftercare_returns_eligibility_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EligibilityInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EligibilityView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ]
+      }
+    },
+    "/aftercare/returns": {
+      "post": {
+        "tags": [
+          "Resolution assurance"
+        ],
+        "summary": "Support Returns",
+        "operationId": "support_returns_aftercare_returns_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrderLocator"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReturnCatalog"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ]
+      }
+    },
+    "/aftercare/returns/request": {
+      "post": {
+        "tags": [
+          "Resolution assurance"
+        ],
+        "summary": "Support Return Request",
+        "operationId": "support_return_request_aftercare_returns_request_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SupportReturn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReturnView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ]
+      }
+    },
+    "/aftercare/returns/guide": {
+      "post": {
+        "tags": [
+          "Resolution assurance"
+        ],
+        "summary": "Support Return Guide",
+        "operationId": "support_return_guide_aftercare_returns_guide_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReturnLocator"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReturnGuideView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ]
+      }
+    },
+    "/aftercare/returns/label": {
+      "post": {
+        "tags": [
+          "Resolution assurance"
+        ],
+        "summary": "Support Label",
+        "operationId": "support_label_aftercare_returns_label_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LabelLocator"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReturnLabelFile"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ]
+      }
+    },
+    "/platform/buyer/assurance": {
+      "post": {
+        "tags": [
+          "Resolution assurance"
+        ],
+        "summary": "Buyer Assurance",
+        "operationId": "buyer_assurance_platform_buyer_assurance_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PortalCredentials"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/platform/buyer/returns/guide": {
+      "post": {
+        "tags": [
+          "Resolution assurance"
+        ],
+        "summary": "Buyer Guide",
+        "operationId": "buyer_guide_platform_buyer_returns_guide_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BuyerReturnLocator"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReturnGuideView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/platform/buyer/returns/label": {
+      "post": {
+        "tags": [
+          "Resolution assurance"
+        ],
+        "summary": "Buyer Label",
+        "operationId": "buyer_label_platform_buyer_returns_label_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BuyerLabelLocator"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReturnLabelFile"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/platform/buyer/return-policy": {
+      "post": {
+        "tags": [
+          "Resolution assurance"
+        ],
+        "summary": "Buyer Return Policy",
+        "operationId": "buyer_return_policy_platform_buyer_return_policy_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PortalCredentials"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicReturnPolicy"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/webhooks/zendesk/{merchant_id}": {
+      "post": {
+        "tags": [
+          "Support webhooks"
+        ],
+        "summary": "Zendesk Hook",
+        "operationId": "zendesk_hook_webhooks_zendesk__merchant_id__post",
+        "parameters": [
+          {
+            "name": "merchant_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Merchant Id"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "AcceptInvite": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "maxLength": 254,
+            "minLength": 3,
+            "pattern": "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$",
+            "title": "Email"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 256,
+            "minLength": 12,
+            "format": "password",
+            "title": "Password",
+            "writeOnly": true
+          },
+          "token": {
+            "type": "string",
+            "format": "password",
+            "title": "Token",
+            "writeOnly": true
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Name"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "email",
+          "password",
+          "token",
+          "name"
+        ],
+        "title": "AcceptInvite"
+      },
       "AccountCase": {
         "properties": {
           "id": {
@@ -5320,6 +8436,70 @@
           "created_at"
         ],
         "title": "AccountCase"
+      },
+      "AccountInput": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "maxLength": 254,
+            "minLength": 3,
+            "pattern": "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$",
+            "title": "Email"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 256,
+            "minLength": 12,
+            "format": "password",
+            "title": "Password",
+            "writeOnly": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "title": "AccountInput"
+      },
+      "AccountSession": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "title": "Token"
+          },
+          "merchant": {
+            "$ref": "#/components/schemas/MerchantIdentity"
+          },
+          "method": {
+            "type": "string",
+            "const": "password",
+            "title": "Method"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          },
+          "paypal_linked": {
+            "type": "boolean",
+            "title": "Paypal Linked"
+          },
+          "staff": {
+            "$ref": "#/components/schemas/StaffView"
+          }
+        },
+        "type": "object",
+        "required": [
+          "token",
+          "merchant",
+          "method",
+          "expires_at",
+          "paypal_linked",
+          "staff"
+        ],
+        "title": "AccountSession"
       },
       "AccountToken": {
         "properties": {
@@ -5374,6 +8554,155 @@
         "title": "Adjustment",
         "description": "A kept proposal that the validators changed."
       },
+      "AlertPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AlertView"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "AlertPage"
+      },
+      "AlertView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "case_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Case Id"
+          },
+          "promise_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Promise Id"
+          },
+          "promise_revision": {
+            "type": "integer",
+            "title": "Promise Revision"
+          },
+          "day": {
+            "type": "string",
+            "format": "date",
+            "title": "Day"
+          },
+          "state": {
+            "type": "string",
+            "title": "State"
+          },
+          "assignee": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assignee"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          },
+          "customer_draft": {
+            "type": "string",
+            "title": "Customer Draft"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "resolved_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "case_id",
+          "promise_id",
+          "promise_revision",
+          "day",
+          "state",
+          "assignee",
+          "reason",
+          "customer_draft",
+          "created_at",
+          "resolved_at"
+        ],
+        "title": "AlertView"
+      },
+      "AppResolutionEvent": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "sequence": {
+            "type": "integer",
+            "title": "Sequence"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "order_reference": {
+            "type": "string",
+            "title": "Order Reference"
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          },
+          "snapshot": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Snapshot"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type",
+            "default": "resolution.updated"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "sequence",
+          "source",
+          "order_reference",
+          "revision",
+          "snapshot",
+          "created_at"
+        ],
+        "title": "AppResolutionEvent"
+      },
       "BillingCorrectionTarget": {
         "properties": {
           "kind": {
@@ -5422,6 +8751,264 @@
           "action"
         ],
         "title": "BillingCorrectionTarget"
+      },
+      "BuyerChoice": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "promise": {
+            "type": "string",
+            "title": "Promise"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "due_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due At"
+          },
+          "conditions_required": {
+            "type": "boolean",
+            "title": "Conditions Required"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "promise",
+          "kind",
+          "amount",
+          "currency",
+          "due_at",
+          "conditions_required"
+        ],
+        "title": "BuyerChoice"
+      },
+      "BuyerLabelLocator": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "format": "password",
+            "title": "Token",
+            "writeOnly": true
+          },
+          "return_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Return Id"
+          },
+          "label_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Label Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "token",
+          "return_id",
+          "label_id"
+        ],
+        "title": "BuyerLabelLocator"
+      },
+      "BuyerOffer": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "stale": {
+            "type": "boolean",
+            "title": "Stale"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          },
+          "selected_choice": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selected Choice"
+          },
+          "decision_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision At"
+          },
+          "choices": {
+            "items": {
+              "$ref": "#/components/schemas/BuyerChoice"
+            },
+            "type": "array",
+            "title": "Choices"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "revision",
+          "status",
+          "stale",
+          "expires_at",
+          "selected_choice",
+          "decision_at",
+          "choices"
+        ],
+        "title": "BuyerOffer"
+      },
+      "BuyerOfferPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/BuyerOffer"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "BuyerOfferPage"
+      },
+      "BuyerReturn": {
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Request Id"
+          },
+          "order_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Order Id"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ReturnItem"
+            },
+            "type": "array",
+            "maxItems": 50,
+            "minItems": 1,
+            "title": "Items"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Reason"
+          },
+          "delivered_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delivered At"
+          },
+          "token": {
+            "type": "string",
+            "format": "password",
+            "title": "Token",
+            "writeOnly": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "request_id",
+          "order_id",
+          "items",
+          "reason",
+          "token"
+        ],
+        "title": "BuyerReturn"
+      },
+      "BuyerReturnLocator": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "format": "password",
+            "title": "Token",
+            "writeOnly": true
+          },
+          "return_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Return Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "token",
+          "return_id"
+        ],
+        "title": "BuyerReturnLocator"
       },
       "Capabilities": {
         "properties": {
@@ -6916,6 +10503,230 @@
         ],
         "title": "ConditionCheckCreate"
       },
+      "ConnectionInput": {
+        "properties": {
+          "expected_revision": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Expected Revision"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled",
+            "default": false
+          },
+          "config": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "boolean"
+                }
+              ]
+            },
+            "type": "object",
+            "maxProperties": 6,
+            "title": "Config"
+          },
+          "credentials": {
+            "additionalProperties": {
+              "type": "string",
+              "format": "password",
+              "writeOnly": true
+            },
+            "type": "object",
+            "maxProperties": 4,
+            "title": "Credentials"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "expected_revision"
+        ],
+        "title": "ConnectionInput"
+      },
+      "ConnectionPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ConnectionView"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "encryption_configured": {
+            "type": "boolean",
+            "title": "Encryption Configured"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "encryption_configured"
+        ],
+        "title": "ConnectionPage"
+      },
+      "ConnectionView": {
+        "properties": {
+          "provider": {
+            "type": "string",
+            "enum": [
+              "paypal",
+              "zendesk",
+              "shopify",
+              "easypost"
+            ],
+            "title": "Provider"
+          },
+          "config": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "boolean"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Config"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          },
+          "check_status": {
+            "type": "string",
+            "title": "Check Status"
+          },
+          "checked_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checked At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "credentials_stored": {
+            "type": "boolean",
+            "title": "Credentials Stored"
+          }
+        },
+        "type": "object",
+        "required": [
+          "provider",
+          "config",
+          "enabled",
+          "revision",
+          "check_status",
+          "checked_at",
+          "updated_at",
+          "credentials_stored"
+        ],
+        "title": "ConnectionView"
+      },
+      "ContextRequest": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$",
+            "title": "Source"
+          },
+          "order_reference": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,159}$",
+            "title": "Order Reference"
+          },
+          "before_sequence": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Before Sequence"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "source",
+          "order_reference"
+        ],
+        "title": "ContextRequest"
+      },
+      "ContextView": {
+        "properties": {
+          "resolution": {
+            "$ref": "#/components/schemas/OrderResolution"
+          },
+          "issues": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Issues"
+          },
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/PortalMessage"
+            },
+            "type": "array",
+            "title": "Messages"
+          },
+          "next_before_sequence": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Before Sequence"
+          },
+          "has_more_messages": {
+            "type": "boolean",
+            "title": "Has More Messages"
+          },
+          "identity_source": {
+            "type": "string",
+            "const": "merchant_app_or_private_buyer_link",
+            "title": "Identity Source",
+            "default": "merchant_app_or_private_buyer_link"
+          }
+        },
+        "type": "object",
+        "required": [
+          "resolution",
+          "issues",
+          "messages",
+          "next_before_sequence",
+          "has_more_messages"
+        ],
+        "title": "ContextView"
+      },
       "CustomerAccountCapabilities": {
         "properties": {
           "email_enabled": {
@@ -7165,6 +10976,193 @@
         ],
         "title": "CustomerNextStep"
       },
+      "Dashboard": {
+        "properties": {
+          "case_count": {
+            "type": "integer",
+            "title": "Case Count"
+          },
+          "outcomes": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Outcomes"
+          },
+          "remedies": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Remedies"
+          },
+          "complaint_reasons": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Complaint Reasons"
+          },
+          "overdue_promises": {
+            "type": "integer",
+            "title": "Overdue Promises"
+          },
+          "awaiting_evidence": {
+            "type": "integer",
+            "title": "Awaiting Evidence"
+          },
+          "financial": {
+            "$ref": "#/components/schemas/LedgerSummary"
+          },
+          "resolution_time": {
+            "$ref": "#/components/schemas/ResolutionTime"
+          }
+        },
+        "type": "object",
+        "required": [
+          "case_count",
+          "outcomes",
+          "remedies",
+          "complaint_reasons",
+          "overdue_promises",
+          "awaiting_evidence",
+          "financial",
+          "resolution_time"
+        ],
+        "title": "Dashboard"
+      },
+      "DecisionReceipt": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "accepted",
+              "declined"
+            ],
+            "title": "Status"
+          },
+          "decision_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Decision At"
+          },
+          "authorizes_payment": {
+            "type": "boolean",
+            "const": false,
+            "title": "Authorizes Payment"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "decision_at",
+          "authorizes_payment"
+        ],
+        "title": "DecisionReceipt"
+      },
+      "DisputeDocument": {
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Request Id"
+          },
+          "requirement": {
+            "type": "string",
+            "enum": [
+              "original_delivery",
+              "product_description",
+              "return_policy",
+              "buyer_authorization",
+              "service_fulfilled",
+              "credit_agreement",
+              "cancellation",
+              "duplicate_charge",
+              "other"
+            ],
+            "title": "Requirement"
+          },
+          "evidence_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "maxItems": 10,
+            "title": "Evidence Ids"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Note"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "request_id",
+          "requirement",
+          "note"
+        ],
+        "title": "DisputeDocument"
+      },
+      "DisputeEvent": {
+        "properties": {
+          "provider": {
+            "type": "string",
+            "enum": [
+              "paypal",
+              "stripe",
+              "bank",
+              "merchant"
+            ],
+            "title": "Provider"
+          },
+          "reference": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,100}$",
+            "title": "Reference"
+          },
+          "event_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.:-]{1,160}$",
+            "title": "Event Id"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Version"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "open",
+              "under_review",
+              "resolved_no_refund",
+              "resolved_refunded"
+            ],
+            "title": "State"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Note"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "provider",
+          "reference",
+          "event_id",
+          "version",
+          "state",
+          "note"
+        ],
+        "title": "DisputeEvent"
+      },
       "DisputeHandoffTarget": {
         "properties": {
           "kind": {
@@ -7248,6 +11246,134 @@
         ],
         "title": "DroppedProposal"
       },
+      "EligibilityInput": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$",
+            "title": "Source"
+          },
+          "order_reference": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,159}$",
+            "title": "Order Reference"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ReturnItem"
+            },
+            "type": "array",
+            "maxItems": 50,
+            "minItems": 1,
+            "title": "Items"
+          },
+          "delivered_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delivered At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "source",
+          "order_reference",
+          "items"
+        ],
+        "title": "EligibilityInput"
+      },
+      "EligibilityView": {
+        "properties": {
+          "policy_enabled": {
+            "type": "boolean",
+            "title": "Policy Enabled",
+            "default": false
+          },
+          "decision": {
+            "type": "string",
+            "enum": [
+              "eligible",
+              "needs_review"
+            ],
+            "title": "Decision"
+          },
+          "policy_revision": {
+            "type": "integer",
+            "title": "Policy Revision"
+          },
+          "delivered_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delivered At"
+          },
+          "flags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Flags"
+          },
+          "shipping_paid_by": {
+            "type": "string",
+            "enum": [
+              "merchant",
+              "buyer"
+            ],
+            "title": "Shipping Paid By"
+          },
+          "restocking_fee": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Restocking Fee"
+          },
+          "currency": {
+            "type": "string",
+            "const": "USD",
+            "title": "Currency",
+            "default": "USD"
+          },
+          "instructions": {
+            "type": "string",
+            "title": "Instructions"
+          },
+          "authorizes_refund": {
+            "type": "boolean",
+            "const": false,
+            "title": "Authorizes Refund",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "decision",
+          "policy_revision",
+          "flags",
+          "shipping_paid_by",
+          "restocking_fee",
+          "instructions"
+        ],
+        "title": "EligibilityView"
+      },
       "EmailSignIn": {
         "properties": {
           "email": {
@@ -7261,6 +11387,77 @@
           "email"
         ],
         "title": "EmailSignIn"
+      },
+      "EventPage": {
+        "properties": {
+          "merchant_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Merchant Id"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AppResolutionEvent"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_after_sequence": {
+            "type": "integer",
+            "title": "Next After Sequence"
+          },
+          "has_more": {
+            "type": "boolean",
+            "title": "Has More"
+          },
+          "reconciled_orders": {
+            "type": "integer",
+            "title": "Reconciled Orders"
+          }
+        },
+        "type": "object",
+        "required": [
+          "merchant_id",
+          "source",
+          "items",
+          "next_after_sequence",
+          "has_more",
+          "reconciled_orders"
+        ],
+        "title": "EventPage"
+      },
+      "EventPull": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$",
+            "title": "Source"
+          },
+          "after_sequence": {
+            "type": "integer",
+            "maximum": 9007199254740991.0,
+            "minimum": 0.0,
+            "title": "After Sequence",
+            "default": 0
+          },
+          "limit": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Limit",
+            "default": 50
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "source"
+        ],
+        "title": "EventPull"
       },
       "EvidenceBundle": {
         "properties": {
@@ -7441,6 +11638,34 @@
           "promises"
         ],
         "title": "EvidenceCaseView"
+      },
+      "EvidenceChecklist": {
+        "properties": {
+          "item": {
+            "type": "string",
+            "title": "Item"
+          },
+          "present": {
+            "type": "boolean",
+            "title": "Present"
+          },
+          "evidence_type": {
+            "type": "string",
+            "title": "Evidence Type",
+            "default": "OTHER"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "default": "unspecified"
+          }
+        },
+        "type": "object",
+        "required": [
+          "item",
+          "present"
+        ],
+        "title": "EvidenceChecklist"
       },
       "EvidenceInput": {
         "properties": {
@@ -8134,6 +12359,43 @@
         ],
         "title": "GoogleStart"
       },
+      "GuideInput": {
+        "properties": {
+          "expected_revision": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Expected Revision"
+          },
+          "instructions": {
+            "type": "string",
+            "maxLength": 3000,
+            "minLength": 1,
+            "title": "Instructions"
+          },
+          "return_address": {
+            "type": "string",
+            "maxLength": 1000,
+            "title": "Return Address",
+            "default": ""
+          },
+          "shipping_paid_by": {
+            "type": "string",
+            "enum": [
+              "merchant",
+              "buyer"
+            ],
+            "title": "Shipping Paid By",
+            "default": "merchant"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "expected_revision",
+          "instructions"
+        ],
+        "title": "GuideInput"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -8170,6 +12432,21 @@
           "ticket"
         ],
         "title": "HelpdeskState"
+      },
+      "ImportMatch": {
+        "properties": {
+          "case_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Case Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "case_id"
+        ],
+        "title": "ImportMatch"
       },
       "InboxItem": {
         "properties": {
@@ -8274,6 +12551,63 @@
           "offset"
         ],
         "title": "InboxPage"
+      },
+      "InspectionInput": {
+        "properties": {
+          "expected_revision": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Expected Revision"
+          },
+          "request_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Request Id"
+          },
+          "finding": {
+            "type": "string",
+            "enum": [
+              "clear",
+              "needs_review",
+              "reject"
+            ],
+            "title": "Finding"
+          },
+          "quantities_match": {
+            "type": "boolean",
+            "title": "Quantities Match"
+          },
+          "evidence_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "maxItems": 10,
+            "title": "Evidence Ids"
+          },
+          "override_policy": {
+            "type": "boolean",
+            "title": "Override Policy",
+            "default": false
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Note"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "expected_revision",
+          "request_id",
+          "finding",
+          "quantities_match",
+          "note"
+        ],
+        "title": "InspectionInput"
       },
       "IntakeSubmit": {
         "properties": {
@@ -8578,6 +12912,53 @@
         ],
         "title": "InvestigationView"
       },
+      "Invitation": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "token": {
+            "type": "string",
+            "title": "Token"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "token",
+          "expires_at"
+        ],
+        "title": "Invitation"
+      },
+      "Invite": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "maxLength": 254,
+            "pattern": "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$",
+            "title": "Email"
+          },
+          "role": {
+            "type": "string",
+            "pattern": "^(manager|finance|agent|viewer)$",
+            "title": "Role"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "email",
+          "role"
+        ],
+        "title": "Invite"
+      },
       "InviteCreate": {
         "properties": {
           "order_reference": {
@@ -8649,6 +13030,106 @@
           "expires_at"
         ],
         "title": "InviteIssued"
+      },
+      "IssueInput": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$",
+            "title": "Source"
+          },
+          "order_reference": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,159}$",
+            "title": "Order Reference"
+          },
+          "request_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Request Id"
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "item_not_received",
+              "damaged_item",
+              "wrong_item",
+              "refund_not_received",
+              "other"
+            ],
+            "title": "Reason"
+          },
+          "message": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Message"
+          },
+          "requested_resolution": {
+            "type": "string",
+            "enum": [
+              "refund",
+              "replacement",
+              "return",
+              "help"
+            ],
+            "title": "Requested Resolution",
+            "default": "help"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "source",
+          "order_reference",
+          "request_id",
+          "reason",
+          "message"
+        ],
+        "title": "IssueInput"
+      },
+      "IssueReceipt": {
+        "properties": {
+          "issue_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Issue Id"
+          },
+          "case_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Case Id"
+          },
+          "order_reference": {
+            "type": "string",
+            "title": "Order Reference"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "status": {
+            "type": "string",
+            "const": "received",
+            "title": "Status",
+            "default": "received"
+          },
+          "authorizes_payment": {
+            "type": "boolean",
+            "const": false,
+            "title": "Authorizes Payment",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "issue_id",
+          "case_id",
+          "order_reference",
+          "created_at"
+        ],
+        "title": "IssueReceipt"
       },
       "IssuedCommerceKey": {
         "properties": {
@@ -8735,7 +13216,8 @@
             "type": "string",
             "enum": [
               "key",
-              "paypal"
+              "paypal",
+              "password"
             ],
             "title": "Method"
           },
@@ -8747,6 +13229,18 @@
           "paypal_linked": {
             "type": "boolean",
             "title": "Paypal Linked"
+          },
+          "staff": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Staff"
           },
           "token": {
             "type": "string",
@@ -8762,6 +13256,135 @@
           "token"
         ],
         "title": "IssuedMerchantSession"
+      },
+      "LabelInput": {
+        "properties": {
+          "filename": {
+            "type": "string",
+            "maxLength": 120,
+            "title": "Filename"
+          },
+          "content_base64": {
+            "type": "string",
+            "maxLength": 2800000,
+            "title": "Content Base64"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "filename",
+          "content_base64"
+        ],
+        "title": "LabelInput"
+      },
+      "LabelLocator": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$",
+            "title": "Source"
+          },
+          "order_reference": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,159}$",
+            "title": "Order Reference"
+          },
+          "return_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Return Id"
+          },
+          "label_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Label Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "source",
+          "order_reference",
+          "return_id",
+          "label_id"
+        ],
+        "title": "LabelLocator"
+      },
+      "LabelMetadata": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "sha256": {
+            "type": "string",
+            "title": "Sha256"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "filename",
+          "sha256",
+          "created_at"
+        ],
+        "title": "LabelMetadata"
+      },
+      "LedgerSummary": {
+        "properties": {
+          "currency": {
+            "type": "string",
+            "const": "USD",
+            "title": "Currency"
+          },
+          "source": {
+            "type": "string",
+            "const": "recorded_ledger_not_independent_provider_verification",
+            "title": "Source"
+          },
+          "shared_capture_count": {
+            "type": "integer",
+            "title": "Shared Capture Count"
+          },
+          "promised": {
+            "type": "string",
+            "title": "Promised"
+          },
+          "completed": {
+            "type": "string",
+            "title": "Completed"
+          },
+          "pending": {
+            "type": "string",
+            "title": "Pending"
+          },
+          "outstanding_excluding_pending": {
+            "type": "string",
+            "title": "Outstanding Excluding Pending"
+          }
+        },
+        "type": "object",
+        "required": [
+          "currency",
+          "source",
+          "shared_capture_count",
+          "promised",
+          "completed",
+          "pending",
+          "outstanding_excluding_pending"
+        ],
+        "title": "LedgerSummary"
       },
       "LinkCreate": {
         "properties": {
@@ -8905,6 +13528,33 @@
         ],
         "title": "LinkedTicket"
       },
+      "LookupIssue": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$",
+            "title": "Source"
+          },
+          "order_reference": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,159}$",
+            "title": "Order Reference"
+          },
+          "request_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Request Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "source",
+          "order_reference",
+          "request_id"
+        ],
+        "title": "LookupIssue"
+      },
       "MarkRead": {
         "properties": {
           "through": {
@@ -9019,7 +13669,8 @@
             "type": "string",
             "enum": [
               "key",
-              "paypal"
+              "paypal",
+              "password"
             ],
             "title": "Method"
           },
@@ -9031,6 +13682,18 @@
           "paypal_linked": {
             "type": "boolean",
             "title": "Paypal Linked"
+          },
+          "staff": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Staff"
           }
         },
         "type": "object",
@@ -9063,6 +13726,303 @@
           "body"
         ],
         "title": "MessageCreate"
+      },
+      "OfferChoice": {
+        "properties": {
+          "promise_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Promise Id"
+          },
+          "expected_revision": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Expected Revision"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "promise_id",
+          "expected_revision"
+        ],
+        "title": "OfferChoice"
+      },
+      "OfferCreate": {
+        "properties": {
+          "choices": {
+            "items": {
+              "$ref": "#/components/schemas/OfferChoice"
+            },
+            "type": "array",
+            "maxItems": 4,
+            "minItems": 1,
+            "title": "Choices"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "choices",
+          "expires_at"
+        ],
+        "title": "OfferCreate"
+      },
+      "OfferDecision": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "format": "password",
+            "title": "Token",
+            "writeOnly": true
+          },
+          "offer_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Offer Id"
+          },
+          "expected_revision": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Expected Revision"
+          },
+          "choice_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Choice Id"
+          },
+          "decision": {
+            "type": "string",
+            "pattern": "^(accept|decline)$",
+            "title": "Decision"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "token",
+          "offer_id",
+          "expected_revision",
+          "decision"
+        ],
+        "title": "OfferDecision"
+      },
+      "OfferOption": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "promise_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Promise Id"
+          },
+          "promise_revision": {
+            "type": "integer",
+            "title": "Promise Revision"
+          },
+          "promise": {
+            "type": "string",
+            "title": "Promise"
+          },
+          "target": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/RefundTarget-Output"
+              },
+              {
+                "$ref": "#/components/schemas/ReturnTarget"
+              },
+              {
+                "$ref": "#/components/schemas/ReplacementTarget"
+              },
+              {
+                "$ref": "#/components/schemas/OrderCancellationTarget"
+              },
+              {
+                "$ref": "#/components/schemas/SubscriptionTarget"
+              },
+              {
+                "$ref": "#/components/schemas/StoreCreditOrExchangeTarget-Output"
+              },
+              {
+                "$ref": "#/components/schemas/BillingCorrectionTarget"
+              },
+              {
+                "$ref": "#/components/schemas/DisputeHandoffTarget"
+              }
+            ],
+            "title": "Target",
+            "discriminator": {
+              "propertyName": "kind",
+              "mapping": {
+                "billing_correction": "#/components/schemas/BillingCorrectionTarget",
+                "dispute_handoff": "#/components/schemas/DisputeHandoffTarget",
+                "order_cancellation": "#/components/schemas/OrderCancellationTarget",
+                "refund": "#/components/schemas/RefundTarget-Output",
+                "replacement": "#/components/schemas/ReplacementTarget",
+                "return": "#/components/schemas/ReturnTarget",
+                "store_credit_or_exchange": "#/components/schemas/StoreCreditOrExchangeTarget-Output",
+                "subscription": "#/components/schemas/SubscriptionTarget"
+              }
+            }
+          },
+          "requires": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Requires"
+          },
+          "due_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "promise_id",
+          "promise_revision",
+          "promise",
+          "target",
+          "requires",
+          "due_at"
+        ],
+        "title": "OfferOption"
+      },
+      "OfferPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/OfferView"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "OfferPage"
+      },
+      "OfferView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "case_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Case Id"
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          },
+          "choices": {
+            "items": {
+              "$ref": "#/components/schemas/OfferOption"
+            },
+            "type": "array",
+            "title": "Choices"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "published",
+              "accepted",
+              "declined",
+              "superseded"
+            ],
+            "title": "Status"
+          },
+          "selected_choice": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selected Choice"
+          },
+          "decision_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision At"
+          },
+          "decision_actor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision Actor"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "case_id",
+          "revision",
+          "choices",
+          "expires_at",
+          "status",
+          "selected_choice",
+          "decision_at",
+          "decision_actor",
+          "created_at"
+        ],
+        "title": "OfferView"
       },
       "Operations": {
         "properties": {
@@ -9258,6 +14218,316 @@
           "kind"
         ],
         "title": "OrderCancellationTarget"
+      },
+      "OrderLocator": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$",
+            "title": "Source"
+          },
+          "order_reference": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,159}$",
+            "title": "Order Reference"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "source",
+          "order_reference"
+        ],
+        "title": "OrderLocator"
+      },
+      "OrderResolution": {
+        "properties": {
+          "order_reference": {
+            "type": "string",
+            "title": "Order Reference"
+          },
+          "case_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Case Id"
+          },
+          "stage": {
+            "type": "string",
+            "enum": [
+              "no_issue",
+              "under_review",
+              "action_required",
+              "pending",
+              "resolved",
+              "needs_review"
+            ],
+            "title": "Stage"
+          },
+          "next_action": {
+            "type": "string",
+            "enum": [
+              "report_issue",
+              "wait",
+              "open_portal",
+              "review_offer",
+              "none"
+            ],
+            "title": "Next Action"
+          },
+          "next_step": {
+            "$ref": "#/components/schemas/CustomerNextStep"
+          },
+          "promises": {
+            "items": {
+              "$ref": "#/components/schemas/PublicPromise"
+            },
+            "type": "array",
+            "title": "Promises"
+          },
+          "refund": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SupportRefund"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "issue_count": {
+            "type": "integer",
+            "title": "Issue Count"
+          },
+          "authorizes_payment": {
+            "type": "boolean",
+            "const": false,
+            "title": "Authorizes Payment",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "order_reference",
+          "case_id",
+          "stage",
+          "next_action",
+          "next_step",
+          "promises",
+          "refund",
+          "issue_count"
+        ],
+        "title": "OrderResolution"
+      },
+      "OwnerAccount": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "maxLength": 254,
+            "minLength": 3,
+            "pattern": "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$",
+            "title": "Email"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 256,
+            "minLength": 12,
+            "format": "password",
+            "title": "Password",
+            "writeOnly": true
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Name"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "email",
+          "password",
+          "name"
+        ],
+        "title": "OwnerAccount"
+      },
+      "PackageCreate": {
+        "properties": {
+          "dispute_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,80}$",
+            "title": "Dispute Id"
+          },
+          "reason": {
+            "type": "string",
+            "pattern": "^(item_not_received|not_as_described|unauthorized|credit_not_processed|duplicate_charge|canceled_recurring|other)$",
+            "title": "Reason"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "dispute_id",
+          "reason"
+        ],
+        "title": "PackageCreate"
+      },
+      "PackageDetail": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "snapshot_hash": {
+            "type": "string",
+            "title": "Snapshot Hash"
+          },
+          "reviewed": {
+            "type": "boolean",
+            "title": "Reviewed"
+          },
+          "stale": {
+            "type": "boolean",
+            "title": "Stale"
+          },
+          "snapshot": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Snapshot"
+          },
+          "submitted_to_paypal": {
+            "type": "boolean",
+            "const": false,
+            "title": "Submitted To Paypal"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "snapshot_hash",
+          "reviewed",
+          "stale",
+          "snapshot",
+          "submitted_to_paypal"
+        ],
+        "title": "PackageDetail"
+      },
+      "PackagePage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PackageSummary"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "PackagePage"
+      },
+      "PackageReceipt": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "snapshot_hash": {
+            "type": "string",
+            "title": "Snapshot Hash"
+          },
+          "checklist": {
+            "items": {
+              "$ref": "#/components/schemas/EvidenceChecklist"
+            },
+            "type": "array",
+            "title": "Checklist"
+          },
+          "submitted_to_paypal": {
+            "type": "boolean",
+            "const": false,
+            "title": "Submitted To Paypal"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "snapshot_hash",
+          "checklist",
+          "submitted_to_paypal"
+        ],
+        "title": "PackageReceipt"
+      },
+      "PackageSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "dispute_id": {
+            "type": "string",
+            "title": "Dispute Id"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          },
+          "snapshot_hash": {
+            "type": "string",
+            "title": "Snapshot Hash"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "reviewed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed At"
+          },
+          "reviewer_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewer Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "dispute_id",
+          "reason",
+          "snapshot_hash",
+          "created_at",
+          "reviewed_at",
+          "reviewer_id"
+        ],
+        "title": "PackageSummary"
       },
       "PayPalCaptureVerification": {
         "properties": {
@@ -9767,6 +15037,127 @@
           "captured_amount"
         ],
         "title": "PaymentReference"
+      },
+      "PlatformIdentity": {
+        "properties": {
+          "merchant": {
+            "$ref": "#/components/schemas/MerchantIdentity"
+          },
+          "actor_id": {
+            "type": "string",
+            "title": "Actor Id"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "owner",
+              "manager",
+              "finance",
+              "agent",
+              "viewer"
+            ],
+            "title": "Role"
+          }
+        },
+        "type": "object",
+        "required": [
+          "merchant",
+          "actor_id",
+          "role"
+        ],
+        "title": "PlatformIdentity"
+      },
+      "PolicyUpdate": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled",
+            "default": false
+          },
+          "window_days": {
+            "type": "integer",
+            "maximum": 365.0,
+            "minimum": 1.0,
+            "title": "Window Days"
+          },
+          "restocking_fee": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Restocking Fee",
+            "default": "0.00"
+          },
+          "shipping_paid_by": {
+            "type": "string",
+            "enum": [
+              "merchant",
+              "buyer"
+            ],
+            "title": "Shipping Paid By",
+            "default": "merchant"
+          },
+          "inspection_required": {
+            "type": "boolean",
+            "title": "Inspection Required",
+            "default": true
+          },
+          "photos_required": {
+            "type": "boolean",
+            "title": "Photos Required",
+            "default": false
+          },
+          "excluded_products": {
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,159}$"
+            },
+            "type": "array",
+            "maxItems": 50,
+            "title": "Excluded Products"
+          },
+          "instructions": {
+            "type": "string",
+            "maxLength": 3000,
+            "minLength": 1,
+            "title": "Instructions",
+            "default": "Contact the merchant for return instructions before shipping."
+          },
+          "expected_revision": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Expected Revision"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "window_days",
+          "expected_revision"
+        ],
+        "title": "PolicyUpdate"
+      },
+      "PolicyView": {
+        "properties": {
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          },
+          "policy": {
+            "$ref": "#/components/schemas/ReturnPolicy"
+          }
+        },
+        "type": "object",
+        "required": [
+          "revision",
+          "policy"
+        ],
+        "title": "PolicyView"
       },
       "PortalCredentials": {
         "properties": {
@@ -10522,6 +15913,85 @@
           "outstanding_amount"
         ],
         "title": "PublicRefund"
+      },
+      "PublicReturnPolicy": {
+        "properties": {
+          "policy_enabled": {
+            "type": "boolean",
+            "title": "Policy Enabled"
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          },
+          "window_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Window Days"
+          },
+          "shipping_paid_by": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "merchant",
+                  "buyer"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shipping Paid By"
+          },
+          "restocking_fee": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Restocking Fee"
+          },
+          "currency": {
+            "type": "string",
+            "const": "USD",
+            "title": "Currency",
+            "default": "USD"
+          },
+          "inspection_required": {
+            "type": "boolean",
+            "title": "Inspection Required"
+          },
+          "evidence_required": {
+            "type": "boolean",
+            "title": "Evidence Required"
+          },
+          "instructions": {
+            "type": "string",
+            "title": "Instructions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "policy_enabled",
+          "revision",
+          "window_days",
+          "shipping_paid_by",
+          "restocking_fee",
+          "inspection_required",
+          "evidence_required",
+          "instructions"
+        ],
+        "title": "PublicReturnPolicy"
       },
       "ReconciliationResponse": {
         "properties": {
@@ -11315,6 +16785,83 @@
         ],
         "title": "RefundExecutionEvent"
       },
+      "RefundJourney": {
+        "properties": {
+          "stage": {
+            "type": "string",
+            "enum": [
+              "not_promised",
+              "needs_verification",
+              "promised",
+              "processor_pending",
+              "sent_to_original_method",
+              "buyer_reports_received",
+              "needs_review"
+            ],
+            "title": "Stage"
+          },
+          "explanation": {
+            "type": "string",
+            "title": "Explanation"
+          },
+          "last_checked_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Checked At"
+          },
+          "buyer_reported_received_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Buyer Reported Received At"
+          },
+          "bank_receipt_verified": {
+            "type": "boolean",
+            "const": false,
+            "title": "Bank Receipt Verified",
+            "default": false
+          },
+          "resolution": {
+            "$ref": "#/components/schemas/OrderResolution"
+          },
+          "traces": {
+            "items": {
+              "$ref": "#/components/schemas/TraceView"
+            },
+            "type": "array",
+            "title": "Traces"
+          },
+          "authorizes_payment": {
+            "type": "boolean",
+            "const": false,
+            "title": "Authorizes Payment",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "stage",
+          "explanation",
+          "last_checked_at",
+          "buyer_reported_received_at",
+          "resolution",
+          "traces"
+        ],
+        "title": "RefundJourney"
+      },
       "RefundProgress": {
         "properties": {
           "refund_case_id": {
@@ -11809,6 +17356,31 @@
         ],
         "title": "ResolutionSummary"
       },
+      "ResolutionTime": {
+        "properties": {
+          "sample_count": {
+            "type": "integer",
+            "title": "Sample Count"
+          },
+          "average_hours": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Average Hours"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sample_count",
+          "average_hours"
+        ],
+        "title": "ResolutionTime"
+      },
       "ResolutionTimeline": {
         "properties": {
           "items": {
@@ -11932,6 +17504,311 @@
         ],
         "title": "ResolutionView"
       },
+      "ReturnCatalog": {
+        "properties": {
+          "orders": {
+            "items": {
+              "$ref": "#/components/schemas/ReturnableOrder"
+            },
+            "type": "array",
+            "title": "Orders"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ReturnView"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "orders",
+          "items"
+        ],
+        "title": "ReturnCatalog"
+      },
+      "ReturnCreate": {
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Request Id"
+          },
+          "order_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Order Id"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ReturnItem"
+            },
+            "type": "array",
+            "maxItems": 50,
+            "minItems": 1,
+            "title": "Items"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Reason"
+          },
+          "delivered_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delivered At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "request_id",
+          "order_id",
+          "items",
+          "reason"
+        ],
+        "title": "ReturnCreate"
+      },
+      "ReturnGuideView": {
+        "properties": {
+          "policy_enabled": {
+            "type": "boolean",
+            "title": "Policy Enabled"
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          },
+          "instructions": {
+            "type": "string",
+            "title": "Instructions"
+          },
+          "return_address": {
+            "type": "string",
+            "title": "Return Address"
+          },
+          "shipping_paid_by": {
+            "type": "string",
+            "enum": [
+              "merchant",
+              "buyer"
+            ],
+            "title": "Shipping Paid By"
+          },
+          "restocking_fee": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Restocking Fee"
+          },
+          "currency": {
+            "type": "string",
+            "const": "USD",
+            "title": "Currency"
+          },
+          "labels": {
+            "items": {
+              "$ref": "#/components/schemas/LabelMetadata"
+            },
+            "type": "array",
+            "title": "Labels"
+          },
+          "eligibility": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EligibilityView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "inspection_status": {
+            "type": "string",
+            "enum": [
+              "unknown",
+              "clear",
+              "needs_review",
+              "reject"
+            ],
+            "title": "Inspection Status"
+          },
+          "policy_revision": {
+            "type": "integer",
+            "title": "Policy Revision"
+          },
+          "save_label_for_later": {
+            "type": "boolean",
+            "const": true,
+            "title": "Save Label For Later"
+          }
+        },
+        "type": "object",
+        "required": [
+          "policy_enabled",
+          "revision",
+          "instructions",
+          "return_address",
+          "shipping_paid_by",
+          "restocking_fee",
+          "currency",
+          "labels",
+          "eligibility",
+          "inspection_status",
+          "policy_revision",
+          "save_label_for_later"
+        ],
+        "title": "ReturnGuideView"
+      },
+      "ReturnItem": {
+        "properties": {
+          "product_id": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Product Id"
+          },
+          "quantity": {
+            "type": "integer",
+            "maximum": 10000.0,
+            "minimum": 1.0,
+            "title": "Quantity"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "product_id",
+          "quantity"
+        ],
+        "title": "ReturnItem"
+      },
+      "ReturnLabelFile": {
+        "properties": {
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "content_type": {
+            "type": "string",
+            "const": "application/pdf",
+            "title": "Content Type"
+          },
+          "content_base64": {
+            "type": "string",
+            "title": "Content Base64"
+          }
+        },
+        "type": "object",
+        "required": [
+          "filename",
+          "content_type",
+          "content_base64"
+        ],
+        "title": "ReturnLabelFile"
+      },
+      "ReturnLocator": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$",
+            "title": "Source"
+          },
+          "order_reference": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,159}$",
+            "title": "Order Reference"
+          },
+          "return_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Return Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "source",
+          "order_reference",
+          "return_id"
+        ],
+        "title": "ReturnLocator"
+      },
+      "ReturnPolicy": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled",
+            "default": false
+          },
+          "window_days": {
+            "type": "integer",
+            "maximum": 365.0,
+            "minimum": 1.0,
+            "title": "Window Days"
+          },
+          "restocking_fee": {
+            "type": "string",
+            "title": "Restocking Fee",
+            "default": "0.00"
+          },
+          "shipping_paid_by": {
+            "type": "string",
+            "enum": [
+              "merchant",
+              "buyer"
+            ],
+            "title": "Shipping Paid By",
+            "default": "merchant"
+          },
+          "inspection_required": {
+            "type": "boolean",
+            "title": "Inspection Required",
+            "default": true
+          },
+          "photos_required": {
+            "type": "boolean",
+            "title": "Photos Required",
+            "default": false
+          },
+          "excluded_products": {
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,159}$"
+            },
+            "type": "array",
+            "maxItems": 50,
+            "title": "Excluded Products"
+          },
+          "instructions": {
+            "type": "string",
+            "maxLength": 3000,
+            "minLength": 1,
+            "title": "Instructions",
+            "default": "Contact the merchant for return instructions before shipping."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "window_days"
+        ],
+        "title": "ReturnPolicy"
+      },
       "ReturnTarget": {
         "properties": {
           "kind": {
@@ -11973,6 +17850,258 @@
           "return_reference"
         ],
         "title": "ReturnTarget"
+      },
+      "ReturnUpdate": {
+        "properties": {
+          "expected_revision": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Expected Revision"
+          },
+          "action": {
+            "type": "string",
+            "pattern": "^(approve|reject|ship_return|receive|pass_inspection|ship_replacement|complete)$",
+            "title": "Action"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Note"
+          },
+          "shipment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Shipment"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "promise_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Promise Id"
+          },
+          "promise_revision": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Promise Revision"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "expected_revision",
+          "action",
+          "note"
+        ],
+        "title": "ReturnUpdate"
+      },
+      "ReturnView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "case_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Case Id"
+          },
+          "order_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Order Id"
+          },
+          "request_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Request Id"
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "requested",
+              "approved",
+              "rejected",
+              "in_transit",
+              "received",
+              "inspection_passed",
+              "replacement_shipped",
+              "completed"
+            ],
+            "title": "Status"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ReturnItem"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          },
+          "tracking": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Shipment"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "replacement": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Shipment"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "case_id",
+          "order_id",
+          "request_id",
+          "revision",
+          "status",
+          "items",
+          "reason",
+          "tracking",
+          "replacement",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "ReturnView"
+      },
+      "ReturnableItem": {
+        "properties": {
+          "product_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,159}$",
+            "title": "Product Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "sku": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sku"
+          },
+          "quantity": {
+            "type": "integer",
+            "maximum": 1000000.0,
+            "minimum": 1.0,
+            "title": "Quantity"
+          },
+          "unit_amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Amount"
+          },
+          "available_quantity": {
+            "type": "integer",
+            "title": "Available Quantity"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "product_id",
+          "quantity",
+          "available_quantity"
+        ],
+        "title": "ReturnableItem"
+      },
+      "ReturnableOrder": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "order_reference": {
+            "type": "string",
+            "title": "Order Reference"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ReturnableItem"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "order_reference",
+          "items"
+        ],
+        "title": "ReturnableOrder"
       },
       "ReviewException": {
         "properties": {
@@ -12145,6 +18274,165 @@
           "reviewed_at"
         ],
         "title": "ReviewReceipt"
+      },
+      "Shipment": {
+        "properties": {
+          "carrier": {
+            "type": "string",
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Carrier"
+          },
+          "tracking_code": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Tracking Code"
+          },
+          "reference": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Reference"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "carrier",
+          "tracking_code",
+          "reference"
+        ],
+        "title": "Shipment"
+      },
+      "Signup": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "maxLength": 254,
+            "minLength": 3,
+            "pattern": "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$",
+            "title": "Email"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 256,
+            "minLength": 12,
+            "format": "password",
+            "title": "Password",
+            "writeOnly": true
+          },
+          "workspace": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Workspace"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Name"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "email",
+          "password",
+          "workspace",
+          "name"
+        ],
+        "title": "Signup"
+      },
+      "StaffPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/StaffView"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "StaffPage"
+      },
+      "StaffUpdate": {
+        "properties": {
+          "role": {
+            "type": "string",
+            "pattern": "^(owner|manager|finance|agent|viewer)$",
+            "title": "Role"
+          },
+          "active": {
+            "type": "boolean",
+            "title": "Active"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "role",
+          "active"
+        ],
+        "title": "StaffUpdate"
+      },
+      "StaffView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "merchant_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Merchant Id"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "owner",
+              "manager",
+              "finance",
+              "agent",
+              "viewer"
+            ],
+            "title": "Role"
+          },
+          "active": {
+            "type": "integer",
+            "title": "Active"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "merchant_id",
+          "email",
+          "name",
+          "role",
+          "active",
+          "created_at"
+        ],
+        "title": "StaffView"
       },
       "StoreCreditOrExchangeTarget-Input": {
         "properties": {
@@ -12394,6 +18682,376 @@
         ],
         "title": "SubscriptionTarget"
       },
+      "SupportKeyInput": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$",
+            "title": "Source"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "source"
+        ],
+        "title": "SupportKeyInput"
+      },
+      "SupportKeyReceipt": {
+        "properties": {
+          "key_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Key Id"
+          },
+          "api_key": {
+            "type": "string",
+            "title": "Api Key"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "capabilities": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "order_sync",
+                "customer_support"
+              ]
+            },
+            "type": "array",
+            "title": "Capabilities"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key_id",
+          "api_key",
+          "source",
+          "capabilities"
+        ],
+        "title": "SupportKeyReceipt"
+      },
+      "SupportRefund": {
+        "properties": {
+          "promised_amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Promised Amount"
+          },
+          "completed_amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed Amount"
+          },
+          "pending_amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pending Amount"
+          },
+          "remaining_amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remaining Amount"
+          },
+          "currency": {
+            "type": "string",
+            "const": "USD",
+            "title": "Currency",
+            "default": "USD"
+          },
+          "environment": {
+            "type": "string",
+            "const": "sandbox",
+            "title": "Environment",
+            "default": "sandbox"
+          },
+          "verification": {
+            "type": "string",
+            "enum": [
+              "current",
+              "unverified"
+            ],
+            "title": "Verification"
+          },
+          "last_checked_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Checked At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "promised_amount",
+          "completed_amount",
+          "pending_amount",
+          "remaining_amount",
+          "verification",
+          "last_checked_at"
+        ],
+        "title": "SupportRefund"
+      },
+      "SupportRequestPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SupportRequestView"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "SupportRequestPage"
+      },
+      "SupportRequestView": {
+        "properties": {
+          "issue_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Issue Id"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          },
+          "requested_resolution": {
+            "type": "string",
+            "title": "Requested Resolution"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "issue_id",
+          "source",
+          "reason",
+          "requested_resolution",
+          "message",
+          "created_at"
+        ],
+        "title": "SupportRequestView"
+      },
+      "SupportReturn": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$",
+            "title": "Source"
+          },
+          "order_reference": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,159}$",
+            "title": "Order Reference"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ReturnItem"
+            },
+            "type": "array",
+            "maxItems": 50,
+            "minItems": 1,
+            "title": "Items"
+          },
+          "delivered_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delivered At"
+          },
+          "request_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Request Id"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Reason"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "source",
+          "order_reference",
+          "items",
+          "request_id",
+          "reason"
+        ],
+        "title": "SupportReturn"
+      },
+      "TicketDetail": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "merchant_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Merchant Id"
+          },
+          "provider": {
+            "type": "string",
+            "const": "zendesk",
+            "title": "Provider"
+          },
+          "ticket_id": {
+            "type": "string",
+            "title": "Ticket Id"
+          },
+          "case_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Case Id"
+          },
+          "order_reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order Reference"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "matched",
+              "needs_match"
+            ],
+            "title": "State"
+          },
+          "suggestions": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExtractionResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/TicketMessage"
+            },
+            "type": "array",
+            "title": "Messages"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "merchant_id",
+          "provider",
+          "ticket_id",
+          "case_id",
+          "order_reference",
+          "title",
+          "state",
+          "suggestions",
+          "created_at",
+          "updated_at",
+          "messages"
+        ],
+        "title": "TicketDetail"
+      },
+      "TicketImport": {
+        "properties": {
+          "ticket_id": {
+            "type": "integer",
+            "maximum": 9007199254740991.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Ticket Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "ticket_id"
+        ],
+        "title": "TicketImport"
+      },
       "TicketInput": {
         "properties": {
           "ticket_id": {
@@ -12409,6 +19067,275 @@
           "ticket_id"
         ],
         "title": "TicketInput"
+      },
+      "TicketMessage": {
+        "properties": {
+          "source_id": {
+            "type": "string",
+            "title": "Source Id"
+          },
+          "sender": {
+            "type": "string",
+            "enum": [
+              "buyer",
+              "merchant"
+            ],
+            "title": "Sender"
+          },
+          "body": {
+            "type": "string",
+            "title": "Body"
+          },
+          "public": {
+            "type": "integer",
+            "title": "Public"
+          },
+          "sent_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Sent At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source_id",
+          "sender",
+          "body",
+          "public",
+          "sent_at"
+        ],
+        "title": "TicketMessage"
+      },
+      "TicketPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/TicketView"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "TicketPage"
+      },
+      "TicketView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "merchant_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Merchant Id"
+          },
+          "provider": {
+            "type": "string",
+            "const": "zendesk",
+            "title": "Provider"
+          },
+          "ticket_id": {
+            "type": "string",
+            "title": "Ticket Id"
+          },
+          "case_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Case Id"
+          },
+          "order_reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order Reference"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "matched",
+              "needs_match"
+            ],
+            "title": "State"
+          },
+          "suggestions": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExtractionResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "merchant_id",
+          "provider",
+          "ticket_id",
+          "case_id",
+          "order_reference",
+          "title",
+          "state",
+          "suggestions",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "TicketView"
+      },
+      "TraceInput": {
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Request Id"
+          },
+          "refund_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,80}$",
+            "title": "Refund Id"
+          },
+          "reference_type": {
+            "type": "string",
+            "enum": [
+              "ARN",
+              "STAN",
+              "RRN",
+              "bank_reference"
+            ],
+            "title": "Reference Type"
+          },
+          "reference": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9 -]{4,100}$",
+            "title": "Reference"
+          },
+          "stage": {
+            "type": "string",
+            "enum": [
+              "initiated",
+              "processor_pending",
+              "sent_to_bank",
+              "bank_processing",
+              "failed"
+            ],
+            "title": "Stage"
+          },
+          "expected_by": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected By"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Note"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "request_id",
+          "refund_id",
+          "reference_type",
+          "reference",
+          "stage",
+          "note"
+        ],
+        "title": "TraceInput"
+      },
+      "TraceView": {
+        "properties": {
+          "refund_id": {
+            "type": "string",
+            "title": "Refund Id"
+          },
+          "reference_type": {
+            "type": "string",
+            "title": "Reference Type"
+          },
+          "reference": {
+            "type": "string",
+            "title": "Reference"
+          },
+          "stage": {
+            "type": "string",
+            "title": "Stage"
+          },
+          "expected_by": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected By"
+          },
+          "source": {
+            "type": "string",
+            "const": "merchant_recorded",
+            "title": "Source"
+          },
+          "recorded_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Recorded At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "refund_id",
+          "reference_type",
+          "reference",
+          "stage",
+          "expected_by",
+          "source",
+          "recorded_at"
+        ],
+        "title": "TraceView"
       },
       "TrackingReference": {
         "properties": {

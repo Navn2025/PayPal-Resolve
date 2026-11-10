@@ -146,29 +146,35 @@ class CustomerPortal:
     def issue(self, case_id, merchant_id, payload):
         with self.store.transaction(write=True) as connection:
             case = self.workspace._case(connection, case_id, merchant_id)
-            now = datetime.now(timezone.utc)
-            token = "rsvp_" + secrets.token_urlsafe(32)
-            connection.execute(
-                """INSERT INTO customer_portal_links
-                   (resolution_id,merchant_id,token_hash,title,show_order_reference,created_at,expires_at)
-                   VALUES (?,?,?,?,?,?,?) ON CONFLICT(resolution_id) DO UPDATE SET
-                   token_hash=excluded.token_hash, title=excluded.title,
-                   show_order_reference=excluded.show_order_reference, created_at=excluded.created_at,
-                   expires_at=excluded.expires_at, revoked_at=NULL""",
-                (
-                    case["id"],
-                    case["merchant_id"],
-                    sha256(token.encode()).hexdigest(),
-                    payload.title,
-                    int(payload.show_order_reference),
-                    _timestamp(now),
-                    _timestamp(now + LINK_LIFETIME),
-                ),
-            )
-            return IssuedLink(
-                token=token,
-                **self._status(self._link(connection, case), now).model_dump(),
-            )
+            return self._issue(connection, case, payload)
+
+    @staticmethod
+    def _issue(connection, case, payload):
+        now = datetime.now(timezone.utc)
+        token = "rsvp_" + secrets.token_urlsafe(32)
+        connection.execute(
+            """INSERT INTO customer_portal_links
+               (resolution_id,merchant_id,token_hash,title,show_order_reference,created_at,expires_at)
+               VALUES (?,?,?,?,?,?,?) ON CONFLICT(resolution_id) DO UPDATE SET
+               token_hash=excluded.token_hash, title=excluded.title,
+               show_order_reference=excluded.show_order_reference, created_at=excluded.created_at,
+               expires_at=excluded.expires_at, revoked_at=NULL""",
+            (
+                case["id"],
+                case["merchant_id"],
+                sha256(token.encode()).hexdigest(),
+                payload.title,
+                int(payload.show_order_reference),
+                _timestamp(now),
+                _timestamp(now + LINK_LIFETIME),
+            ),
+        )
+        return IssuedLink(
+            token=token,
+            **CustomerPortal._status(
+                CustomerPortal._link(connection, case), now
+            ).model_dump(),
+        )
 
     def revoke(self, case_id, merchant_id):
         with self.store.transaction(write=True) as connection:

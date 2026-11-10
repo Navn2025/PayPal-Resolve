@@ -4,11 +4,13 @@ from contextlib import contextmanager
 from functools import lru_cache
 from hashlib import sha256
 from pathlib import Path
+from threading import Lock
 import re
 
 import psycopg
 from psycopg import errors, sql
 from pydantic import SecretStr
+from psycopg_pool import ConnectionPool, PoolTimeout, TooManyRequests
 
 from .errors import StoreError
 from .storage import ResolveStore
@@ -74,7 +76,12 @@ class _Connection:
 
 class PostgresStore(ResolveStore):
     def __init__(
-        self, database_url: SecretStr, *, schema="resolve", timeout: float = 5.0
+        self,
+        database_url: SecretStr,
+        *,
+        schema="resolve",
+        timeout: float = 5.0,
+        pool_size: int = 8,
     ):
         if (
             not re.fullmatch(r"[a-z][a-z0-9_]{0,62}", schema)
@@ -82,6 +89,11 @@ class PostgresStore(ResolveStore):
             or schema == "public"
         ):
             raise ValueError("Use a dedicated Resolve database schema")
+        if not 1 <= pool_size <= 32:
+            raise ValueError("Use a PostgreSQL pool size between 1 and 32")
+        self._pool = None
+        self._pool_lock = Lock()
+        self._pool_size = pool_size
         self._database_url = database_url
         self.schema = schema
         self.timeout = timeout
@@ -102,6 +114,37 @@ class PostgresStore(ResolveStore):
         except psycopg.Error:
             raise StoreError(503, "PostgreSQL connection is unavailable") from None
 
+    def _connections(self):
+        # One bounded pool per store/process; never cache tenant data or sessions.
+        with self._pool_lock:
+            if self._pool is None:
+                pool = ConnectionPool(
+                    self._database_url.get_secret_value(),
+                    kwargs={
+                        "connect_timeout": 8,
+                        "prepare_threshold": None,
+                        "row_factory": _rows,
+                    },
+                    min_size=0,
+                    max_size=self._pool_size,
+                    max_waiting=32,
+                    timeout=8,
+                    max_idle=60,
+                    max_lifetime=600,
+                    reconnect_timeout=8,
+                    name="resolve-store",
+                    open=False,
+                )
+                pool.open()
+                self._pool = pool
+            return self._pool
+
+    def close(self):
+        with self._pool_lock:
+            pool, self._pool = self._pool, None
+        if pool is not None:
+            pool.close()
+
     def _lock(self, raw):
         raw.execute(
             "SELECT set_config('lock_timeout', %s, true)",
@@ -117,18 +160,21 @@ class PostgresStore(ResolveStore):
     @contextmanager
     def transaction(self, *, write=False):
         try:
-            with self._connect() as raw:
+            with self._connections().connection() as raw:
                 if write:
                     # Lock before reading any application state, as BEGIN IMMEDIATE did in SQLite.
                     raw.execute(
                         "SET TRANSACTION ISOLATION LEVEL READ COMMITTED, READ WRITE"
                     )
                     self._lock(raw)
+                    self._search_path(raw)
                 else:
+                    # One setup round trip; both statements are transaction-local.
                     raw.execute(
-                        "SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY"
+                        sql.SQL(
+                            "SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY; SET LOCAL search_path TO {}"
+                        ).format(sql.Identifier(self.schema))
                     )
-                self._search_path(raw)
                 yield _Connection(raw)
         except (
             errors.LockNotAvailable,
@@ -136,7 +182,7 @@ class PostgresStore(ResolveStore):
             errors.DeadlockDetected,
         ):
             raise StoreError(503, "Database is busy; retry the request") from None
-        except psycopg.OperationalError:
+        except (psycopg.OperationalError, PoolTimeout, TooManyRequests):
             raise StoreError(503, "PostgreSQL connection is unavailable") from None
 
     def initialize(self):
@@ -176,7 +222,11 @@ class PostgresStore(ResolveStore):
                     )
             for index in range(len(applied), len(scripts)):
                 if files[index].name == "010_investigations.sql":
-                    db.execute((MIGRATIONS.parent / "investigation_prerequisite.sql").read_text(encoding="utf-8"))
+                    db.execute(
+                        (
+                            MIGRATIONS.parent / "investigation_prerequisite.sql"
+                        ).read_text(encoding="utf-8")
+                    )
                 db.execute(scripts[index])
                 db.execute(
                     "INSERT INTO schema_migrations VALUES (?,?)",

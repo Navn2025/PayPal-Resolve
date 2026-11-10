@@ -35,7 +35,7 @@ function createShop(env) {
   const paypal = env.SHOP_PAYPAL_CLIENT_ID && env.SHOP_PAYPAL_CLIENT_SECRET && env.SHOP_PAYPAL_MERCHANT_ID
     ? new SandboxPayPal(env.SHOP_PAYPAL_CLIENT_ID, env.SHOP_PAYPAL_CLIENT_SECRET, env.SHOP_PAYPAL_MERCHANT_ID) : null;
   const evidence = env.RESOLVE_API_URL && env.RESOLVE_API_KEY
-    ? new ResolveClient({ baseUrl: env.RESOLVE_API_URL, apiKey: env.RESOLVE_API_KEY, timeoutMs: 25_000 }) : null;
+    ? new ResolveClient({ baseUrl: env.RESOLVE_API_URL, apiKey: env.RESOLVE_API_KEY, timeoutMs: 25_000, source: "field-brew-store" }) : null;
   const enabled = Boolean(paypal && evidence);
   const find = db.prepare("SELECT * FROM store_orders WHERE id=? AND session_hash=?");
   const byRequest = db.prepare("SELECT * FROM store_orders WHERE session_hash=? AND checkout_key=?");
@@ -203,10 +203,29 @@ function createShop(env) {
         });
         return json(res, 200, { ...receipt(started), approvalUrl: started.approval });
       }
-      const match = route.match(/^\/api\/orders\/([a-f0-9-]+)(?:\/(capture|verify))?$/);
+      const match = route.match(/^\/api\/orders\/([a-f0-9-]+)(?:\/(capture|verify|support|resolution|support-link|refund-journey|context|return-eligibility))?$/);
       if (!match || !GUID.test(match[1])) throw new ShopError(404, "That page does not exist.");
       const [, id, action] = match;
       if (req.method === "GET" && !action) return json(res, 200, receipt(get(id, sid)));
+      if (["support", "resolution", "support-link", "refund-journey", "context", "return-eligibility"].includes(action)) {
+        if (req.method !== "POST") throw new ShopError(405, "Use the order support action.");
+        const order = get(id, sid); // Validate this browser owns the order before contacting Resolve.
+        if (!evidence || order.payment_state !== "completed" || !order.case_id) throw new ShopError(409, "Support is available after the paid order is synced.");
+        const input = await body(req);
+        try {
+          const reference = "FIELD-" + order.id;
+          const result = action === "refund-journey" ? await evidence.getRefundJourney(reference)
+            : action === "context" ? await evidence.getSupportContext(reference)
+            : action === "return-eligibility" ? await evidence.getReturnEligibility(reference,{items:JSON.parse(order.lines).map(line=>({product_id:line.id,quantity:line.quantity}))})
+            : action === "resolution" ? await evidence.getOrderResolution(reference)
+            : action === "support-link" ? await evidence.createSupportLink(reference)
+            : await evidence.openIssue({ orderId: reference, requestId: input.requestId, reason: input.reason, message: input.message, requestedResolution: input.requestedResolution });
+          return json(res, action === "resolution" ? 200 : 201, result);
+        } catch (error) {
+          const status = Number.isInteger(error.status) && error.status >= 400 && error.status <= 499 ? error.status : 503;
+          throw new ShopError(status, status === 403 ? "Enable a support integration key for field-brew-store." : status === 409 ? "This request changed. Review the saved issue before retrying." : "Order support is unavailable. Try again shortly.");
+        }
+      }
       if (req.method !== "POST" || !action) throw new ShopError(404, "That page does not exist.");
       if (!enabled) throw new ShopError(503, "Checkout settings are not available.");
       const input = await body(req);

@@ -1,6 +1,6 @@
 {
   "name": "@resolve-paypal/sdk",
-  "version": "0.5.0",
+  "version": "0.7.0",
   "description": "Server-side SDK for Resolve case evidence and private buyer links",
   "license": "UNLICENSED",
   "type": "module",

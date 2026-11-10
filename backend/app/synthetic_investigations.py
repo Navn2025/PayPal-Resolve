@@ -167,7 +167,7 @@ def simulated_providers(label=None):
                     "next_step": candidate["next_step"],
                 }
             response = {
-                "provider": "Anthropic",
+                "provider": "Phala",
                 "choices": [
                     {
                         "finish_reason": "stop",

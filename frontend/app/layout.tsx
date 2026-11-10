@@ -1,3 +1,4 @@
+import "./operations.css";
 import type { Metadata } from "next";
 import "@fontsource-variable/inter";
 import "@fontsource-variable/manrope";

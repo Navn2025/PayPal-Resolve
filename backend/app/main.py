@@ -42,6 +42,10 @@ from .investigation_routes import router as investigation_router
 from .customer_routes import router as customer_router
 from .merchant_auth_routes import router as merchant_auth_router
 from .ai_routes import router as ai_router
+from .platform_routes import router as platform_router, hooks as support_hooks
+from .aftercare_routes import router as aftercare_router
+from .assurance_routes import router as assurance_router
+from .platform_connections import paypal_for
 
 
 router = APIRouter()
@@ -168,7 +172,7 @@ def verify_paypal_capture(
     case_id: UUID, request: Request, store: Store, merchant: CurrentMerchant
 ):
     case = store.get_case(case_id, merchant.id)
-    capture = request.app.state.paypal_client.read_capture(case)
+    capture = paypal_for(request, merchant.id).read_capture(case)
     return store.record_capture_verification(case_id, merchant.id, capture)
 
 
@@ -260,7 +264,7 @@ def execute_refund(
     merchant: CurrentMerchant,
 ):
     execution, created = RefundExecutionService(
-        store, request.app.state.paypal_client
+        store, paypal_for(request, merchant.id)
     ).create(case_id, payload, merchant.id)
     if not created:
         response.status_code = 200
@@ -271,7 +275,7 @@ def execute_refund(
 def list_refund_executions(
     case_id: UUID, request: Request, store: Store, merchant: CurrentMerchant
 ):
-    return RefundExecutionService(store, request.app.state.paypal_client).list(
+    return RefundExecutionService(store, paypal_for(request, merchant.id)).list(
         case_id, merchant.id
     )
 
@@ -286,7 +290,7 @@ def get_refund_execution(
     store: Store,
     merchant: CurrentMerchant,
 ):
-    return RefundExecutionService(store, request.app.state.paypal_client).get(
+    return RefundExecutionService(store, paypal_for(request, merchant.id)).get(
         case_id, execution_id, merchant.id
     )
 
@@ -302,7 +306,7 @@ def retry_refund_execution(
     store: Store,
     merchant: CurrentMerchant,
 ):
-    return RefundExecutionService(store, request.app.state.paypal_client).retry(
+    return RefundExecutionService(store, paypal_for(request, merchant.id)).retry(
         case_id, execution_id, merchant.id
     )
 
@@ -319,7 +323,7 @@ def refresh_refund_execution(
     merchant: CurrentMerchant,
     payload: PayPalRefundVerificationCreate | None = None,
 ):
-    return RefundExecutionService(store, request.app.state.paypal_client).refresh(
+    return RefundExecutionService(store, paypal_for(request, merchant.id)).refresh(
         case_id, execution_id, merchant.id, payload.refund_id if payload else None
     )
 
@@ -335,7 +339,7 @@ def get_execution_events(
     store: Store,
     merchant: CurrentMerchant,
 ):
-    return RefundExecutionService(store, request.app.state.paypal_client).events(
+    return RefundExecutionService(store, paypal_for(request, merchant.id)).events(
         case_id, execution_id, merchant.id
     )
 
@@ -352,7 +356,7 @@ def verify_paypal_refund(
     store: Store,
     merchant: CurrentMerchant,
 ):
-    return RefundExecutionService(store, request.app.state.paypal_client).verify_refund(
+    return RefundExecutionService(store, paypal_for(request, merchant.id)).verify_refund(
         case_id, payload.refund_id, merchant.id
     )
 
@@ -394,6 +398,7 @@ def create_app(
         finally:
             app.state.paypal_client.close()
             followup_http.close()
+            store.close()
 
     application = FastAPI(
         title="Resolve for PayPal API",
@@ -403,6 +408,19 @@ def create_app(
     )
     application.state.store = store
     application.state.settings = configuration
+
+    @application.middleware("http")
+    async def operation_audit(request, call_next):
+        response = await call_next(request)
+        intent = getattr(request.state, "audit_intent", None)
+        if intent:
+            from .platform_identity import audit
+            with store.transaction(write=True) as db:
+                audit(db, request.state.audit_merchant, request.state.actor_id,
+                      "request_finished", intent, status=response.status_code)
+        if request.url.path.startswith(("/platform", "/webhooks/zendesk")):
+            response.headers.update({"Cache-Control": "private, no-store", "Referrer-Policy": "no-referrer"})
+        return response
 
     @application.exception_handler(StoreError)
     async def handle_store_error(request: Request, error: StoreError):
@@ -418,6 +436,10 @@ def create_app(
     application.include_router(commerce_router)
     application.include_router(investigation_router)
     application.include_router(ai_router)
+    application.include_router(platform_router)
+    application.include_router(aftercare_router)
+    application.include_router(assurance_router)
+    application.include_router(support_hooks)
     return application
 
 

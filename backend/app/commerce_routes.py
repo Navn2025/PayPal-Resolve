@@ -1,3 +1,5 @@
+from .platform_connections import paypal_for
+
 """Bounded merchant commerce evidence API. Request validation never echoes data."""
 
 from uuid import UUID
@@ -29,8 +31,26 @@ class PrivateCommerceRoute(APIRoute):
 
         async def private(request: Request):
             try:
-                if self.name in ("sync_commerce_order", "register_commerce_order"):
-                    body = await bounded_body(request, 32 * 1024)
+                if request.url.path.startswith(
+                    ("/aftercare/", "/platform/buyer/")
+                ) or self.name in (
+                    "sync_commerce_order",
+                    "register_commerce_order",
+                    "open_aftercare_issue",
+                    "aftercare_status",
+                    "aftercare_portal",
+                    "upload_label",
+                    "inspect_return",
+                    "save_return_guide",
+                    "policy_save",
+                    "trace_record",
+                    "dispute_record",
+                    "dispute_document",
+                ):
+                    body = await bounded_body(
+                        request,
+                        3 * 1024 * 1024 if self.name == "upload_label" else 32 * 1024,
+                    )
 
                     async def receive():
                         return {
@@ -136,7 +156,7 @@ def refresh_commerce_order(
 ):
     """Read linked PayPal Sandbox evidence and compare. Never mutate payments."""
     return CommerceWorkspace(store).refresh(
-        case_id, merchant.id, request.app.state.paypal_client
+        case_id, merchant.id, paypal_for(request, merchant.id)
     )
 
 

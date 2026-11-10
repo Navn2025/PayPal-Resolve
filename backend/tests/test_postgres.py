@@ -45,6 +45,8 @@ def test_applied_postgres_scripts_keep_their_canonical_checksums():
 
 
 def _rewind_evidence_schema(db):
+    for table in ("assurance_events", "assurance_projections", "assurance_receipts", "assurance_refund_traces", "assurance_dispute_events", "assurance_disputes", "assurance_return_reviews", "assurance_return_labels", "assurance_return_guides", "assurance_policies", "aftercare_issues", "aftercare_apps", "platform_packages", "platform_returns", "platform_offers", "platform_alerts", "platform_ticket_messages", "platform_imports", "platform_webhook_jobs", "platform_connections", "platform_sessions", "platform_invites", "platform_staff", "platform_auth_limits", "platform_audit"):
+        db.execute(sql.SQL("DROP TABLE IF EXISTS {} CASCADE").format(sql.Identifier(table)))
     for row in list(db.execute("SELECT p.proname FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname=current_schema() AND p.proname LIKE 'investigate_%'")):
         db.execute(sql.SQL("DROP FUNCTION {}() CASCADE").format(sql.Identifier(row[0])))
     for table in ("investigation_reviews", "investigation_audit", "investigations", "investigation_jobs"):
@@ -97,7 +99,7 @@ def test_postgres_003_upgrades_both_paypal_flow_variants(
             )
     with postgres_store.transaction() as db:
         assert (
-            db.execute("SELECT max(version) FROM schema_migrations").fetchone()[0] == 15
+            db.execute("SELECT max(version) FROM schema_migrations").fetchone()[0] == 19
         )
         assert (
             db.execute(
@@ -150,7 +152,7 @@ def test_postgres_005_upgrades_both_notification_variants(
             assert client.get("/health").status_code == 200
     with postgres_store.transaction() as db:
         assert (
-            db.execute("SELECT max(version) FROM schema_migrations").fetchone()[0] == 15
+            db.execute("SELECT max(version) FROM schema_migrations").fetchone()[0] == 19
         )
         assert (
             db.execute(
@@ -200,6 +202,47 @@ def test_sqlite_import_keeps_capabilities_money_bytes_and_sequence(
     with merchant_client(create_app(path, settings=settings)) as old:
         key = old.headers["Authorization"].split(" ", 1)[1]
         identity = old.get("/auth/me").json()
+        owner = old.post("/platform/account/claim", json={
+            "email": "import-owner@example.test", "name": "Import owner",
+            "password": "synthetic-import-password-123",
+        })
+        assert owner.status_code == 201, owner.text
+        owner_token = owner.json()["token"]
+        from test_platform_operations import case as operations_case, promise as operations_promise
+        operation_id = operations_case(old, "IMPORT-OPERATIONS")
+        commitment = operations_promise(old, operation_id)
+        from datetime import datetime, timedelta, timezone
+        offer = old.post(f"/platform/cases/{operation_id}/offers", json={
+            "choices": [{"promise_id": commitment["id"], "expected_revision": 1}],
+            "expires_at": (datetime.now(timezone.utc) + timedelta(days=1)).isoformat(),
+        })
+        assert offer.status_code == 201, offer.text
+        assert old.post("/platform/watchdog/scan").status_code == 200
+        synced = old.post("/commerce/orders/sync", json={
+            "source": "synthetic-import", "order_reference": "IMPORT-OPERATIONS",
+            "revision": 1, "case_id": operation_id,
+            "items": [{"product_id": "IMPORT-ITEM", "name": "Synthetic item", "quantity": 1}],
+        })
+        assert synced.status_code == 200, synced.text
+        order = old.get(f"/platform/cases/{operation_id}/returns").json()["orders"][0]
+        returned = old.post(f"/platform/cases/{operation_id}/returns", json={
+            "request_id": str(uuid4()), "order_id": order["id"],
+            "items": [{"product_id": "IMPORT-ITEM", "quantity": 1}], "reason": "Synthetic damage",
+        })
+        assert returned.status_code == 201, returned.text
+        support = old.post("/platform/support-keys", json={"source": "synthetic-import"}).json()
+        app_issue = old.post("/aftercare/issues", json={"source": "synthetic-import", "order_reference": "IMPORT-OPERATIONS", "request_id": str(uuid4()), "reason": "damaged_item", "message": "Synthetic imported app support"})
+        assert app_issue.status_code == 201, app_issue.text
+        guide_root=f"/platform/cases/{operation_id}/returns/{returned.json()['id']}"
+        assert old.put(guide_root+"/guide",json={"expected_revision":0,"instructions":"Keep your drop-off receipt","return_address":"Synthetic warehouse","shipping_paid_by":"merchant"}).status_code==200
+        import base64
+        label_bytes=b"%PDF-1.4\nImported synthetic label\n%%EOF"
+        saved_label=old.post(guide_root+"/labels",json={"filename":"import-label.pdf","content_base64":base64.b64encode(label_bytes).decode()})
+        assert saved_label.status_code==200,saved_label.text
+        journal=old.post("/aftercare/events",json={"source":"synthetic-import"})
+        assert journal.status_code==200,journal.text
+
+
         case, _ = ready(old)
         second = refund_case(old, capture="SECONDCASE")
         prior = old.get(f"/cases/{case}/reconciliation").json()
@@ -224,6 +267,10 @@ def test_sqlite_import_keeps_capabilities_money_bytes_and_sequence(
     original = sha256(path.read_bytes()).digest()
     counts = migrate(path, postgres_store)
     assert counts["customer_evidence"] == counts["refund_approvals"] == 1
+    assert counts["platform_staff"] == counts["platform_sessions"] == 1
+    assert counts["aftercare_apps"] == counts["aftercare_issues"] == 1
+    assert counts["assurance_return_labels"] == counts["assurance_projections"] == counts["assurance_events"] == 1
+    assert counts["platform_returns"] == counts["platform_offers"] == counts["platform_alerts"] == 1
     assert sha256(path.read_bytes()).digest() == original
     with pytest.raises(RuntimeError, match="target is not empty"):
         migrate(path, postgres_store)
@@ -231,6 +278,19 @@ def test_sqlite_import_keeps_capabilities_money_bytes_and_sequence(
         create_app(settings=settings, store=postgres_store), key
     ) as new:
         assert new.get("/auth/me").json() == identity
+        imported_support = new.post("/aftercare/status", json={"source": "synthetic-import", "order_reference": "IMPORT-OPERATIONS"}, headers={"Authorization": "Bearer " + support["api_key"]})
+        assert imported_support.status_code == 200, imported_support.text
+        assert imported_support.json()["issue_count"] == 1
+        imported_label=new.post("/aftercare/returns/label",json={"source":"synthetic-import","order_reference":"IMPORT-OPERATIONS","return_id":returned.json()["id"],"label_id":saved_label.json()["id"]},headers={"Authorization":"Bearer "+support["api_key"]})
+        assert imported_label.status_code==200,imported_label.text
+        assert base64.b64decode(imported_label.json()["content_base64"])==label_bytes
+        events=new.post("/aftercare/events",json={"source":"synthetic-import","after_sequence":journal.json()["next_after_sequence"]},headers={"Authorization":"Bearer "+support["api_key"]})
+        assert events.status_code==200,events.text
+
+
+        assert new.get("/platform/me", headers={"Authorization": "Bearer " + owner_token}).json()["role"] == "owner"
+        assert new.get(f"/platform/cases/{operation_id}/offers").json()["items"][0] == offer.json()
+        assert new.get(f"/platform/cases/{operation_id}/returns").json()["items"][0] == returned.json()
         assert new.get(f"/cases/{case}/reconciliation").json() == prior
         assert [item["id"] for item in new.get("/cases").json()["items"]] == [
             second,
@@ -326,3 +386,46 @@ def test_postgres_transactions_preserve_snapshot_and_time_out_contended_writer(
         other.create_merchant("Unblocked merchant").merchant.name
         == "Unblocked merchant"
     )
+
+
+def test_pool_reuses_connections_without_leaking_transactions_or_schema(postgres_store):
+    from psycopg.errors import ReadOnlySqlTransaction
+
+    store = postgres_store
+    with store.transaction(write=True) as db:
+        backend = db.execute("SELECT pg_backend_pid()").fetchone()[0]
+        db.execute("CREATE TABLE pool_probe (value INTEGER)")
+        db.execute("SET LOCAL application_name = 'resolve-synthetic-pool-probe'")
+    with pytest.raises(ValueError):
+        with store.transaction(write=True) as db:
+            assert db.execute("SELECT pg_backend_pid()").fetchone()[0] == backend
+            db.execute("INSERT INTO pool_probe VALUES (1)")
+            raise ValueError("rollback synthetic update")
+    with store.transaction() as db:
+        assert db.execute("SELECT pg_backend_pid()").fetchone()[0] == backend
+        assert db.execute("SELECT current_schema()").fetchone()[0] == store.schema
+        assert db.execute("SELECT current_setting('transaction_read_only')").fetchone()[0] == "on"
+        assert db.execute("SELECT current_setting('application_name')").fetchone()[0] != "resolve-synthetic-pool-probe"
+        assert db.execute("SELECT count(*) FROM pool_probe").fetchone()[0] == 0
+    with pytest.raises(ReadOnlySqlTransaction):
+        with store.transaction() as db:
+            db.execute("INSERT INTO pool_probe VALUES (2)")
+    with store.transaction(write=True) as db:
+        db.execute("INSERT INTO pool_probe VALUES (3)")
+    with store.transaction() as db:
+        assert db.execute("SELECT value FROM pool_probe").fetchone()[0] == 3
+
+
+def test_pool_discards_a_broken_connection_and_reopens_after_close(postgres_store):
+    store = postgres_store
+    with pytest.raises(StoreError) as error:
+        with store.transaction() as db:
+            old_backend = db.execute("SELECT pg_backend_pid()").fetchone()[0]
+            db.raw.close()
+            db.execute("SELECT 1")
+    assert error.value.status_code == 503
+    with store.transaction() as db:
+        assert db.execute("SELECT pg_backend_pid()").fetchone()[0] != old_backend
+    store.close()
+    with store.transaction() as db:
+        assert db.execute("SELECT current_schema()").fetchone()[0] == store.schema

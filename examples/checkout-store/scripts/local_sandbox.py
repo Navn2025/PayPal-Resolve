@@ -28,6 +28,7 @@ sys.path.insert(0, str(REPO / "backend"))
 from app.main import create_app
 from app.settings import Settings
 from app.storage import SQLiteStore
+from app.platform_identity import audit, now
 
 
 def sandbox_values():
@@ -99,6 +100,9 @@ def serve(folder, port, smoke):
         merchant = initial.merchant.id
         store.revoke_key(initial.key_id)
     issued = store.issue_key(merchant, scope="commerce")
+    with store.transaction(write=True) as db:
+        db.execute("INSERT INTO aftercare_apps VALUES (?,?,?,?)", (str(issued.key_id), str(merchant), "field-brew-store", now()))
+        audit(db, merchant, "local_sandbox_launcher", "support_key_issued", issued.key_id, source="field-brew-store")
     settings = Settings(
         _env_file=None,
         database_url=None,

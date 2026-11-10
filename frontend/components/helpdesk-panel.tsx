@@ -30,7 +30,8 @@ export function HelpdeskPanel({ caseId, request }: { caseId: string; request: Re
     const id = Number(new FormData(event.currentTarget).get("ticket"));
     if (Number.isSafeInteger(id) && id > 0) void save(id);
   }
-  if (!state?.configured && !error) return null;
+  if (!state && !error) return <p className="muted" role="status">Loading ticket settings…</p>;
+  if (state && !state.configured && !error) return <p className="muted">Connect Zendesk in Operations → Connections to link a support ticket.</p>;
   const ticket = state?.ticket;
   return <section className="section-card helpdesk-panel customer-print-hide">
     <div className="section-head"><div><div className="eyebrow">HELPDESK</div><h3>Zendesk ticket</h3></div><Headphones size={17} /></div>

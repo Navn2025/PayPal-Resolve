@@ -210,9 +210,10 @@ class PayPalFinish(Input):
 
 class MerchantSession(BaseModel):
     merchant: MerchantIdentity
-    method: Literal["key", "paypal"]
+    method: Literal["key", "paypal", "password"]
     expires_at: datetime
     paypal_linked: bool
+    staff: dict | None = None
 
 
 class IssuedMerchantSession(MerchantSession):
@@ -294,20 +295,18 @@ class MerchantAuth:
         )
 
     def session(self, token):
+        from .platform_identity import Identities
+
         with self.store.transaction() as db:
             row = self._find(db, token, _now())
-            return self._view(db, row) if row else None
+            if row:
+                return self._view(db, row)
+            result = Identities(self.store).session_in(db, token) if token else None
+            return MerchantSession.model_validate(result) if result else None
 
     def merchant(self, token):
-        with self.store.transaction() as db:
-            row = self._find(db, token, _now())
-            return (
-                MerchantIdentity(
-                    id=row["id"], name=row["name"], created_at=row["created_at"]
-                )
-                if row
-                else None
-            )
+        session = self.session(token)
+        return session.merchant if session else None
 
     def _issue(self, db, merchant_id, now, *, key_id=None, link_id=None):
         token = "rweb_" + secrets.token_urlsafe(32)
@@ -348,6 +347,10 @@ class MerchantAuth:
             with self.store.transaction(write=True) as db:
                 db.execute(
                     "DELETE FROM merchant_web_sessions WHERE token_hash=?",
+                    (_digest(token),),
+                )
+                db.execute(
+                    "DELETE FROM platform_sessions WHERE token_hash=?",
                     (_digest(token),),
                 )
 

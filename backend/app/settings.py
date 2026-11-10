@@ -58,6 +58,8 @@ class Settings(BaseSettings):
     helpdesk_merchant_id: UUID | None = None
     zendesk_subdomain: str | None = None
     zendesk_oauth_token: SecretStr | None = None
+    platform_encryption_key: SecretStr | None = None
+    merchant_signup_enabled: bool = True
 
     @field_validator("database_path", mode="before")
     @classmethod

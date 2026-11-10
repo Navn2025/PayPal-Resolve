@@ -38,19 +38,23 @@ def get_commerce_merchant(
 
 def _merchant(request, credentials, store, *, allow_commerce=False):
     token = credentials.credentials if credentials else ""
-    merchant = (
-        MerchantAuth(store, request.app.state.settings).merchant(token)
-        if token.startswith("rweb_")
-        else store.authenticate(token, allow_commerce=allow_commerce)
-        if token
-        else None
-    )
+    if token.startswith("rweb_"):
+        info = MerchantAuth(store, request.app.state.settings).session(token)
+        request.state.merchant_session = info
+        merchant = info.merchant if info else None
+    else:
+        merchant = (
+            store.authenticate(token, allow_commerce=allow_commerce) if token else None
+        )
     if merchant is None:
         raise HTTPException(
             status_code=401,
             detail="Invalid or missing merchant credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    from .platform_identity import enforce_role
+
+    enforce_role(request, merchant, token)
     return merchant
 
 

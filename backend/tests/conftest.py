@@ -44,6 +44,7 @@ def postgres_store():
     finally:
         with store.transaction(write=True) as db:
             db.execute(sql.SQL("DROP SCHEMA {} CASCADE").format(sql.Identifier(schema)))
+        store.close()
 
 
 @pytest.fixture

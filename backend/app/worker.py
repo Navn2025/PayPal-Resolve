@@ -110,13 +110,23 @@ def main(argv=None):
     paypal = None
     try:
         settings = Settings()
-        if settings.paypal_resolve_merchant_id is None:
-            raise StoreError(503, "A configured Resolve merchant is required")
         store = configured_store(settings)
         store.initialize()
-        paypal = PayPalSandboxClient(settings)
         while True:
-            report = run_once(store, paypal, limit=args.limit)
+            from .platform_connections import Connections
+            with store.transaction() as db:
+                owners = {str(r[0]) for r in db.execute("SELECT merchant_id FROM platform_connections WHERE provider='paypal'")}
+            if settings.paypal_resolve_merchant_id:
+                owners.add(str(settings.paypal_resolve_merchant_id))
+            reports = []
+            for owner in sorted(owners):
+                paypal = PayPalSandboxClient(Connections(store, settings).settings_for(owner))
+                try:
+                    reports.append({"merchant_id": owner, **run_once(store, paypal, limit=args.limit)})
+                finally:
+                    paypal.close()
+                    paypal = None
+            report = {"workspaces": reports, "errors": sum(r["errors"] for r in reports), "processed": sum(r["processed"] for r in reports)}
             print(json.dumps(report), flush=True)
             if not args.loop:
                 return 1 if report["errors"] else 0

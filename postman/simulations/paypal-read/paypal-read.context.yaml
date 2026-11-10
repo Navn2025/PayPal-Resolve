@@ -114,6 +114,20 @@ assumptions:
     verification: CHG-030; two browser tests passed with 19 mocked requests and zero pass-through. A separate real Sandbox smoke check created one unapproved USD 8.00 order; buyer approval, capture, and comparison for that new real order were not exercised.
     source: examples/checkout-store/test/checkout.test.mjs ; examples/checkout-store/README.md ; https://developer.paypal.com/api/orders/v2/orders-create ; https://developer.paypal.com/api/orders/v2/orders-capture
     updated_at: '2026-11-07'
+  - id: embedded-order-aftercare
+    status: supported
+    claim: A scoped support key lets an authenticated store customer report an order issue once, read safe progress with verified refund totals and open a private buyer portal session.
+    reason: CHG-049 reuses the existing owned PayPal mock and real Node/FastAPI/browser paths. Existing commerce keys do not inherit support access; merchant-app authentication remains required.
+    verification: Two browser store tests passed with 19 mocked requests and zero pass-through. Duplicate support submissions created one message/issue; a different browser session was denied; a simulated external USD 5 refund appeared as a current provider observation. No real payment or merchant account was used.
+    source: examples/checkout-store/test/checkout.test.mjs ; docs/SDK_AFTERCARE.md ; backend/tests/test_aftercare.py
+    updated_at: '2026-11-10'
+  - id: aftercare-refund-context-return-guidance
+    status: supported
+    claim: The owned store receipt can show a safe refund journey, recover the previous support explanation and disclose unconfigured return-cost terms without creating another payment.
+    reason: CHG-050 uses the existing PayPal stand-in with real Node, FastAPI, SDK and browser flows. The additional support reads do not call a new provider API.
+    verification: Two browser tests passed with 19 mocked requests and zero pass-through. The receipt displayed the original complaint, refund guidance and explicit merchant confirmation of return fees when no policy was enabled. A teardown socket-reset notice did not fail the run. No bank receipt or live provider behavior was verified.
+    source: examples/checkout-store/test/checkout.test.mjs ; docs/AFTERCARE_RELIABILITY.md
+    updated_at: '2026-11-10'
 fingerprints:
   - id: paypal-read-local
     date: '2026-11-07'

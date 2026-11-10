@@ -100,6 +100,8 @@ def extract_promise_proposals(
     else:
         stored = CustomerPortal(store).merchant_messages(case_id, merchant.id)
         messages, source = conversation_transcript(stored), "case_conversation"
+        from .platform_imports import imported_transcript
+        messages = (messages + imported_transcript(store, case_id, merchant.id))[-200:]
     return extract_promises(
         case_id,
         messages,

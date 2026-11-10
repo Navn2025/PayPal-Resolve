@@ -21,16 +21,16 @@ class InvestigationSettings(BaseSettings):
     groq_key: SecretStr | None = None
     openrouter_key: SecretStr | None = None
     groq_model: str = "openai/gpt-oss-20b"
-    openrouter_model: str = "anthropic/claude-sonnet-5.5"
+    openrouter_model: str = "openai/gpt-oss-120b"
     approved_groq_models: tuple[str, ...] = (
         "openai/gpt-oss-20b",
         "openai/gpt-oss-120b",
     )
     approved_openrouter_models: tuple[str, ...] = (
-        "anthropic/claude-sonnet-5.5",
-        "anthropic/claude-sonnet-4.5",
+        "xingchen-agi/xing4.0-29b-a4b:free",
+        "openai/gpt-oss-120b",
     )
-    openrouter_routes: tuple[str, ...] = ("anthropic",)
+    openrouter_routes: tuple[str, ...] = ("phala",)
     # Direct Groq has no request-level ZDR enforcement. Default policy blocks it.
     data_policy: str = "zdr_required"
     allow_sandbox_refresh: bool = False
@@ -104,7 +104,7 @@ class JSONProvider:
         if self.provider == "groq":
             payload["reasoning_effort"] = "low"
         if self.provider == "openrouter":
-            if model == "anthropic/claude-sonnet-5.5":
+            if model == "openai/gpt-oss-120b":
                 payload["reasoning_effort"] = "low"
             if not cfg.openrouter_routes or any(
                 not r or r != r.lower() for r in cfg.openrouter_routes
@@ -116,6 +116,8 @@ class JSONProvider:
                 "require_parameters": True,
                 "data_collection": "deny",
                 "zdr": True,
+                # USD per million output tokens; owner requires strictly <0.75.
+                "max_price": {"completion": 0.74},
             }
             route = ",".join(cfg.openrouter_routes)
         serialized = json.dumps(payload)

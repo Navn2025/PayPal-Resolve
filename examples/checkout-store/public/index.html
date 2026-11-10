@@ -36,6 +36,23 @@
       <dl id="receipt-details" class="receipt-details"></dl>
       <div id="receipt-checks" class="checks"></div>
       <button class="primary" id="retry" type="button" hidden>Check again</button>
+      <section id="order-support" hidden aria-labelledby="support-heading">
+        <h3 id="support-heading">Need help with this order?</h3>
+        <p>Report a problem and track the agreed resolution here.</p>
+        <form id="support-form">
+          <label>What happened?<select name="reason" required><option value="damaged_item">Item arrived damaged</option><option value="item_not_received">Item did not arrive</option><option value="wrong_item">Wrong item</option><option value="refund_not_received">Refund not received</option><option value="other">Something else</option></select></label>
+          <label>Tell us what happened<textarea name="message" required maxlength="2000" rows="3"></textarea></label>
+          <label>What would help?<select name="requestedResolution"><option value="replacement">A replacement</option><option value="refund">A refund</option><option value="return">A return</option><option value="help">Advice from the team</option></select></label>
+          <button class="primary" type="submit">Send support request</button>
+        </form>
+        <p id="support-progress" role="status"></p>
+        <button id="refresh-support" type="button">Check resolution</button>
+        <button id="refund-journey" type="button">Where is my refund?</button>
+        <button id="return-options" type="button">Check return options</button>
+        <button id="saved-context" type="button">View previous report</button>
+        <p id="support-detail" role="status"></p>
+        <button id="open-support" type="button">Open messages, offers and returns</button>
+      </section>
     </section>
     <section class="catalog" id="shop" aria-labelledby="shop-heading">
       <div class="section-head">

@@ -1,0 +1,25 @@
+purpose:
+  stands_in_for: Zendesk ticket, paginated comments, and author role reads for merchant support imports.
+  unblocks: Testing the actual Resolve import and source privacy paths without customer accounts or emails.
+assumptions:
+  - id: zendesk-source-roles-and-pagination
+    status: supported
+    claim: Resolve imports all bounded pages and classifies merchant statements from authenticated author roles, while keeping private notes out of the buyer portal.
+    reason: The owned stand-in extends the existing Zendesk mock using documented comments and users schemas. Owner-workspace mock discovery was skipped because the CLI is signed out.
+    verification: The dedicated application test passed through the Postman TLS proxy with eight mocked requests and zero pass-through requests. It checked both comment pages, author roles, private notes, repeat imports and buyer privacy. This establishes local simulated behavior only; see CHG-048.
+    source: https://developer.zendesk.com/api-reference/ticketing/tickets/ticket_comments/ ; https://developer.zendesk.com/api-reference/ticketing/users/users/ ; backend/tests/test_platform_operations.py
+    updated_at: '2026-11-10'
+  - id: zendesk-signed-webhook-contract
+    status: supported
+    claim: Webhook signatures use base64 HMAC-SHA256 of timestamp plus raw body. Resolve additionally requires a fresh timestamp and deduplicates stable event IDs.
+    reason: The published signature contract is implemented with constant-time comparison; local tests use synthetic signed requests.
+    verification: The loopback application test rejects invalid signatures, accepts a valid event once, deduplicates a replay, and records provider outage as a retry without duplicate messages. No real Zendesk delivery has been observed.
+    source: https://developer.zendesk.com/documentation/webhooks/verifying/ ; backend/tests/test_platform_operations.py
+    updated_at: '2026-11-10'
+  - id: actual-provider-account-access
+    status: unknown
+    claim: A merchant's real Zendesk token, trigger, ticket permissions and signed public delivery work with this deployment.
+    reason: This task uses synthetic accounts and local stand-ins only. Account-backed checks remain an operator step.
+    source: docs/PLATFORM_EXPANSION.md
+    updated_at: '2026-11-10'
+fingerprints: []

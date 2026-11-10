@@ -1,3 +1,4 @@
+from .platform_connections import settings_for
 """Customer-link management and capability-scoped customer access."""
 
 from uuid import UUID
@@ -114,7 +115,7 @@ def customer_link_status(case_id: UUID, store: Store, merchant: CurrentMerchant)
 def read_helpdesk(
     case_id: UUID, request: Request, store: Store, merchant: CurrentMerchant
 ):
-    return Helpdesk(store, request.app.state.settings).state(case_id, merchant.id)
+    return Helpdesk(store, settings_for(request, merchant.id)).state(case_id, merchant.id)
 
 
 @router.put("/resolution-cases/{case_id}/helpdesk", response_model=HelpdeskState)
@@ -125,7 +126,7 @@ def link_helpdesk(
     store: Store,
     merchant: CurrentMerchant,
 ):
-    return Helpdesk(store, request.app.state.settings).link(
+    return Helpdesk(store, settings_for(request, merchant.id)).link(
         case_id, merchant.id, payload.ticket_id, request.app.state.followup_http
     )
 

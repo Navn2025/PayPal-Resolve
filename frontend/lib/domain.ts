@@ -135,7 +135,8 @@ export interface Review {
 export interface Merchant { id: string; name: string }
 export interface Session {
   merchant: Merchant | null;
-  method?: "key" | "paypal";
+  method?: "key" | "paypal" | "password";
+  staff?: { id: string; role: string; name: string; email: string } | null;
   expires_at?: string;
   paypal_linked?: boolean;
   paypal_enabled?: boolean;

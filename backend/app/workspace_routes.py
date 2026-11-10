@@ -1,3 +1,4 @@
+from .platform_connections import paypal_for
 """HTTP contracts for case workspace and PayPal reconciliation."""
 
 from typing import Literal
@@ -79,7 +80,7 @@ async def receive_paypal_webhook(request: Request, store: Store):
     ):
         raise StoreError(415, "Use application/json for PayPal events")
     raw = await bounded_body(request, WEBHOOK_MAX_BYTES)
-    service = PayPalHistoryService(store, request.app.state.paypal_client)
+    service = PayPalHistoryService(store, paypal_for(request, merchant.id))
     await run_in_threadpool(service.receive, request.headers, raw)
     return Response(status_code=204)
 
@@ -91,7 +92,7 @@ def refresh_paypal_history(
     case_id: UUID, request: Request, store: Store, merchant: CurrentMerchant
 ):
     """Read order, capture and refund details. This endpoint never submits a refund."""
-    snapshot, _ = PayPalHistoryService(store, request.app.state.paypal_client).refresh(
+    snapshot, _ = PayPalHistoryService(store, paypal_for(request, merchant.id)).refresh(
         case_id, merchant.id
     )
     return snapshot

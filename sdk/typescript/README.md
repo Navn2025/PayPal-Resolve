@@ -1,5 +1,68 @@
 # Resolve Evidence SDK for Node.js
 
+SDK **0.7** adds return policy checks, saved label downloads, inspection review,
+reason-specific dispute evidence, capture-wide dispute holds, refund tracing,
+shared support context, issue receipt recovery and resumable app state updates.
+See the [assurance guide](../../docs/AFTERCARE_RELIABILITY.md) for setup and limits.
+
+
+**Put order support inside your store.** SDK 0.6 turns your order page's
+“Need help?” action into a tracked case, a customer-safe resolution status and
+a private portal for messages, offers and returns. Your customer stays connected
+to the same order while the merchant works in Resolve.
+
+An example: a buyer reports a broken cup and requests a replacement. Your server
+opens the issue once; the merchant sees it in the inbox, approves a remedy and
+publishes an offer. Your app shows the next action, and the buyer opens the
+portal to accept the offer or request a return. Repeated network requests do not
+create duplicate issues. A requested refund is separate from a merchant promise
+and payment approval.
+
+Create a **support integration key** under **Operations → Connections** for
+your stable app source. Save its copied settings on your server. Authenticate the
+customer and verify that they own the order before every support call:
+
+```ts
+import { createResolve } from "@resolve-paypal/sdk";
+
+const resolve = createResolve();
+
+// Run after the app saves the paid order, using its trusted order data.
+await resolve.syncOrder({ id: "ORDER-123", status: "paid" });
+
+// Run after your server checks that the customer owns ORDER-123.
+await resolve.openIssue({
+  orderId: "ORDER-123",
+  requestId: savedComplaintId, // A UUID persisted by your app; retain on retries.
+  reason: "damaged_item",
+  message: "The cup handle arrived broken.",
+  requestedResolution: "replacement",
+});
+
+const progress = await resolve.getOrderResolution("ORDER-123");
+// Render progress.stage and progress.next_step.action on your order page.
+
+// On an explicit “Open support” action; return this only to the owning customer.
+const portal = await resolve.createSupportLink("ORDER-123");
+```
+
+The default environment keys are `RESOLVE_API_URL`, `RESOLVE_API_KEY`, and
+`RESOLVE_APP_SOURCE`. Use the same source as the support key and order sync.
+Support calls work through `/api/sdk` or direct FastAPI. Existing commerce-only
+keys need an explicitly issued support key; old permissions do not expand.
+The support grant is limited to its app source; regular commerce permissions
+remain unchanged. Keep the key on the server. [Full workflow, status meanings,
+limits and runnable store example](../../docs/SDK_AFTERCARE.md).
+
+Merchant operations helpers include `getOperationsDashboard`, `getMissedPromises`,
+`scanMissedPromises`, `importZendeskTicket`, `confirmSupportImport`,
+`publishResolutionOffer`, `getReturnWorkflow`, `requestReturn`, `updateReturn`,
+`prepareDisputePackage` and `reviewDisputePackage`. Inputs and results use the
+generated OpenAPI types. These helpers require a **full merchant key and direct
+FastAPI URL**; commerce keys and `/api/sdk` do not expose them. Provider checks
+remain explicit and offer acceptance never authorizes payment. See the
+[workflow guide](../../docs/PLATFORM_EXPANSION.md).
+
 Private investigations: `getInvestigations(caseId)` returns queued/running state
 and completed or blocked results. `reviewInvestigation(caseId,id,{expected_revision,
 evidence_snapshot,decision})` records `approve`, `reject` or `request_evidence`.
@@ -43,10 +106,10 @@ npm pack
 ```
 
 In your own application's backend, install the resulting
-`resolve-paypal-sdk-0.5.0.tgz`:
+`resolve-paypal-sdk-0.7.0.tgz`:
 
 ```powershell
-npm install path/to/resolve-paypal-sdk-0.5.0.tgz
+npm install path/to/resolve-paypal-sdk-0.7.0.tgz
 ```
 
 ## Quick start from the merchant dashboard

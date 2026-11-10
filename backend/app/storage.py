@@ -132,6 +132,9 @@ class _SQLiteTransactions:
             directory / "023_investigation_payment_facts.sql",
             directory / "024_investigation_financial_state.sql",
             directory / "025_investigation_queue_audit.sql",
+            directory / "026_merchant_operations.sql",
+            directory / "027_embedded_aftercare.sql",
+            directory / "028_resolution_assurance.sql",
         ]
         with self.transaction(write=True) as connection:
             version = connection.execute("PRAGMA user_version").fetchone()[0]
@@ -154,6 +157,9 @@ class _SQLiteTransactions:
 
 
 class ResolveStore:
+    def close(self) -> None:
+        """Release optional process-owned resources; SQLite has no persistent connections."""
+
     def initialize(self) -> None:
         raise NotImplementedError
 

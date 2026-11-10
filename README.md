@@ -14,7 +14,38 @@ store credit/exchanges, billing corrections, and dispute handoff. PayPal, Shopif
 and EasyPost evidence reads are optional; refund execution remains the only
 provider write.
 
+For a responsive local preview, build once with
+`npm --prefix frontend run build:preview`, then run
+`npm --prefix frontend run preview` alongside the backend. This serves compiled
+pages on port 3000 without development-time compilation. Rebuild after frontend
+changes. See [performance and local preview](docs/PERFORMANCE.md).
+
 ## Integrate Resolve into your app
+
+SDK 0.7 extends the order-page support flow: `openIssue` records the buyer's
+problem once, `getOrderResolution` returns safe progress and the next action,
+and `createSupportLink` opens the existing messages/offers/returns portal.
+Owners enable this explicitly with an app-source support key. The
+[embedded aftercare guide](docs/SDK_AFTERCARE.md) and
+[checkout-store example](examples/checkout-store/README.md) show the complete path
+from a damaged-item report to merchant handling, rather than just order sync.
+
+The [aftercare reliability guide](docs/AFTERCARE_RELIABILITY.md) covers return
+policy and inspection checks, reusable PDF labels, reason-specific dispute
+checklists, capture-wide dispute holds, refund tracing and shared support context.
+Apps can recover issue receipts after timeouts and reconcile missed updates with
+a resumable event feed and transactional PostgreSQL consumer. Provider dispute
+references and physical returns remain merchant-recorded; bank receipt is not
+independently verified.
+
+Merchant operations are available at `/account` and `/workspace/operations`:
+individual staff roles, workspace onboarding, encrypted provider connections,
+Zendesk conversation imports and signed webhook intake, daily overdue-promise
+alerts, dashboard metrics, buyer offer acceptance, guided returns/replacements,
+and reviewed dispute evidence exports. See the [setup and workflow guide](docs/PLATFORM_EXPANSION.md).
+Automation needs the separate operations worker. Returns record merchant-arranged
+fulfillment; packages do not submit disputes to PayPal. Provider account checks
+and hosted deliveries still require merchant credentials and verification.
 
 Resolution cases now automatically queue a private evidence investigation when
 created or updated. A separate worker produces findings or a clear abstention;
@@ -190,6 +221,18 @@ An AI recommendation alone will not authorize a financial action.
 | Testing | pytest and Playwright |
 
 The local frontend and backend run as separate processes.
+
+Local configuration placeholders are in `backend/.env` and `frontend/.env.local`;
+fresh checkouts can copy their respective `.env.example` files. Keep existing
+values and fill only the integrations you intend to enable. AI configuration
+uses a separate private `backend/.env.ai.ps1`: copy
+`backend/ai-env.example.ps1`, fill it, and run `. .\.env.ai.ps1` from `backend`
+before starting the API. See the [backend setup](backend/README.md#local-environment-files)
+for activation and worker configuration.
+OpenRouter investigations default to GPT-OSS 120B through Phala (currently
+$0.60 per million output tokens), with free Xing4.0 optional. Requests cap output
+token pricing at $0.74 per million. See the
+[model choices and evidence limits](docs/AI_INVESTIGATIONS.md#model-decision-and-official-evidence).
 
 SQLite is the credential-free default. FastAPI and both workers use PostgreSQL
 when `RESOLVE_DATABASE_URL` is set. The [migration guide](docs/POSTGRES_MIGRATION.md)

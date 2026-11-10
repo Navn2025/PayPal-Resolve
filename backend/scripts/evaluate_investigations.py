@@ -22,11 +22,10 @@ def main():
     parser.add_argument(
         "--openrouter-model",
         choices=[
-            "anthropic/claude-sonnet-5.5",
-            "anthropic/claude-sonnet-4.5",
-            "openai/gpt-4.1-mini",
+            "xingchen-agi/xing4.0-29b-a4b:free",
+            "openai/gpt-oss-120b",
         ],
-        default="anthropic/claude-sonnet-5.5",
+        default="openai/gpt-oss-120b",
     )
     args = parser.parse_args()
     if args.live and not args.confirm_synthetic_only:
@@ -44,9 +43,7 @@ def main():
     rates = {
         "openai/gpt-oss-20b": (0.075, 0.30),
         "openai/gpt-oss-120b": (0.15, 0.60),
-        "anthropic/claude-sonnet-4.5": (3, 15),
-        "anthropic/claude-sonnet-5.5": (2, 10),
-        "openai/gpt-4.1-mini": (0.4, 1.6),
+        "xingchen-agi/xing4.0-29b-a4b:free": (0, 0),
     }
     scratch = Path(__file__).resolve().parents[2] / ".local" / "ai-evaluation"
     scratch.mkdir(parents=True, exist_ok=True)
@@ -67,6 +64,9 @@ def main():
         )
         if simulated:
             with simulated_providers(label) as (cfg, groq, deep, _):
+                cfg.groq_model = args.groq_model
+                cfg.openrouter_model = args.openrouter_model
+                cfg.openrouter_routes = ("phala",)
                 service = Investigations(store, cfg)
                 service.run_one(groq, deep)
         else:
@@ -80,9 +80,7 @@ def main():
                 groq_model=args.groq_model,
                 openrouter_model=args.openrouter_model,
                 approved_openrouter_models=(args.openrouter_model,),
-                openrouter_routes=("openai",)
-                if args.openrouter_model.startswith("openai/")
-                else ("anthropic",),
+                openrouter_routes=("phala",),
                 allow_sandbox_refresh=False,
             )
             service = Investigations(store, cfg)

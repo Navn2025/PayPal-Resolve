@@ -1,5 +1,12 @@
 # Resolve landing page and merchant sign-in
 
+Individual accounts are also available at `/account`, with self-service workspace
+creation and owner-created staff invitations. `/workspace/operations` manages
+the team and connections. To retain an existing key-owned workspace, sign in
+with its full key then open `/account?claim=1` to create its first owner account.
+Staff roles apply to API writes as well as UI actions. See the
+[merchant operations guide](PLATFORM_EXPANSION.md) for permissions and limitations.
+
 | Route | What it opens |
 | --- | --- |
 | `/` | Public landing page with merchant, buyer, and demo entry points |

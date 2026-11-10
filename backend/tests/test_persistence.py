@@ -154,7 +154,7 @@ def test_sqlite_14_upgrades_both_paypal_flow_variants(tmp_path, already_has_clai
         with TestClient(app) as client:
             assert client.get("/health").status_code == 200
     with sqlite3.connect(database) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 25
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 28
         flows = connection.execute(
             "SELECT state_hash,claimed_at FROM merchant_paypal_flows"
         ).fetchall()
@@ -184,7 +184,7 @@ def test_sqlite_16_upgrades_both_notification_variants(tmp_path, already_has_fla
         with TestClient(app) as client:
             assert client.get("/health").status_code == 200
     with sqlite3.connect(database) as db:
-        assert db.execute("PRAGMA user_version").fetchone()[0] == 25
+        assert db.execute("PRAGMA user_version").fetchone()[0] == 28
         assert db.execute(
             "SELECT order_reference,email_notifications FROM customer_intake_invites"
         ).fetchone() == ("ORDER-16", int(not already_has_flags))
@@ -203,7 +203,7 @@ def test_first_migration_is_recorded_and_repeated_startup_preserves_data(
                 case_id = client.post("/cases", json=durable_case).json()["id"]
             assert client.get(f"/cases/{case_id}").status_code == 200
     with sqlite3.connect(database) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 25
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 28
         assert connection.execute("SELECT count(*) FROM cases").fetchone()[0] == 1
         assert connection.execute("SELECT count(*) FROM captures").fetchone()[0] == 1
 

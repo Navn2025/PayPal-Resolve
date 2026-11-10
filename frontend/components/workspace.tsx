@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Activity, ArrowRight, BookOpen, CheckCircle2, ChevronRight, CircleAlert, ClipboardList, FlaskConical, Inbox, Layers3, Link2, LogOut, Package, Plus, RefreshCw, Search, Settings2, ShieldCheck, X } from "lucide-react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
+import { DeferredDetails } from "./deferred-details";
 import { DemoStore, demoPrimary } from "@/lib/demo";
 import { activeApproval, ApiError, dateText, money, outcomeLabels, pretty, reconcileLabels, shortId, timeText, uuid,
   type Approval, type CaseView, type Execution, type LegacyCase, type Merchant, type Outcome, type Page,
@@ -11,8 +13,9 @@ import { backendRequest, readJson } from "@/lib/http";
 import { workflowLabels, type Operations, type Workflow } from "@/lib/customer";
 import { Badge, Brand, Button, Empty, Notice, remedyIcons } from "./ui";
 import { CaseDesk, type DeskTab } from "./case-desk";
-import { InvestigationReviewPanel } from "./investigation-review";
-import { PromiseExtractionPanel } from "./promise-extraction";
+import { CaseOperationsPanel } from "./case-operations";
+const InvestigationReviewPanel = dynamic(() => import("./investigation-review").then(m => m.InvestigationReviewPanel));
+const PromiseExtractionPanel = dynamic(() => import("./promise-extraction").then(m => m.PromiseExtractionPanel));
 import { CaseForm, ConnectForm, EvidenceForm, LocalGuide, PromiseForm, RefundForm, ReviewForm, type PromiseDraft } from "./forms";
 import { InviteForm, OperationsForm, PaymentLinkForm } from "./merchant-triage";
 
@@ -119,14 +122,13 @@ async function fetchSummary(request: Requester, id: string): Promise<CaseView> {
   return { ...item, operations };
 }
 
-async function fetchCase(request: Requester, id: string): Promise<Detail> {
+async function fetchCase(request: Requester, id: string, publish: (value:Detail)=>void): Promise<Detail> {
   const root = "/resolution-cases/" + id;
-  const [item, log] = await Promise.all([
-    fetchSummary(request, id),
-    request<Timeline>(root + `/timeline?limit=${EVENT_PAGE}`).then((timeline) => ({ timeline, timelineError: undefined }))
-      .catch((failure) => ({ timeline: null, timelineError: errorText(failure) })),
-  ]);
-  if (!item.refund_case_id) return { item, ...log, payment: null, basis: null, approvals: [], executions: [] };
+  const item = await fetchSummary(request, id);
+  const log = { timeline: null, timelineError: undefined };
+  const summary:Detail = { item, ...log, payment:null, basis:null, approvals:[], executions:[] };
+  publish(summary);
+  if (!item.refund_case_id) return summary;
   const url = "/cases/" + item.refund_case_id;
   try {
     const [payment, basis, approvals, executions] = await Promise.all([
@@ -143,6 +145,7 @@ export function Workspace({ mode, initialCaseId = null }: { mode: "demo" | "merc
   const demo = mode === "demo";
   const [demoStore, setDemoStore] = useState(() => new DemoStore());
   const [merchant, setMerchant] = useState<Merchant | null>(null);
+  const [staffRole, setStaffRole] = useState("viewer");
   const [sessionError, setSessionError] = useState("");
   const [inbox, setInbox] = useState(() => initialPage(demo ? demoStore.initial() : []));
   const [selected, setSelected] = useState<string | null>(demo ? demoPrimary : initialCaseId);
@@ -202,9 +205,11 @@ export function Workspace({ mode, initialCaseId = null }: { mode: "demo" | "merc
     const seq = ++detailSeq.current;
     setDetailError("");
     try {
-      const result = await fetchCase(request, id);
+      const result = await fetchCase(request, id, summary => {
+        if (seq === detailSeq.current) setDetail(summary);
+      });
       if (seq !== detailSeq.current) return;
-      setDetail(result);
+      setDetail(previous => ({ ...result, timeline: previous?.item.id===id ? previous.timeline : null, timelineError:previous?.item.id===id ? previous.timelineError : undefined }));
       setInbox((previous) => ({ ...previous, items: previous.items.map((item) => item.id === id ? result.item : item) }));
     } catch (failure) {
       if (seq === detailSeq.current) { setDetail(null); setDetailError(errorText(failure)); }
@@ -228,6 +233,7 @@ export function Workspace({ mode, initialCaseId = null }: { mode: "demo" | "merc
       if (!enabled) return;
       if (!value.merchant) { window.location.replace("/login"); return; }
       setMerchant(value.merchant);
+      setStaffRole(value.staff?.role ?? "owner");
     }).catch((failure) => { if (enabled) setSessionError(errorText(failure)); });
     return () => { enabled = false; };
   }, [demo]);
@@ -240,6 +246,17 @@ export function Workspace({ mode, initialCaseId = null }: { mode: "demo" | "merc
   }, [demo, merchant, loadInbox, search]);
   useEffect(() => { if (selected) void loadDetail(selected); }, [selected, loadDetail]);
   useEffect(() => { if (nav === "review") void loadReview(); }, [nav, loadReview]);
+  useEffect(() => {
+    if (tab !== "timeline" || !current || current.timeline || current.timelineError) return;
+    const id=current.item.id, seq=detailSeq.current;
+    let active=true;
+    setLoadingTimeline(true);
+    request<Timeline>(`/resolution-cases/${id}/timeline?limit=${EVENT_PAGE}`)
+      .then(timeline=>{if(active&&seq===detailSeq.current)setDetail(value=>value?.item.id===id?{...value,timeline}:value);})
+      .catch(failure=>{if(active&&seq===detailSeq.current)setDetail(value=>value?.item.id===id?{...value,timelineError:errorText(failure)}:value);})
+      .finally(()=>{if(seq===detailSeq.current)setLoadingTimeline(false);});
+    return ()=>{active=false;};
+  }, [tab, selected, current?.item.id, current?.timeline, current?.timelineError, request]);
   useEffect(() => {
     if (!toast) return;
     const timer = window.setTimeout(() => setToast(""), 5000);
@@ -340,9 +357,9 @@ export function Workspace({ mode, initialCaseId = null }: { mode: "demo" | "merc
   const paymentBasis = current?.basis ?? null;
   const active = activeApproval(current?.approvals ?? [], current?.executions ?? [], paymentBasis);
   const latestExecution = current?.executions[0];
-  const canReview = !!current?.payment && paymentBasis?.status === "refund_required"
+  const canReview = (demo || ["owner", "manager", "finance"].includes(staffRole)) && !!current?.payment && paymentBasis?.status === "refund_required"
     && paymentBasis.paypal_history_current && Number(paymentBasis.recommended_refund_amount) > 0;
-  const canSubmit = canReview && !!active;
+  const canSubmit = canReview && !!active && (demo || ["owner", "finance"].includes(staffRole));
   const nextMessage = paymentBasis
     ? paymentBasis.status === "refund_required" && !paymentBasis.paypal_history_current ? "Check current PayPal history before approving an exact amount." : reconcileLabels[paymentBasis.status] ?? pretty(paymentBasis.next_action)
     : "Read the payment evidence to see the next step.";
@@ -416,7 +433,7 @@ export function Workspace({ mode, initialCaseId = null }: { mode: "demo" | "merc
     } catch (failure) { setActionError(errorText(failure)); }
   }
 
-  const desk = item && <CaseDesk item={item} tab={tab} setTab={setTab} request={request} demo={demo} onBack={() => setMobileCase(false)}
+  const desk = item && <CaseDesk key={item.id} item={item} tab={tab} setTab={setTab} request={request} demo={demo} onBack={() => setMobileCase(false)}
     onLinkPayment={() => setDialog({ kind: "payment-link", item })}
     onManage={() => item.operations && setDialog({ kind: "operations", id: item.id, fields: item.operations })}
     onOperations={updateOperations}
@@ -460,7 +477,7 @@ export function Workspace({ mode, initialCaseId = null }: { mode: "demo" | "merc
         <div className="topbar-actions">
           <span className="mode-chip"><span />{demo ? "Demo mode" : "Connected · Sandbox"}</span>
           {demo ? <Button onClick={() => setDialog({ kind: "connect" })} className="connect-button"><Link2 size={16} /><span>Connect account</span></Button>
-            : <><Link href="/workspace/settings" className="button button-secondary connect-button" aria-label="Account settings" title="Account settings"><Settings2 size={16} /><span>Settings</span></Link>
+            : <><Link href="/workspace/operations" className="button button-secondary connect-button"><Activity size={16} /><span>Operations</span></Link><Link href="/workspace/settings" className="button button-secondary connect-button" aria-label="Account settings" title="Account settings"><Settings2 size={16} /><span>Settings</span></Link>
               <Button onClick={disconnect} className="connect-button" aria-label="Sign out" title="Sign out"><LogOut size={16} /><span>Sign out</span></Button></>}
           <span className="avatar" aria-label={merchant?.name ?? "Demo merchant"}>{(merchant?.name ?? "Demo Merchant").split(/\s+/).slice(0, 2).map((part) => part.charAt(0).toUpperCase()).join("")}</span>
         </div>
@@ -487,8 +504,8 @@ export function Workspace({ mode, initialCaseId = null }: { mode: "demo" | "merc
             <InboxPane cases={inbox.items} selected={selected} select={select} filter={filter} setFilter={setFilter} search={search}
               setSearch={setSearch} more={inbox.offset + CASE_PAGE < inbox.total} onMore={() => loadInbox(inbox.offset + CASE_PAGE)}
               loading={loadingList} onNew={() => setDialog({ kind: "case" })} demo={demo} />
-            <div className="desk-pane">{desk || <Empty title={loadingList ? "Loading case workspace…" : "Select a case"} detail={loadingList ? "Reading your cases from the local backend." : "Open a case from the inbox to see its promises and evidence."} />}{!demo && item && <InvestigationReviewPanel key={item.id} caseId={item.id} request={request} />}
-              {!demo && item && <PromiseExtractionPanel key={"extract-" + item.id} caseId={item.id} request={request} onUse={(draft) => setDialog({ kind: "promise", draft })} />}</div>
+            <div className="desk-pane">{desk || <Empty title={loadingList ? "Loading case workspace…" : "Select a case"} detail={loadingList ? "Reading your cases from the local backend." : "Open a case from the inbox to see its promises and evidence."} />}{!demo && item && tab === "overview" && <DeferredDetails key={"investigation-"+item.id} title="Automatic investigation" unmountOnClose><InvestigationReviewPanel caseId={item.id} request={request} /></DeferredDetails>}
+              {!demo && item && tab === "overview" && <PromiseExtractionPanel key={"extract-" + item.id} caseId={item.id} request={request} onUse={(draft) => setDialog({ kind: "promise", draft })} />}{!demo && item && <div hidden={tab !== "overview"}><CaseOperationsPanel key={"operations-" + item.id} caseId={item.id} promises={item.promises} role={staffRole} /></div>}</div>
           </div>
           {demo && <div className="demo-tools"><span><FlaskConical size={17} /> Demo controls</span><p>Try the normal refund, or approve first and simulate a refund made outside Resolve.</p>
             <a className="button button-secondary small-button" href="/customer?demo=1" target="_blank" rel="noreferrer">Customer demo</a>

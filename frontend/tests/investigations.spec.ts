@@ -5,6 +5,7 @@ test("merchant reviews an automatic blocked investigation without approving a re
   await page.getByLabel("Resolve access key").fill("rslv_ui_test_fixture_key_not_a_real_secret");
   await page.getByRole("button", { name: "Sign in with access key" }).click();
   await page.getByRole("button", { name: /Connected refund fixture/ }).click();
+  await page.locator("summary").filter({hasText:"Automatic investigation"}).click();
   const panel = page.getByRole("region", { name: "Automatic investigation" });
   await expect(panel.getByRole("heading", { name: "Automatic investigation", exact: true })).toBeVisible();
   await expect(panel.getByText(/inference disabled/).first()).toBeVisible();

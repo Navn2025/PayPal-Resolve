@@ -5,6 +5,8 @@
   "scripts": {
     "dev": "next dev --hostname 127.0.0.1",
     "build": "next build",
+    "build:preview": "node scripts/preview.mjs build",
+    "preview": "node scripts/preview.mjs start",
     "start": "next start --hostname 127.0.0.1",
     "start:hosted": "next start --hostname 0.0.0.0",
     "check": "tsc --noEmit",

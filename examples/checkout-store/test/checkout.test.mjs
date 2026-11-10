@@ -123,12 +123,16 @@ test("browser checkout captures once, connects the SDK and shows an external ref
     "Use Postman --proxy --lift with Node's environment proxy support enabled.");
   const { scratch, stack } = await resources(t);
   const evidence = await resolveBackend(scratch, stack);
+  const supportResponse = await fetch(evidence.base + "/platform/support-keys", { method: "POST", headers: { Authorization: "Bearer " + evidence.key, "Content-Type": "application/json" }, body: JSON.stringify({ source: "field-brew-store" }) });
+  assert.equal(supportResponse.status, 201);
+  const supportKey = (await supportResponse.json()).api_key;
+
   const base = await store(scratch, stack, {
     SHOP_PAYPAL_CLIENT_ID: "simulation-client",
     SHOP_PAYPAL_CLIENT_SECRET: "simulation-secret",
     SHOP_PAYPAL_MERCHANT_ID: "SIMSELLER001",
     RESOLVE_API_URL: evidence.base,
-    RESOLVE_API_KEY: evidence.commerceKey,
+    RESOLVE_API_KEY: supportKey,
   });
   const { page, browser: instance } = await browser(stack);
   const merchant = new ResolveClient({ baseUrl: evidence.base, apiKey: evidence.key });
@@ -199,4 +203,31 @@ test("browser checkout captures once, connects the SDK and shows an external ref
   assert.equal((await merchant.getEvidenceBundle(receipt.caseId)).case.evidence_summary.provider_completed_amount, "5.00");
   assert.equal((await control("shop/state/" + paypalOrder)).capture_posts, 1);
   assert.equal((await control("state/" + captured.capture_id)).refund_posts, 0);
+
+  // The same order page now handles an actual aftercare task, not just order syncing.
+  await page.getByRole("textbox", { name: "Tell us what happened" }).fill("The cup handle arrived broken.");
+  await page.getByRole("button", { name: "Send support request", exact: true }).click();
+  await expect(page.locator("#support-progress")).toContainText("Your request is with the support team");
+  await page.getByRole("button", { name: "Send support request", exact: true }).click();
+  await expect(page.locator("#support-progress")).toContainText("Your request is with the support team");
+  const status = await page.request.post(receiptRoute + "/resolution", { data: {} });
+  assert.equal(status.status(), 200);
+  const resolution = await status.json();
+  assert.equal(resolution.issue_count, 1);
+  assert.equal(resolution.refund.completed_amount, "5.00");
+  assert.equal(resolution.refund.verification, "current");
+  await page.getByRole("button",{name:"Where is my refund?",exact:true}).click();
+  await expect(page.locator("#support-detail")).toContainText("Posting to your original payment method can take additional time");
+  await page.getByRole("button",{name:"Check return options",exact:true}).click();
+  await expect(page.locator("#support-detail")).toContainText("merchant will confirm eligibility, shipping costs and any applicable fees");
+  await page.getByRole("button",{name:"View previous report",exact:true}).click();
+  await expect(page.locator("#support-detail")).toContainText("The cup handle arrived broken.");
+
+  assert.equal((await other.request.post(receiptRoute + "/resolution", { data: {} })).status(), 404);
+  const supportLink = await page.request.post(receiptRoute + "/support-link", { data: {} });
+  assert.equal(supportLink.status(), 201);
+  const customer = await fetch(evidence.base + "/customer-portal/view", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token: (await supportLink.json()).token }) });
+  assert.equal(customer.status, 200);
+  assert.equal((await customer.json()).messages.filter(m => m.body === "The cup handle arrived broken.").length, 1);
+
 });

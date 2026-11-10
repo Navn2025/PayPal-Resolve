@@ -58,9 +58,9 @@ export function customerSameOrigin(request: NextRequest) {
   const origin = customerRequestOrigin(request);
   return !!origin && request.headers.get("origin") === origin;
 }
-export async function readBody(request: NextRequest): Promise<string | null> {
+export async function readBody(request: NextRequest, limit = MAX_BODY): Promise<string | null> {
   if (!request.body) return "";
-  if (Number(request.headers.get("content-length") ?? 0) > MAX_BODY) return null;
+  if (Number(request.headers.get("content-length") ?? 0) > limit) return null;
   const reader = request.body.getReader();
   const decoder = new TextDecoder();
   let text = "", bytes = 0;
@@ -68,7 +68,7 @@ export async function readBody(request: NextRequest): Promise<string | null> {
     const result = await reader.read();
     if (result.done) return text + decoder.decode();
     bytes += result.value.byteLength;
-    if (bytes > MAX_BODY) { await reader.cancel(); return null; }
+    if (bytes > limit) { await reader.cancel(); return null; }
     text += decoder.decode(result.value, { stream: true });
   }
 }

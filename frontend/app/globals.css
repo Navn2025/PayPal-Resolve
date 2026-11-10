@@ -560,3 +560,9 @@ cite { display: block; margin-top: 4px; font-size: 10px; font-style: normal; col
 .health-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .health-actions small { color: var(--muted); }
 .promise-health .button { white-space: normal; }
+.next-step, .missing-list { margin-top: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; display: grid; gap: 6px; }
+.next-step h3, .missing-list h3 { font-size: 13px; margin: 0; }
+.missing-list { background: var(--amber-soft); }
+.missing-list ul { margin: 0; padding-left: 18px; }
+.missing-list li { margin-block: 3px; }
+.ai-label { justify-self: start; }

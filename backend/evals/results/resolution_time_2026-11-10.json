@@ -1,0 +1,292 @@
+{
+  "data": "synthetic",
+  "seed": 7,
+  "metric": "time_to_verified_resolution",
+  "definition": "first promise_recorded event -> first PayPal-verified COMPLETED refunds covering the promise",
+  "overall": {
+    "cases": 40,
+    "resolved": 24,
+    "unresolved": 16,
+    "median_hours": 86.49,
+    "p90_hours": 124.47
+  },
+  "by_scenario": {
+    "one_refund": {
+      "cases": 8,
+      "resolved": 8,
+      "unresolved": 0,
+      "median_hours": 93.87,
+      "p90_hours": 115.52
+    },
+    "two_refunds": {
+      "cases": 8,
+      "resolved": 8,
+      "unresolved": 0,
+      "median_hours": 80.99,
+      "p90_hours": 174.15
+    },
+    "partial_only": {
+      "cases": 8,
+      "resolved": 0,
+      "unresolved": 8,
+      "median_hours": null,
+      "p90_hours": null
+    },
+    "no_refund": {
+      "cases": 8,
+      "resolved": 0,
+      "unresolved": 8,
+      "median_hours": null,
+      "p90_hours": null
+    },
+    "pending_then_completed": {
+      "cases": 8,
+      "resolved": 8,
+      "unresolved": 0,
+      "median_hours": 98.1,
+      "p90_hours": 124.47
+    }
+  },
+  "cases": [
+    {
+      "case": 0,
+      "scenario": "one_refund",
+      "promised": "63.05",
+      "hours": 113.85
+    },
+    {
+      "case": 1,
+      "scenario": "two_refunds",
+      "promised": "97.79",
+      "hours": 70.72
+    },
+    {
+      "case": 2,
+      "scenario": "partial_only",
+      "promised": "45.17",
+      "hours": null
+    },
+    {
+      "case": 3,
+      "scenario": "no_refund",
+      "promised": "24.86",
+      "hours": null
+    },
+    {
+      "case": 4,
+      "scenario": "pending_then_completed",
+      "promised": "46.57",
+      "hours": 80.32
+    },
+    {
+      "case": 5,
+      "scenario": "one_refund",
+      "promised": "74.99",
+      "hours": 7.85
+    },
+    {
+      "case": 6,
+      "scenario": "two_refunds",
+      "promised": "31.81",
+      "hours": 53.45
+    },
+    {
+      "case": 7,
+      "scenario": "partial_only",
+      "promised": "60.54",
+      "hours": null
+    },
+    {
+      "case": 8,
+      "scenario": "no_refund",
+      "promised": "40.78",
+      "hours": null
+    },
+    {
+      "case": 9,
+      "scenario": "pending_then_completed",
+      "promised": "19.76",
+      "hours": 101.03
+    },
+    {
+      "case": 10,
+      "scenario": "one_refund",
+      "promised": "61.46",
+      "hours": 56.94
+    },
+    {
+      "case": 11,
+      "scenario": "two_refunds",
+      "promised": "50.70",
+      "hours": 164.04
+    },
+    {
+      "case": 12,
+      "scenario": "partial_only",
+      "promised": "59.19",
+      "hours": null
+    },
+    {
+      "case": 13,
+      "scenario": "no_refund",
+      "promised": "57.17",
+      "hours": null
+    },
+    {
+      "case": 14,
+      "scenario": "pending_then_completed",
+      "promised": "37.02",
+      "hours": 115.32
+    },
+    {
+      "case": 15,
+      "scenario": "one_refund",
+      "promised": "16.42",
+      "hours": 115.52
+    },
+    {
+      "case": 16,
+      "scenario": "two_refunds",
+      "promised": "61.40",
+      "hours": 78.35
+    },
+    {
+      "case": 17,
+      "scenario": "partial_only",
+      "promised": "84.74",
+      "hours": null
+    },
+    {
+      "case": 18,
+      "scenario": "no_refund",
+      "promised": "20.64",
+      "hours": null
+    },
+    {
+      "case": 19,
+      "scenario": "pending_then_completed",
+      "promised": "83.01",
+      "hours": 68.01
+    },
+    {
+      "case": 20,
+      "scenario": "one_refund",
+      "promised": "13.69",
+      "hours": 113.0
+    },
+    {
+      "case": 21,
+      "scenario": "two_refunds",
+      "promised": "90.88",
+      "hours": 83.63
+    },
+    {
+      "case": 22,
+      "scenario": "partial_only",
+      "promised": "50.56",
+      "hours": null
+    },
+    {
+      "case": 23,
+      "scenario": "no_refund",
+      "promised": "37.25",
+      "hours": null
+    },
+    {
+      "case": 24,
+      "scenario": "pending_then_completed",
+      "promised": "80.53",
+      "hours": 124.47
+    },
+    {
+      "case": 25,
+      "scenario": "one_refund",
+      "promised": "68.78",
+      "hours": 82.56
+    },
+    {
+      "case": 26,
+      "scenario": "two_refunds",
+      "promised": "23.59",
+      "hours": 48.13
+    },
+    {
+      "case": 27,
+      "scenario": "partial_only",
+      "promised": "89.45",
+      "hours": null
+    },
+    {
+      "case": 28,
+      "scenario": "no_refund",
+      "promised": "33.86",
+      "hours": null
+    },
+    {
+      "case": 29,
+      "scenario": "pending_then_completed",
+      "promised": "30.56",
+      "hours": 113.51
+    },
+    {
+      "case": 30,
+      "scenario": "one_refund",
+      "promised": "18.84",
+      "hours": 55.88
+    },
+    {
+      "case": 31,
+      "scenario": "two_refunds",
+      "promised": "74.28",
+      "hours": 89.23
+    },
+    {
+      "case": 32,
+      "scenario": "partial_only",
+      "promised": "75.60",
+      "hours": null
+    },
+    {
+      "case": 33,
+      "scenario": "no_refund",
+      "promised": "36.59",
+      "hours": null
+    },
+    {
+      "case": 34,
+      "scenario": "pending_then_completed",
+      "promised": "34.78",
+      "hours": 95.17
+    },
+    {
+      "case": 35,
+      "scenario": "one_refund",
+      "promised": "21.52",
+      "hours": 105.17
+    },
+    {
+      "case": 36,
+      "scenario": "two_refunds",
+      "promised": "51.32",
+      "hours": 174.15
+    },
+    {
+      "case": 37,
+      "scenario": "partial_only",
+      "promised": "28.89",
+      "hours": null
+    },
+    {
+      "case": 38,
+      "scenario": "no_refund",
+      "promised": "89.27",
+      "hours": null
+    },
+    {
+      "case": 39,
+      "scenario": "pending_then_completed",
+      "promised": "53.37",
+      "hours": 83.75
+    }
+  ]
+}

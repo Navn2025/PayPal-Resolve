@@ -20,6 +20,7 @@ from .ai_extraction import (
 from .ai_usage import ExtractionUsage
 from .auth import CurrentMerchant, Store
 from .customer_portal import CustomerPortal
+from .next_action import Explanation, collect, explain
 from .resolution_workspace import ResolutionWorkspace
 
 router = APIRouter(tags=["AI promise extraction"])
@@ -127,3 +128,26 @@ def extraction_usage(
         daily_token_limit=settings.daily_token_limit,
         remaining_tokens=max(settings.daily_token_limit - summary["tokens"], 0),
     )
+
+
+@router.post(
+    "/resolution-cases/{case_id}/ai/explain-next-action",
+    response_model=Explanation,
+    responses={404: {"description": "Resolution case not found"}},
+)
+def explain_next_action(
+    case_id: UUID,
+    store: Store,
+    merchant: CurrentMerchant,
+    settings: Annotated[ExtractionSettings, Depends(get_ai_settings)],
+    client: Annotated[groq.Groq | None, Depends(get_ai_client)],
+    data_policy: Annotated[str, Depends(get_data_policy)],
+    usage: Annotated[ExtractionUsage, Depends(get_usage)],
+):
+    """One-sentence explanation of the next action, written from structured case facts only.
+
+    Uses the extraction switch, data policy, cache, token cap and daily budget. Text whose
+    amounts, dates or numbers are not in the facts is replaced by the code template.
+    Advisory only: it never approves, submits or records anything."""
+    action = collect(case_id, merchant.id, store)
+    return explain(action, client, settings, data_policy=data_policy, usage=usage, merchant_id=merchant.id)

@@ -3862,6 +3862,55 @@
         }
       }
     },
+    "/resolution-cases/{case_id}/next-action": {
+      "get": {
+        "tags": [
+          "Promise health"
+        ],
+        "summary": "Case Next Action",
+        "description": "What is missing before a refund, the facts behind it, and a code-written next step. No AI.",
+        "operationId": "case_next_action_resolution_cases__case_id__next_action_get",
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NextAction"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/resolution-cases": {
       "post": {
         "tags": [
@@ -5375,6 +5424,58 @@
           }
         ]
       }
+    },
+    "/resolution-cases/{case_id}/ai/explain-next-action": {
+      "post": {
+        "tags": [
+          "AI promise extraction"
+        ],
+        "summary": "Explain Next Action",
+        "description": "One-sentence explanation of the next action, written from structured case facts only.\n\nUses the extraction switch, data policy, cache, token cap and daily budget. Text whose\namounts, dates or numbers are not in the facts is replaced by the code template.\nAdvisory only: it never approves, submits or records anything.",
+        "operationId": "explain_next_action_resolution_cases__case_id__ai_explain_next_action_post",
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Explanation"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resolution case not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -5647,6 +5748,88 @@
           "payment"
         ],
         "title": "CaseCreate"
+      },
+      "CaseFacts": {
+        "properties": {
+          "currency": {
+            "type": "string",
+            "title": "Currency",
+            "default": "USD"
+          },
+          "payment_linked": {
+            "type": "boolean",
+            "title": "Payment Linked"
+          },
+          "captured_amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Captured Amount"
+          },
+          "agreed_amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agreed Amount"
+          },
+          "agreement_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agreement Status"
+          },
+          "reconciliation_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reconciliation Status"
+          },
+          "recommended_refund_amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recommended Refund Amount"
+          },
+          "refunds": {
+            "items": {
+              "$ref": "#/components/schemas/RefundFacts"
+            },
+            "type": "array",
+            "title": "Refunds",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "payment_linked"
+        ],
+        "title": "CaseFacts",
+        "description": "Structured, message-free facts. This is all the model ever sees."
       },
       "CasePage": {
         "properties": {
@@ -7997,6 +8180,106 @@
         ],
         "title": "ExecutionCaptureCheck"
       },
+      "Explanation": {
+        "properties": {
+          "case_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Case Id"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "ai",
+              "template"
+            ],
+            "title": "Source"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "fallback_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fallback Reason"
+          },
+          "guard_violations": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Guard Violations"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "tokens": {
+            "type": "integer",
+            "title": "Tokens",
+            "default": 0
+          },
+          "cache_hit": {
+            "type": "boolean",
+            "title": "Cache Hit",
+            "default": false
+          },
+          "facts": {
+            "$ref": "#/components/schemas/CaseFacts"
+          },
+          "missing": {
+            "items": {
+              "$ref": "#/components/schemas/MissingItem"
+            },
+            "type": "array",
+            "title": "Missing"
+          },
+          "authorizes": {
+            "type": "string",
+            "const": "nothing",
+            "title": "Authorizes",
+            "default": "nothing"
+          }
+        },
+        "type": "object",
+        "required": [
+          "case_id",
+          "text",
+          "source",
+          "label",
+          "fallback_reason",
+          "guard_violations",
+          "model",
+          "facts",
+          "missing"
+        ],
+        "title": "Explanation"
+      },
       "ExtractionRequest": {
         "properties": {
           "messages": {
@@ -9223,6 +9506,76 @@
         ],
         "title": "MessageCreate"
       },
+      "MissingItem": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "no_linked_payment",
+              "no_refund_promise",
+              "no_amount",
+              "agreement_not_accepted",
+              "no_deadline",
+              "unmet_condition",
+              "pending_refund_unconfirmed"
+            ],
+            "title": "Code"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "promise_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Promise Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "text"
+        ],
+        "title": "MissingItem"
+      },
+      "NextAction": {
+        "properties": {
+          "case_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Case Id"
+          },
+          "facts": {
+            "$ref": "#/components/schemas/CaseFacts"
+          },
+          "missing": {
+            "items": {
+              "$ref": "#/components/schemas/MissingItem"
+            },
+            "type": "array",
+            "title": "Missing"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          }
+        },
+        "type": "object",
+        "required": [
+          "case_id",
+          "facts",
+          "missing",
+          "summary"
+        ],
+        "title": "NextAction"
+      },
       "Operations": {
         "properties": {
           "revision": {
@@ -9976,6 +10329,24 @@
           "created_at"
         ],
         "title": "PortalMessage"
+      },
+      "Prerequisite": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "done": {
+            "type": "boolean",
+            "title": "Done"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "done"
+        ],
+        "title": "Prerequisite"
       },
       "PromiseHealth": {
         "properties": {
@@ -11635,6 +12006,66 @@
           "recorded_at"
         ],
         "title": "RefundExecutionEvent"
+      },
+      "RefundFacts": {
+        "properties": {
+          "promise_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Promise Id"
+          },
+          "promised_amount": {
+            "type": "string",
+            "title": "Promised Amount"
+          },
+          "refunded_amount": {
+            "type": "string",
+            "title": "Refunded Amount"
+          },
+          "pending_amount": {
+            "type": "string",
+            "title": "Pending Amount"
+          },
+          "remaining_amount": {
+            "type": "string",
+            "title": "Remaining Amount"
+          },
+          "due_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due Date"
+          },
+          "days_since_promise": {
+            "type": "integer",
+            "title": "Days Since Promise"
+          },
+          "prerequisites": {
+            "items": {
+              "$ref": "#/components/schemas/Prerequisite"
+            },
+            "type": "array",
+            "title": "Prerequisites"
+          }
+        },
+        "type": "object",
+        "required": [
+          "promise_id",
+          "promised_amount",
+          "refunded_amount",
+          "pending_amount",
+          "remaining_amount",
+          "due_date",
+          "days_since_promise",
+          "prerequisites"
+        ],
+        "title": "RefundFacts"
       },
       "RefundProgress": {
         "properties": {

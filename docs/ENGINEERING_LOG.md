@@ -2951,6 +2951,148 @@ regenerated (+289 lines).
 - Only refund promises are checked.
 - Days count from the promise's first creation, not its latest revision.
 
+### CHG-048 - Missing-before-refund reasons, a fact-guarded next-step explanation, and time to verified resolution
+
+**Date:** 10 November 2026 (Asia/Calcutta). Branch `feat/ai-part`.
+
+**Objective:** tell the merchant what is missing before a refund, and explain
+the next action in one sentence. Missing items and the default summary are
+code. The optional AI wording is checked against the facts it was given. Also
+measure time to verified resolution on synthetic cases.
+
+**Files and resulting behavior:**
+
+- `backend/app/next_action.py` (new):
+  - **`collect()`** builds message-free `CaseFacts` from the workspace view
+    and `ResolveStore._reconcile`: payment linked, captured and agreed
+    amounts, agreement and reconciliation status, recommended refund, and per
+    refund promise the promised, PayPal-confirmed, pending and remaining
+    amounts, due date, days since the promise, and prerequisites by kind with
+    their done flag.
+  - **Missing-before-refund codes**, each with short text:
+    - `no_linked_payment`
+    - `no_refund_promise`
+    - `no_amount` (no agreed amount on the payment case)
+    - `agreement_not_accepted`
+    - `no_deadline`
+    - `unmet_condition`: an unconfirmed prerequisite such as "The return is
+      not confirmed yet.", or reconciliation `awaiting_condition`
+    - `pending_refund_unconfirmed`: a pending refund, or local refund records
+      ahead of PayPal confirmation
+  - **`template()`** writes the code summary, for example "Promised $100.00
+    after return; $20.00 refunded; $80.00 remaining; return confirmed → review
+    a refund of $80.00." The next action comes from the reconciliation status.
+  - **`guard()`:** every currency amount, ISO or month-name date, and bare
+    number in the text must be a value in the facts. Claims such as
+    "approved", "authorized" or "has been paid", and anything over 400
+    characters or more than one line, are also rejected. Templates always pass.
+  - **`explain()`:**
+    - **Reused controls:** the `ExtractionSettings` switch (off by default),
+      Groq client, `RESOLVE_AI_DATA_POLICY` check and `MAX_COMPLETION_TOKENS`
+      (800), plus the `ExtractionUsage` cache and per-merchant daily budget.
+      The cache key covers the model, prompt version and facts.
+    - **What the model sees:** facts JSON only. Promise wording, source notes,
+      chat messages and IDs are not sent.
+    - **Fallback:** a guard violation, invalid JSON, provider failure or any
+      skip returns the template with `fallback_reason` and the violations.
+    - **Label:** accepted text is labelled "AI explanation – verify before
+      acting".
+    - **Usage:** every call is recorded in `/ai/usage`.
+    - **Advisory only:** the result carries `authorizes: "nothing"`. Nothing
+      is written, approved or submitted.
+- **Routes:**
+  - `GET /resolution-cases/{id}/next-action` (code only, in
+    `promise_health_routes.py`).
+  - `POST /resolution-cases/{id}/ai/explain-next-action` (in `ai_routes.py`,
+    same dependencies as extraction).
+- `backend/app/resolution_metrics.py` (new):
+  - **Time to verified resolution:** from the first `promise_recorded` event
+    to the first `paypal.refund_verified` timeline entry at which the latest
+    status per refund ID, counting COMPLETED only, covers the promised amount.
+    Merchant-recorded refunds don't count.
+  - **Statistics:** nearest-rank p90 and the median.
+- `backend/evals/run_resolution_eval.py` (new) builds 40 **synthetic** cases
+  through the real API on a temporary SQLite database.
+  - **How the cases are made:** each case has a seeded amount and scenario.
+    PayPal refunds are simulated with the store's own recorder, and the event
+    and verification timestamps are set to seeded delays. The metric is then
+    read back from the timeline API.
+  - **Results:** `backend/evals/results/resolution_time_2026-11-10.{json,md}`.
+    Seed 7, 40 cases, 24 resolved: median 86.49 h, p90 124.47 h. Partial-only
+    and no-refund cases are never resolved, as designed. These numbers
+    describe the generator, not real merchants.
+- **Frontend:**
+  - **Proxy:** allows `GET .../next-action` and
+    `POST .../ai/explain-next-action`.
+  - **Panel:** `PromiseHealthPanel` adds "Next step" (the code summary), an
+    "Explain with AI" button, and a "Missing before refund" list.
+  - **AI text in the panel:** it shows with the label badge. When the
+    template is used, the panel says why ("AI explanation not used: ...").
+  - **Reloads:** an explanation stays visible while the code summary it was
+    written for is unchanged.
+
+**Reason and decision IDs:** DEC-084.
+
+**Compatibility:** additive routes. No schema or setting change; the AI uses
+the existing extraction settings. OpenAPI regenerated (+431 lines).
+
+**Validation actually performed:**
+
+- `uv run python -m pytest -q tests/test_next_action.py`: 27 passed. All data
+  is synthetic, with a local fake model and simulated PayPal refunds. The
+  tests cover:
+  - every missing code;
+  - the example summary after a confirmed return and a $20 refund;
+  - the fact guard, which accepts facts in other formats and rejects an
+    invented amount, "85 dollars", an invented named or ISO date, a bare
+    "7 days", and "approved";
+  - an invented $90.00 from the model, which gives the template with reason
+    `fact_guard`;
+  - accepted text that is labelled and cached (second call 0 tokens, no
+    model call), with the payload free of promise wording, notes and the
+    case ID;
+  - each skip and failure, which gives the template;
+  - the route through the dependencies (an invented $1,000.00 gives the
+    template, and the call is recorded in `/ai/usage`), and the default-off
+    route;
+  - the metric, percentiles, and an eval run checked against its own seeded
+    plan.
+- **Mutation check:** replacing the guard call with an empty list made the
+  two fallback tests fail. The code was restored and the tests pass again.
+- The eval was re-run after the ruff fixes: the JSON was byte-identical.
+- `npm run check`: passed. `npx playwright test tests/promise-health.spec.ts`:
+  3 passed.
+  - **Real proxy:** the fixture case shows "no due date" and "return is not
+    confirmed yet", and its summary. "Explain with AI" falls back with
+    "AI is turned off on this server", and a POST to `next-action` returns 404.
+  - **Mocked AI response:** the label is shown, and there is no approval,
+    execution or promise POST.
+- **Not done:** no live Groq call was made for this feature.
+- **Full backend suite:** `uv run python -m pytest -q`: 439 passed, 60
+  skipped. It took 84 min of wall time on this machine; the run was slow,
+  not failing.
+- **Race found by the full Playwright suite:** the first full run failed the
+  real-proxy promise-check test.
+  - **Cause:** when the case's reconciliation finished loading, the panel
+    reloaded and cleared an explanation the merchant had just requested.
+  - **Fix:** an explanation is now kept with the code summary it was
+    written for, and stays while that summary is unchanged.
+  - **Test:** it holds reconciliation until after the click. With the old
+    clearing restored, it fails after the reload; with the fix, it passes.
+- **Full Playwright suite after the fix:** 17 passed, 5 skipped, 1 failed.
+  The failure is `investigations.spec.ts` at the 390px width check (410). It
+  also fails without these changes (CHG-047); it is the top-bar overflow
+  fixed on `ui-revamp`.
+
+**Known limitations and follow-up:**
+
+- The guard checks values, not meaning: a sentence can reuse correct numbers
+  in the wrong roles. That is why the label says to verify, and why the code
+  summary stays visible.
+- Facts and the summary describe the first refund promise when there are
+  several.
+- Time to verified resolution is only measured on synthetic data so far.
+
 ## Decision register
 
 ### DEC-001 - Keep FastAPI/Pydantic and the existing uv project
@@ -3717,6 +3859,15 @@ amount is limited by the promise, by refunds already recorded or pending, by
 the capture and by the server's own approval cap, so the detector can never
 widen what may be refunded.
 
+### DEC-084 - AI may only reword facts the code already has
+
+The next step is decided by code from reconciliation. The model only rewords
+it, from structured facts and never from messages. Its text is used only if
+every amount, date and number in it appears in those facts and it claims no
+approval; otherwise the code template is shown. It shares extraction's off
+switch, data policy, cache, token cap and daily budget, so it adds no new
+provider path, and its output can never authorize a refund.
+
 ## Open work and boundaries
 
 1. Verify import (if needed), SSL connection, migration startup, and worker
@@ -3742,7 +3893,7 @@ widen what may be refunded.
 ## Template for the next entry
 
 ```text
-### CHG-048 - Concrete change title
+### CHG-049 - Concrete change title
 Date:
 Objective:
 Files and resulting behavior:

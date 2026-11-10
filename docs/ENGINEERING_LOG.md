@@ -2841,6 +2841,116 @@ order number that passes the Luhn check would be masked as a card (safe, but
 it hides that number from the model). Masked details are restored only in the
 returned quote. No live provider call was made.
 
+### CHG-047 - Broken-promise detector for accepted refund promises
+
+**Date:** 10 November 2026 (Asia/Calcutta). Branch `feat/ai-part`.
+
+**Objective:** flag accepted refund promises that are going unpaid, using the
+existing reconciliation only. No model call, no new storage. CHG-045, CHG-046
+and DEC-082 are skipped because the local, unmerged `ui-revamp` branch already
+uses them.
+
+**Files and resulting behavior:**
+
+- `backend/app/promise_health.py` (new):
+  - **Promises checked:** refund promises on a resolution case whose linked
+    payment case has a commitment with `status == "accepted"`. Other promise
+    kinds, unlinked cases and unaccepted commitments are left out.
+  - **Inputs, all existing values:**
+    - Promised, refunded, pending, remaining and captured come from the
+      promise's `refund_progress`. That is the same PayPal-confirmed progress
+      the workspace shows, built from `ResolveStore._reconcile`.
+    - Locally recorded completed and pending refunds come from the same
+      reconciliation.
+  - **Status (`classify`):**
+    - `kept` when the confirmed refund covers the promise.
+    - Before the deadline: `partially_kept` if part was refunded, `at_risk` if
+      nothing was refunded yet.
+    - After the deadline: `at_risk` if part was refunded, `broken` if nothing
+      was.
+  - **Deadline:** the promise's own `due_at` when set; otherwise its creation
+    time plus `RESOLVE_PROMISE_OVERDUE_DAYS`. That is a new `Settings` field,
+    default 3, 1–365, read like the other `RESOLVE_` settings.
+  - **Days since promise:** whole days since the promise was created.
+  - **Suggested refund:** the promise minus the larger of PayPal-confirmed and
+    locally recorded refunds, minus pending refunds. It is never above what is
+    left of the capture and never below zero.
+    `ledger_ahead_of_provider` is true when local records exceed the
+    PayPal-confirmed amount.
+- `backend/app/promise_health_routes.py` (new), registered in `main.py` before
+  the resolution router so the path isn't read as a case ID:
+  - `GET /resolution-cases/{case_id}/promise-health`: every assessed promise
+    on one case.
+  - `GET /resolution-cases/promise-health?limit=` (1–200, default 50): the
+    merchant's `at_risk` and `broken` promises, sorted by remaining amount and
+    then by days. It returns `total` and `cases_checked`.
+  - Both are read-only and scoped to the merchant.
+- `frontend/app/api/resolve/[...path]/route.ts`: both paths added to `GET`
+  only.
+- `frontend/components/promise-health.tsx` (new), mounted in the connected
+  workspace (not the demo) above the investigation panel. It shows one card
+  per promise, for example "Promised $30.00 · Refunded $17.50 · $12.50 at risk
+  · 4 days", with a status badge, the deadline, pending money, and a warning
+  when local records are ahead of PayPal.
+- **Refund button:** "Refund remaining $X" opens the existing refund review
+  (`RefundForm`) with that amount pre-filled.
+  - The workspace uses the suggestion only if it is at or below the current
+    reconciliation's `recommended_refund_amount`; otherwise the form keeps the
+    recommended amount.
+  - The button is disabled with the reason when review isn't available: an
+    approval already exists, or the evidence isn't ready.
+  - The merchant still writes a note, approves and submits separately.
+    `RefundForm` gained an optional `initial` amount.
+
+**Reason and decision IDs:** DEC-083.
+
+**Compatibility:** additive API and setting; no migration. OpenAPI contract
+regenerated (+289 lines).
+
+**Validation actually performed:**
+
+- `uv run python -m pytest -q tests/test_promise_health.py`: 16 passed. The
+  PayPal refunds in these tests are simulated through the store's own
+  `_record_provider_refund`, with synthetic data and no network. They cover:
+  - every classification rule and the suggestion limits;
+  - the environment setting;
+  - kept, partial before the deadline, at risk 4 days after with a 3-day
+    threshold (still partial with 5 days), and broken past `due_at`;
+  - over-refund: with $90 recorded outside PayPal confirmation, only $10 is
+    suggested and a $100 approval is refused with 409;
+  - on a case ready for approval, the suggestion equals the recommended $80:
+    $80.01 is refused with 409 and $80.00 is accepted;
+  - unaccepted, unlinked and unknown cases;
+  - merchant list order and filter.
+- Full backend: `uv run python -m pytest -q`: 412 passed, 60 skipped (before
+  the ruff autofix; the new file was re-run after it: 16 passed).
+  `uvx ruff check` on the new files: clean after `--fix`.
+- `npm run check`: passed.
+- `npx playwright test tests/promise-health.spec.ts`: 2 passed.
+  - **Real proxy and fixture backend:** the card reads "Promised $30.00 ·
+    Refunded $0.00 · $30.00 at risk · 0 days", with the button disabled. The
+    merchant list returns 200, and a POST on the path returns the proxy's 404.
+  - **Mocked part:** the health response and `paypal_history_current` are
+    mocked in the browser, because the fixture has no PayPal history. In it,
+    the pre-fill of $12.50 works, $45.00 falls back to the $30.00 cap, and no
+    approval or execution request is sent.
+- Full Playwright suite: 14 passed, 5 skipped, 3 failed during a run in which
+  the machine slept (1.7 h, `ERR_NETWORK_IO_SUSPENDED`). Re-run on its own:
+  `orders` and both `promise-extraction` tests passed. `investigations.spec.ts`
+  still fails its 390px width check (410), and it also fails with all of these
+  frontend changes stashed, so the failure was already there (the top bar,
+  fixed on `ui-revamp` in CHG-045).
+
+**Known limitations and follow-up:**
+
+- The merchant list is computed on request across every linked case, with no
+  stored index. That is fine at fixture scale but should be measured on large
+  merchants.
+- There is no merchant-wide UI yet; the endpoint is reachable through the
+  proxy.
+- Only refund promises are checked.
+- Days count from the promise's first creation, not its latest revision.
+
 ## Decision register
 
 ### DEC-001 - Keep FastAPI/Pydantic and the existing uv project
@@ -3595,6 +3705,18 @@ regex would skip real commitments when a buyer is merely angry, while the code
 validators already stop buyer text from becoming a promise (0/50 attacks
 succeeded in CHG-038).
 
+### DEC-083 - Detect broken promises from reconciled evidence, and only suggest refunds
+
+Promise health is computed in code from the values reconciliation already
+produces; no model judges it. The status depends only on confirmed refund
+versus promise, and on a deadline (the agreed due date, otherwise a
+configurable window), so the same evidence always gives the same answer.
+Within the window, an unpaid promise is `at_risk` rather than a fifth state, so
+it is visible early. The refund action only pre-fills the existing review. The
+amount is limited by the promise, by refunds already recorded or pending, by
+the capture and by the server's own approval cap, so the detector can never
+widen what may be refunded.
+
 ## Open work and boundaries
 
 1. Verify import (if needed), SSL connection, migration startup, and worker
@@ -3620,7 +3742,7 @@ succeeded in CHG-038).
 ## Template for the next entry
 
 ```text
-### CHG-045 - Concrete change title
+### CHG-048 - Concrete change title
 Date:
 Objective:
 Files and resulting behavior:

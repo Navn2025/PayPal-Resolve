@@ -227,12 +227,12 @@ export function EvidenceForm({ promise, onClose, onSave }: {
   </Modal>;
 }
 
-export function RefundForm({ amount, approval, demo, onClose, onApprove, onExecute }: {
-  amount: string; approval?: Approval; demo: boolean; onClose: () => void;
+export function RefundForm({ amount, initial, approval, demo, onClose, onApprove, onExecute }: {
+  amount: string; initial?: string; approval?: Approval; demo: boolean; onClose: () => void;
   onApprove: (note: string, requested: string) => Promise<void>; onExecute: (approval: Approval) => Promise<void>;
 }) {
   const { busy, error, submit } = useSubmission();
-  const [requested, setRequested] = useState(amount);
+  const [requested, setRequested] = useState(initial ?? amount);
   const cents = amountCents(requested);
   const valid = cents !== null && cents > 0 && cents <= (amountCents(amount) ?? 0);
   return <Modal title={approval ? "Submit approved refund" : "Review exact refund"} description={approval ? "Resolve will check PayPal again before submitting." : "Approve the exact amount for this payment. Submission is a separate step."}

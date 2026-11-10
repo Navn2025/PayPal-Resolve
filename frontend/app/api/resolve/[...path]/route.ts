@@ -6,7 +6,7 @@ const rules = {
   GET: [
     `resolution-cases/${id}/investigations`,
     "merchant-auth/commerce-keys", "commerce/orders", `commerce/orders/${id}`,
-    "resolution-cases", "resolution-cases/inbox", `resolution-cases/${id}(?:/(?:timeline|evidence-bundle|commerce|customer-link|customer-messages|operations|helpdesk|customer-evidence(?:/${id})?))?`,
+    "resolution-cases", "resolution-cases/inbox", "resolution-cases/promise-health", `resolution-cases/${id}(?:/(?:timeline|evidence-bundle|commerce|customer-link|customer-messages|operations|helpdesk|promise-health|customer-evidence(?:/${id})?))?`,
     "cases", `cases/${id}(?:/(?:reconciliation|refund-approvals|refund-executions))?`,
     "review-queue",
     "ai/usage",

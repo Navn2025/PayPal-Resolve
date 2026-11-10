@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Literal
 from urllib.parse import urlsplit
 
-from pydantic import SecretStr, field_validator
+from pydantic import Field, SecretStr, field_validator
 from uuid import UUID
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -39,6 +39,8 @@ class Settings(BaseSettings):
     shopify_admin_token: SecretStr | None = None
     easypost_api_key: SecretStr | None = None
     auto_provider_refresh_enabled: bool = False
+    # Days after a refund promise is recorded before it counts as overdue when it has no due date.
+    promise_overdue_days: int = Field(3, ge=1, le=365)
     customer_email_enabled: bool = False
     customer_email_transport: Literal["resend", "smtp"] = "resend"
     customer_email_merchant_id: UUID | None = None

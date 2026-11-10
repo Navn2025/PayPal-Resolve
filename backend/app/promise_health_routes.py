@@ -5,6 +5,7 @@ from uuid import UUID
 from fastapi import APIRouter, Query, Request
 
 from .auth import CurrentMerchant, Store
+from .next_action import NextAction, collect
 from .promise_health import CasePromiseHealth, PromiseHealthCheck, PromiseHealthPage
 
 router = APIRouter(prefix="/resolution-cases", tags=["Promise health"])
@@ -27,3 +28,9 @@ def promises_needing_attention(
 def case_promise_health(case_id: UUID, request: Request, store: Store, merchant: CurrentMerchant):
     """Kept, partially kept, at-risk or broken status for each accepted refund promise on one case."""
     return _check(request, store).for_case(case_id, merchant.id)
+
+
+@router.get("/{case_id}/next-action", response_model=NextAction)
+def case_next_action(case_id: UUID, store: Store, merchant: CurrentMerchant):
+    """What is missing before a refund, the facts behind it, and a code-written next step. No AI."""
+    return collect(case_id, merchant.id, store)

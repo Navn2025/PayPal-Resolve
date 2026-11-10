@@ -6,7 +6,7 @@ const rules = {
   GET: [
     `resolution-cases/${id}/investigations`,
     "merchant-auth/commerce-keys", "commerce/orders", `commerce/orders/${id}`,
-    "resolution-cases", "resolution-cases/inbox", "resolution-cases/promise-health", `resolution-cases/${id}(?:/(?:timeline|evidence-bundle|commerce|customer-link|customer-messages|operations|helpdesk|promise-health|customer-evidence(?:/${id})?))?`,
+    "resolution-cases", "resolution-cases/inbox", "resolution-cases/promise-health", `resolution-cases/${id}(?:/(?:timeline|evidence-bundle|commerce|customer-link|customer-messages|operations|helpdesk|promise-health|next-action|customer-evidence(?:/${id})?))?`,
     "cases", `cases/${id}(?:/(?:reconciliation|refund-approvals|refund-executions))?`,
     "review-queue",
     "ai/usage",
@@ -21,7 +21,7 @@ const rules = {
     "cases", `cases/${id}/(?:refund-approvals|refund-executions)`,
     `cases/${id}/refund-executions/${id}/refresh`,
     `review-queue/${id}/resolve`,
-    `resolution-cases/${id}/ai/extract-promises`,
+    `resolution-cases/${id}/ai/extract-promises`, `resolution-cases/${id}/ai/explain-next-action`,
   ],
   PUT: [`resolution-cases/${id}/promises/${id}`, `resolution-cases/${id}/(?:operations|payment-link|helpdesk)`],
   DELETE: [`merchant-auth/commerce-keys/${id}`, `resolution-cases/${id}/customer-link`],

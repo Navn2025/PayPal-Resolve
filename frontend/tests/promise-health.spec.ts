@@ -21,12 +21,34 @@ async function api<T>(page: Page, path: string, body?: unknown): Promise<T> {
 
 test("promise check reads the real backend through the proxy", async ({ page }) => {
   await signIn(page);
+  // Hold reconciliation until after "Explain with AI" is clicked, so the panel's reload lands after the
+  // explanation (a race first seen in the full suite). The explanation must survive unchanged facts.
+  let release = () => {};
+  const gate = new Promise<void>((resolve) => { release = resolve; });
+  await page.route("**/api/resolve/cases/*/reconciliation", async (route) => { await gate; await route.continue(); });
   await page.getByRole("button", { name: /Connected refund fixture/ }).click();
   const panel = page.getByRole("region", { name: "Promise check" });
   // Fixture: accepted $30 refund promise, nothing refunded yet, gated behind a return milestone.
   await expect(panel.getByText(/Promised \$30\.00 · Refunded \$0\.00 · \$30\.00 at risk · 0 days/)).toBeVisible();
   await expect(panel.getByRole("button", { name: "Refund remaining $30.00" })).toBeDisabled();
   await expect(panel.getByText(/Refund review is not available yet/)).toBeVisible();
+
+  // Missing information and the next step are written by code from the same case.
+  const missing = panel.locator(".missing-list li");
+  await expect(missing.filter({ hasText: "The refund promise has no due date." })).toHaveCount(1);
+  await expect(missing.filter({ hasText: "The return is not confirmed yet." })).toHaveCount(1);
+  const summary = "Promised $30.00 after return; $0.00 refunded; $30.00 remaining; return not confirmed → confirm the return before any refund.";
+  await expect(panel.getByText(summary)).toBeVisible();
+  // The fixture backend has AI extraction off, so the explanation falls back to the same template.
+  const reloaded = page.waitForResponse((response) => /\/promise-health$/.test(new URL(response.url()).pathname));
+  await panel.getByRole("button", { name: "Explain with AI" }).click();
+  await expect(panel.getByText(/AI explanation not used: AI is turned off on this server/)).toBeVisible();
+  release();
+  await reloaded;
+  await page.waitForTimeout(300);
+  await expect(panel.getByText(/AI explanation not used: AI is turned off on this server/)).toBeVisible();
+  await expect(panel.getByText(summary)).toBeVisible();
+  await expect(panel.getByText("AI explanation – verify before acting")).toHaveCount(0);
 
   const list = await page.request.get("/api/resolve/resolution-cases/promise-health");
   expect(list.status()).toBe(200);
@@ -35,6 +57,9 @@ test("promise check reads the real backend through the proxy", async ({ page }) 
   expect(body.items.every((item: { status: string }) => ["at_risk", "broken"].includes(item.status))).toBe(true);
   // Read-only: the proxy does not forward other methods on these paths.
   expect(await page.evaluate(async () => (await fetch("/api/resolve/resolution-cases/promise-health", { method: "POST" })).status)).toBe(404);
+  const caseId = (await (await page.request.get("/api/resolve/resolution-cases")).json()).items
+    .find((item: { title: string }) => item.title === "Connected refund fixture").id;
+  expect(await page.evaluate(async (id) => (await fetch(`/api/resolve/resolution-cases/${id}/next-action`, { method: "POST" })).status, caseId)).toBe(404);
 });
 
 test("refund button pre-fills the review but never above the backend cap, and sends nothing", async ({ page }) => {
@@ -83,4 +108,19 @@ test("refund button pre-fills the review but never above the backend cap, and se
   await expect(dialog.getByLabel("Refund amount (USD)")).toHaveValue("30.00");
   await dialog.getByRole("button", { name: "Close dialog" }).click();
   expect(posts.filter((path) => /refund-approvals|refund-executions/.test(path))).toEqual([]);
+});
+
+test("an AI explanation is labelled and changes nothing", async ({ page }) => {
+  await signIn(page);
+  const text = "Promised $30.00 after the return; nothing refunded yet, so confirm the return first.";
+  await page.route("**/api/resolve/resolution-cases/*/ai/explain-next-action", (route) => route.fulfill({ json: {
+    text, source: "ai", label: "AI explanation – verify before acting", fallback_reason: null, cache_hit: false } }));
+  const posts: string[] = [];
+  page.on("request", (request) => { if (request.method() === "POST") posts.push(new URL(request.url()).pathname); });
+  await page.getByRole("button", { name: /Connected refund fixture/ }).click();
+  const panel = page.getByRole("region", { name: "Promise check" });
+  await panel.getByRole("button", { name: "Explain with AI" }).click();
+  await expect(panel.getByText("AI explanation – verify before acting")).toBeVisible();
+  await expect(panel.getByText(text)).toBeVisible();
+  expect(posts.filter((path) => /refund-approvals|refund-executions|promises/.test(path))).toEqual([]);
 });

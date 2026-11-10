@@ -104,6 +104,8 @@ interface DeskProps {
   onOperations: (id: string, operations: Operations) => void;
   /** Merchant-only AI and check panels, shown in the overview's promises area. */
   assistant?: ReactNode;
+  /** Case operations (offers, returns, dispute evidence); kept mounted so drafts survive tab changes. */
+  operations?: ReactNode;
 }
 
 function Metric({
@@ -687,8 +689,11 @@ const actorChanged = (list: { actor: string }[], index: number) =>
 function RecentActivity({
   timeline,
   timelineError,
+  loadingTimeline,
   onOpen,
-}: Pick<DeskProps, "timeline" | "timelineError"> & { onOpen: () => void }) {
+}: Pick<DeskProps, "timeline" | "timelineError" | "loadingTimeline"> & {
+  onOpen: () => void;
+}) {
   const events = caseEvents(timeline);
   return (
     <div className="section-card activity-card">
@@ -697,10 +702,20 @@ function RecentActivity({
           Events could not be loaded. Open the evidence timeline to retry.
         </p>
       )}
-      {!timeline && !timelineError && (
+      {!timeline && !timelineError && loadingTimeline && (
         <p className="panel-state" role="status">
           Loading events…
         </p>
+      )}
+      {!timeline && !timelineError && !loadingTimeline && (
+        <>
+          <p className="panel-state">
+            Events load when you open the evidence timeline.
+          </p>
+          <Button className="small-button" onClick={onOpen}>
+            Show events
+          </Button>
+        </>
       )}
       {timeline && !events.length && (
         <p className="panel-state">No events recorded yet.</p>
@@ -991,11 +1006,13 @@ export function CaseDesk(props: DeskProps) {
               {!demo && <PromiseCheckList checks={checks} />}
               {props.assistant}
               {!demo && (
-                <HelpdeskPanel
+                <DeferredDetails
                   key={item.id}
-                  caseId={item.id}
-                  request={props.request}
-                />
+                  title="Zendesk ticket"
+                  className="details-card"
+                >
+                  <HelpdeskPanel caseId={item.id} request={props.request} />
+                </DeferredDetails>
               )}
             </section>
             <section
@@ -1007,6 +1024,11 @@ export function CaseDesk(props: DeskProps) {
               </h3>
               <RecentActivity {...props} onOpen={() => setTab("timeline")} />
             </section>
+          </div>
+        )}
+        {props.operations && (
+          <div className="desk-operations" hidden={tab !== "overview"}>
+            {props.operations}
           </div>
         )}
         {tab === "timeline" && <EventTimeline {...props} />}

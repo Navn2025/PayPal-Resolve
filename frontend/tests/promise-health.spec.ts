@@ -20,12 +20,13 @@ async function api<T>(page: Page, path: string, body?: unknown): Promise<T> {
 }
 
 test("promise check reads the real backend through the proxy", async ({ page }) => {
-  await signIn(page);
   // Hold reconciliation until after "Explain with AI" is clicked, so the panel's reload lands after the
   // explanation (a race first seen in the full suite). The explanation must survive unchanged facts.
+  // The gate goes in before sign-in: the inbox selects the first case and starts loading it straight away.
   let release = () => {};
   const gate = new Promise<void>((resolve) => { release = resolve; });
   await page.route("**/api/resolve/cases/*/reconciliation", async (route) => { await gate; await route.continue(); });
+  await signIn(page);
   await page.getByRole("button", { name: /Connected refund fixture/ }).click();
   const step = page.getByRole("region", { name: "Next step" });
   const check = page.getByRole("region", { name: "Promise check" });
@@ -203,4 +204,33 @@ test("the inbox renders with and without promise-health data", async ({ page }) 
     await expect(page.locator(".case-row-risk")).toHaveCount(0);
   }
   expect(errors).toEqual([]);
+});
+
+// After the main merge: our overview structure on the deferred-loading markup. Collapsed sections make no
+// request until opened, and the timeline card says how to load events instead of loading forever.
+test("the overview keeps its cards and defers investigation, Zendesk and events", async ({ page }) => {
+  const paths: string[] = [];
+  page.on("request", (request) => paths.push(new URL(request.url()).pathname));
+  await signIn(page);
+  await page.getByRole("button", { name: /Connected refund fixture/ }).click();
+  const step = page.getByRole("region", { name: "Next step" });
+  await expect(step.getByRole("button", { name: "Refresh evidence" })).toBeEnabled();
+  for (const area of ["Case summary", "Promises & AI", "Timeline"]) await expect(page.getByRole("region", { name: area })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Case summary" }).getByRole("region", { name: "Next step" })).toBeVisible();
+  for (const suffix of ["/investigations", "/helpdesk", "/timeline"]) expect(paths.some((path) => path.endsWith(suffix)), suffix).toBe(false);
+
+  const timeline = page.getByRole("region", { name: "Timeline" });
+  await expect(timeline.getByText("Events load when you open the evidence timeline.")).toBeVisible();
+  const investigation = page.locator("details.details-card").filter({ hasText: "Automatic investigation details" });
+  await expect(investigation).not.toHaveAttribute("open", "");
+  await investigation.locator("summary").click();
+  await expect(investigation.getByRole("region", { name: "Automatic investigation" })).toBeVisible();
+  const zendesk = page.locator("details.details-card").filter({ hasText: "Zendesk ticket" });
+  await zendesk.locator("summary").click();
+  await expect(zendesk.getByText(/Connect Zendesk|Zendesk ticket ID/).first()).toBeVisible();
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
+  await timeline.getByRole("button", { name: "Show events" }).click();
+  await expect(page.getByRole("button", { name: "Evidence timeline", exact: true })).toHaveAttribute("aria-current", "page");
 });

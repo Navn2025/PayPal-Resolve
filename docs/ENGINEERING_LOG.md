@@ -3596,6 +3596,135 @@ passed the promise-health map (from CHG-050) to `InboxPane`, so `risk` was
   filter and search changes), as before the merge; it isn't cached across
   loads.
 
+### CHG-054 - Structured case layout restored on the merged markup
+
+**Date:** 10 November 2026 (Asia/Calcutta). Branch `feat/ai-part`, after merge
+`13ac7ed` and CHG-053. Frontend only.
+
+**Objective:** after the merge, the case overview lost its structure. The
+merge resolved `frontend/app/globals.css` to the merge-base styles plus the
+CHG-044 rules only. That dropped both our CHG-047 to CHG-052 rules (223 lines:
+spacing and type tokens, case areas, Next step card, money summary, checks,
+details cards, settings cards, phone top bar) and Navneet's narrow-screen block
+from `1158673` (11 lines). It also dropped some markup:
+
+- **Our side:** the overview's AI slot. The investigation and promise
+  suggestions rendered bare under the case, touching the pane edge.
+- **Navneet's side:** the deferred Zendesk section, the deferred investigation
+  and the `CaseOperationsPanel` (offers, returns, dispute safety and evidence).
+
+The overview timeline card also showed "Loading events…" forever, because
+`1158673` loads events only on the Evidence timeline tab.
+
+**Files and resulting behavior:**
+
+- **`frontend/app/globals.css`:**
+  - **Both lost blocks re-appended:** Navneet's 11-line block and our 223
+    lines, formatted with Prettier to match the file. The four hex colours in
+    the block (`#8a2433`, `#b4384a`, `#c98a1b`, `#fde7ea`) are the CHG-047
+    broken-promise colours that existed before the merge; nothing else adds a
+    colour value.
+  - **New rules (spacing and border tokens only):**
+    - **Collapsed sections:** `details-card` children get padding, and nested
+      cards inside them have no second border.
+    - **Case operations:** `.desk-operations` holds the operations panel, with
+      `[hidden]` honoured.
+    - **Operations panel:** its titles and summaries use the case type scale.
+- **`frontend/components/workspace.tsx`:**
+  - **AI slot restored:** the `assistant` slot holds Promise suggestions, then
+    "Automatic investigation details" as Navneet's `DeferredDetails`
+    (`details-card`, `unmountOnClose`). It mounts and requests
+    `/investigations` only when opened.
+  - **Case operations restored:** `CaseOperationsPanel` (with `staffRole`) is
+    passed back to the case desk.
+  - **Bare panels removed:** the two panels no longer render separately in the
+    desk pane.
+- **`frontend/components/case-desk.tsx`:**
+  - **Zendesk:** the ticket section is in `DeferredDetails` ("Zendesk ticket",
+    `details-card`) again, so there is no `/helpdesk` request until it's
+    opened.
+  - **Case operations:** a new `operations` slot renders inside the desk
+    content, below the three areas. It stays mounted and hidden off the
+    overview, as in `1158673`, so drafts survive tab changes.
+  - **Timeline card:** when events haven't been loaded, it says "Events load
+    when you open the evidence timeline." and offers "Show events", which opens the Evidence timeline tab.
+    "Loading events…" shows only while a load is running.
+- **`frontend/playwright.config.ts`:** `testIgnore` skips `platform.spec.ts` and
+  `platform.performance.spec.ts`. They run with `playwright.platform.config.ts`.
+- **`frontend/playwright.platform.config.ts`:** accepts
+  `PLAYWRIGHT_CHROMIUM_EXECUTABLE`, like the default config, so it can run with
+  the system Chrome.
+- **Tests:**
+  - **`tests/investigations.spec.ts`:** one click on the "Automatic
+    investigation details" summary. The merged test clicked two summaries; with
+    one collapsed section, the second click closed it again.
+  - **`tests/promise-health.spec.ts`, proxy test:** the reconciliation gate is
+    now installed before sign-in. The inbox selects the first case during
+    sign-in, so the gated request could slip through first. It failed when run
+    after `investigations.spec.ts` and passed on its own.
+  - **`tests/promise-health.spec.ts`, new test:**
+    - **Structure:** the three areas are present, with the Next step inside
+      Case summary.
+    - **Deferred loading:** no `/investigations`, `/helpdesk` or `/timeline`
+      request is made on load. Both collapsed sections open with their
+      content.
+    - **Timeline card:** shows the "Events load…" state, and its "Show events" button opens
+      the Evidence timeline tab.
+    - **Overflow:** none at 390px.
+
+**Reason and decision IDs:** DEC-090.
+
+**Validation actually performed:**
+
+- `npm run check`: passed.
+- **Screenshots:**
+  - **Pages and widths:** case overview and settings at 1280px and 390px.
+  - **Three states:**
+    - **Before:** `4652c68`, with the frontend folders checked out temporarily
+      and restored afterwards.
+    - **Merged:** `648ad8a`.
+    - **Restored:** this change. It also has the investigation and Zendesk
+      sections opened.
+  - **Method:** a scratch Playwright script on the isolated fixture backend.
+    The screenshots aren't committed.
+  - **Width at 390px:**
+
+    | Page | Merged | Restored |
+    | --- | --- | --- |
+    | Case overview | 501px | 390px |
+    | Settings | 410px | 390px |
+- **Specs on their own:** `investigations`, `promise-health` and `settings`:
+  8 passed and 1 failed (the order-dependent proxy test). After the gate fix,
+  the investigations and proxy pair passed.
+- **Full default suite, first run:** 20 passed, 5 skipped, 3 failed, all in
+  `workspace.spec.ts`:
+  - **Two were caused by this change:** the new timeline button, then named
+    "Open evidence timeline", also matched the tab locator
+    `getByRole('button', { name: 'Evidence timeline' })`. It was renamed
+    "Show events".
+  - **One was the customer-message test**, which waits for a merchant reply on
+    the customer page. It passed when `workspace.spec.ts` was rerun alone (8
+    passed, 3 skipped) and in the final full run. Treated as order- or
+    timing-dependent and not changed.
+- **Full default suite, final run** (`PLAYWRIGHT_CHROMIUM_EXECUTABLE=<system
+  Chrome> npx playwright test`, platform specs now excluded): 23 passed,
+  5 skipped, 0 failed.
+- **Platform suite** (`npx playwright test -c playwright.platform.config.ts`,
+  system Chrome): 2 passed. This includes Navneet's performance test, which
+  confirms that `/timeline`, `/investigations` and `/helpdesk` are not
+  requested on the initial overview and that there's no 390px overflow.
+- **Backend:** not changed, so not re-run.
+
+**Known limitations and follow-up:**
+
+- **Before screenshots:** the `4652c68` frontend ran against the current
+  backend, so they show the old layout but not old backend behaviour.
+- **Overview timeline:** the overview no longer shows recent events until the
+  Evidence timeline tab has loaded them. This is the cost of Navneet's deferred
+  loading, kept as it is.
+- **Operations panel text:** its upper-case eyebrow ("RESOLUTION WORKFLOW") and
+  its texts are Navneet's and were left unchanged.
+
 ## Decision register
 
 ### DEC-001 - Keep FastAPI/Pydantic and the existing uv project
@@ -4416,6 +4545,14 @@ prop with an empty default, so a missing prop, a failed call or an empty list
 leaves plain rows instead of a crash. The page loads the data once and passes
 it down; rows never fetch it themselves.
 
+### DEC-090 - Deferred sections use the same card shape and stay deferred
+
+Secondary case sections (automatic investigation, Zendesk, case operations)
+keep Navneet's deferred loading: they request nothing until opened, and
+operations drafts survive tab changes. They take the same card shape and
+spacing as the overview cards. When a card's data hasn't been loaded, it says
+how to load it instead of showing a loading state that never ends.
+
 ## Open work and boundaries
 
 1. Verify import (if needed), SSL connection, migration startup, and worker
@@ -4441,7 +4578,7 @@ it down; rows never fetch it themselves.
 ## Template for the next entry
 
 ```text
-### CHG-054 - Concrete change title
+### CHG-055 - Concrete change title
 Date:
 Objective:
 Files and resulting behavior:

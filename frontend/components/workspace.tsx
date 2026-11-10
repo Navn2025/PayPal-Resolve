@@ -1202,6 +1202,37 @@ export function Workspace({
 
   const desk = item && (
     <CaseDesk
+      assistant={
+        demo ? undefined : (
+          <div className="ai-stack" aria-label="AI and promise checks">
+            <PromiseExtractionPanel
+              key={"extract-" + item.id}
+              caseId={item.id}
+              request={request}
+              onUse={(draft) => setDialog({ kind: "promise", draft })}
+            />
+            {/* Collapsed and loaded on open (Navneet's 1158673): no /investigations request until then. */}
+            <DeferredDetails
+              key={"investigation-" + item.id}
+              title="Automatic investigation details"
+              className="details-card"
+              unmountOnClose
+            >
+              <InvestigationReviewPanel caseId={item.id} request={request} />
+            </DeferredDetails>
+          </div>
+        )
+      }
+      operations={
+        demo ? undefined : (
+          <CaseOperationsPanel
+            key={"operations-" + item.id}
+            caseId={item.id}
+            promises={item.promises}
+            role={staffRole}
+          />
+        )
+      }
       item={item}
       tab={tab}
       setTab={setTab}
@@ -1523,21 +1554,6 @@ export function Workspace({
                           ? "Reading your cases from the local backend."
                           : "Open a case from the inbox to see its promises and evidence."
                       }
-                    />
-                  )}
-                  {!demo && item && (
-                    <InvestigationReviewPanel
-                      key={item.id}
-                      caseId={item.id}
-                      request={request}
-                    />
-                  )}
-                  {!demo && item && (
-                    <PromiseExtractionPanel
-                      key={"extract-" + item.id}
-                      caseId={item.id}
-                      request={request}
-                      onUse={(draft) => setDialog({ kind: "promise", draft })}
                     />
                   )}
                 </div>

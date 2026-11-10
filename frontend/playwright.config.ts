@@ -6,6 +6,8 @@ process.env.no_proxy = process.env.NO_PROXY;
 
 export default defineConfig({
   testDir: "./tests",
+  // The platform specs need their own isolated backend on 8025: run them with playwright.platform.config.ts.
+  testIgnore: ["platform.spec.ts", "platform.performance.spec.ts"],
   workers: 1,
   timeout: 45_000,
   expect: { timeout: 10_000 },

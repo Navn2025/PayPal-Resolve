@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { money, pretty, remedyLabels, type Remedy, type Requester } from "@/lib/domain";
+import { localTimeText, money, pretty, remedyLabels, type Remedy, type Requester } from "@/lib/domain";
 import type { Message } from "@/lib/customer";
 import type { PromiseDraft } from "./forms";
 import { Button, Notice } from "./ui";
@@ -48,12 +48,11 @@ const droppedText: Record<string, string> = {
   limit_exceeded: "There were too many suggestions in one answer.",
 };
 const plain = (texts: Record<string, string>, reason: string) => texts[reason] ?? pretty(reason) + ".";
-const when = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", hourCycle: "h23", timeZone: "UTC" });
-/** "Merchant · Nov 7, 9:24" (UTC) from the stored conversation; IDs are never shown. */
+/** "Merchant · Nov 7, 9:24 AM" in the viewer's local time, from the stored conversation; IDs are never shown. */
 function speaker(id: string | null, thread: Message[], fallback: string) {
   const found = id ? thread.find((message) => message.id === id) : undefined;
   if (!found) return fallback;
-  return `${found.sender === "merchant" ? "Merchant" : "Buyer"} · ${when.format(new Date(found.created_at))}`;
+  return `${found.sender === "merchant" ? "Merchant" : "Buyer"} · ${localTimeText(found.created_at)}`;
 }
 const later = (count: number) => `Also confirmed in ${count} later ${count === 1 ? "message" : "messages"}`;
 

@@ -3303,6 +3303,98 @@ the inbox.
   ("Refund agreed", "Still owed").
 - Finding lines in the investigation panel still show evidence IDs.
 
+### CHG-051 - Settings inside the workspace shell; local message times
+
+**Date:** 10 November 2026 (Asia/Calcutta). Branch `feat/ai-part`. Frontend only;
+existing colour tokens only (a grep of the new CSS block finds no colour literal).
+
+**Objective:** make `/workspace/settings` look and behave like the rest of the
+workspace, and show message times in the viewer's own time zone.
+
+**Files and resulting behavior:**
+
+- `frontend/components/workspace-shell.tsx` (new): `WorkspaceShell` uses the
+  workspace's own markup and classes.
+  - **Sidebar:** Case inbox, Orders and Settings, with `aria-current` on the
+    active page.
+  - **Top bar:** the breadcrumb "Workspace > Settings", the mode chip, the
+    Settings link (`aria-label="Account settings"`), the only Sign out, and
+    the avatar.
+  - **Mobile:** the mobile brand and mobile nav, and the same icon-only top
+    bar at 390px.
+  - **Sign out:** calls the existing `DELETE /api/session`, then goes to
+    `/login`.
+- `frontend/components/merchant-login.tsx` (`MerchantSettings`):
+  - **Layout:** renders inside the shell, with the workspace intro header
+    (small eyebrow "Merchant workspace", h1 "Account settings", subtitle).
+  - **Cards:** Account, PayPal sign-in and SDK keys are separate
+    `section-card`s with the existing pills:
+    - Account: "Signed in".
+    - PayPal sign-in: "Not configured", "Ready to link" or "Linked", plus
+      "Sandbox".
+    - SDK keys: "Not configured" or "N active".
+  - **Account details:** shown as right-aligned label/value rows.
+  - **Removed:** the old divider borders and the duplicate in-page Sign out.
+  - **Unchanged:** the PayPal link and unlink actions, the confirm step and
+    the notices.
+- `frontend/components/merchant-sdk-keys.tsx`:
+  - **Card shape:** card header with the pill; buttons use the shared
+    `Button`, and loading and empty states use `panel-state`.
+  - **Copy button:** the code example has a header row with "Copy"
+    (`aria-label="Copy example code"`, success notice "Example code
+    copied."), placed above the snippet so it never covers code on phones.
+  - **Unchanged:** the setup-copy, hide, revoke and confirm flows and their
+    labels.
+- `frontend/components/workspace.tsx`: the main workspace sidebar also links
+  to Settings (merchant mode), so all three pages share the same navigation.
+- **Message times in the viewer's local time:**
+  - `frontend/lib/domain.ts`: `localTimeText()` uses the viewer's time zone
+    and locale, for example "Nov 7, 9:24 AM".
+  - `frontend/components/conversation.tsx`: message times use it, with
+    `suppressHydrationWarning` and the UTC time in `title`.
+  - `frontend/components/promise-extraction.tsx`: the "Merchant · …" message
+    names use it too.
+  - Other timestamps (for example "Session ends") stay in UTC.
+- `frontend/app/globals.css`: settings card, facts, code header and SDK
+  setup styles.
+  - **Overflow fix:** `min-width: 0` on the grid children. The long code
+    line had made the old settings page 517px wide on a 390px screen; it now
+    scrolls inside the code box.
+- `frontend/tests/settings.spec.ts` (new):
+  - **Shell checks:** the breadcrumb, Settings `aria-current` in the sidebar,
+    exactly one Sign out, three separate cards with their pills, and the
+    copy button (clipboard contents read back). The page is 390px wide at
+    390px, and Sign out goes to `/login`.
+  - **Local times:** the customer demo's message time matches the browser's
+    formatting in Asia/Kolkata and America/New_York, without "UTC".
+- No existing test needed changes: `sdk-keys.spec.ts` and the settings steps
+  in `site-auth.spec.ts` use the same labels.
+
+**Reason and decision IDs:** DEC-087.
+
+**Validation actually performed:**
+
+- `npm run check`: passed.
+- `npx playwright test tests/settings.spec.ts tests/sdk-keys.spec.ts
+  tests/site-auth.spec.ts`: passed (one PayPal test skipped as usual). One
+  first-run failure was in the new test itself: the sidebar is an `<aside>`
+  (role complementary), not a navigation landmark.
+- **Screenshots:** settings at 1280 and 390px, before (`40db217`, taken with
+  the changes stashed) and after, with a scratch Playwright script against
+  the isolated fixture backend. They aren't committed.
+- **Full Playwright suite** (`PLAYWRIGHT_CHROMIUM_EXECUTABLE=<system Chrome> npx
+  playwright test`): 20 passed, 5 skipped, 0 failed.
+- **Backend:** not changed, so not re-run.
+
+**Known limitations and follow-up:**
+
+- The Orders page still renders its own copy of the shell and could move to
+  `WorkspaceShell`.
+- The shell's "Sandbox connection" note is static text, as in the workspace.
+- Server-rendered message times can differ from the browser's for a moment
+  until hydration replaces them; mismatch warnings are suppressed on those
+  elements.
+
 ## Decision register
 
 ### DEC-001 - Keep FastAPI/Pydantic and the existing uv project
@@ -4098,6 +4190,15 @@ or diagnostic (kept promises, empty checklists, the automatic investigation,
 unopened suggestions) is collapsed, so the page stays short without hiding
 anything a test or merchant needs.
 
+### DEC-087 - One workspace frame for every merchant page
+
+Settings is part of the merchant workspace, so it uses the same frame,
+header and card patterns instead of the public-site look. One shared shell
+keeps navigation and sign-out in one place; the page shows Sign out only in
+the top bar. Message times follow the viewer's time zone because they
+describe conversations people read in their own day; audit and
+session times stay in UTC.
+
 ## Open work and boundaries
 
 1. Verify import (if needed), SSL connection, migration startup, and worker
@@ -4123,7 +4224,7 @@ anything a test or merchant needs.
 ## Template for the next entry
 
 ```text
-### CHG-051 - Concrete change title
+### CHG-052 - Concrete change title
 Date:
 Objective:
 Files and resulting behavior:

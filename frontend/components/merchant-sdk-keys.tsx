@@ -5,7 +5,7 @@ import { Copy, KeyRound, Plus, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { backendRequest } from "@/lib/http";
 import { timeText } from "@/lib/domain";
-import { Notice } from "./ui";
+import { Button, Notice } from "./ui";
 
 type KeyRow = { key_id: string; created_at: string };
 type Keys = { keys: KeyRow[]; can_manage: boolean };
@@ -56,49 +56,53 @@ export function MerchantSdkKeys() {
     } finally { setBusy(false); }
   }
 
-  async function copy() {
-    if (!issued) return;
+  const example = 'import { createResolve } from "@resolve-paypal/sdk";\n\nawait createResolve().syncOrder({ id: "ORDER-123", status: "paid" });';
+  async function copy(text: string, done: string) {
     try {
-      await navigator.clipboard.writeText(issued.setup);
-      setMessage("Copied. Paste this into your app server’s environment.");
+      await navigator.clipboard.writeText(text);
+      setError(""); setMessage(done);
     } catch {
-      setError("Select the setup text and copy it manually.");
+      setError("Select the text and copy it manually.");
     }
   }
 
-  return <section id="sdk-keys" className="settings-provider sdk-keys" aria-labelledby="sdk-keys-heading">
-    <div className="settings-row"><span className="site-preview-icon"><KeyRound size={22} /></span>
-      <div><h2 id="sdk-keys-heading">SDK keys</h2><p>Connect a store or app to this merchant workspace.</p></div></div>
-    <p>SDK keys let your app sync orders and check their evidence. They cannot sign in to the dashboard or move money.</p>
+  const count = list?.keys.length ?? 0;
+  return <section id="sdk-keys" className="section-card settings-section sdk-keys" aria-labelledby="sdk-keys-heading">
+    <div className="section-head"><div className="settings-title"><span className="section-icon"><KeyRound size={20} /></span>
+      <div><div className="eyebrow">Connected apps</div><h3 id="sdk-keys-heading">SDK keys</h3></div></div>
+      {list && <span className={`badge ${count ? "badge-fulfilled" : "badge-pending"}`}><span />{count ? `${count} active` : "Not configured"}</span>}</div>
+    <p className="card-note">Connect a store or app to this merchant workspace. SDK keys let your app sync orders and check their evidence. They cannot sign in to the dashboard or move money.</p>
     {error && <Notice>{error}</Notice>}
     {message && <Notice tone="success">{message}</Notice>}
+    {!list && !error && <p className="panel-state" role="status">Loading SDK keys…</p>}
     {list && !list.can_manage
-      ? <p><Link className="site-text-link" href="/login?next=settings">Sign in again with a Resolve access key</Link> to generate or revoke SDK keys.</p>
-      : <button type="button" className="site-button site-button-primary" disabled={busy || !list || !!issued} onClick={() => void act()}>
-        <Plus size={17} /> Generate SDK key
-      </button>}
-    {!list && error && <button type="button" className="site-button site-button-quiet" onClick={() => void load()}>Reload keys</button>}
-    {issued && <div className="settings-confirm sdk-setup">
-      <h3>Copy your server setup</h3>
-      <p>Resolve shows this key once. Paste these values into your app server’s environment, then hide the key.</p>
+      ? <p className="card-note"><Link className="text-link" href="/login?next=settings">Sign in again with a Resolve access key</Link> to generate or revoke SDK keys.</p>
+      : <div className="card-actions"><Button variant="primary" disabled={busy || !list || !!issued} onClick={() => void act()}>
+        <Plus size={16} /> Generate SDK key
+      </Button></div>}
+    {!list && error && <div className="card-actions"><Button onClick={() => void load()}>Reload keys</Button></div>}
+    {issued && <div className="sdk-setup">
+      <h4>Copy your server setup</h4>
+      <p className="card-note">Resolve shows this key once. Paste these values into your app server’s environment, then hide the key.</p>
       <textarea aria-label="SDK server environment" readOnly rows={3} spellCheck={false} value={issued.setup} onFocus={(event) => event.currentTarget.select()} />
-      <div className="site-actions"><button type="button" className="site-button site-button-primary" onClick={() => void copy()}><Copy size={16} /> Copy SDK setup</button>
-        <button type="button" className="site-button site-button-quiet" onClick={() => setIssued(null)}>Hide key</button></div>
+      <div className="card-actions"><Button variant="primary" onClick={() => void copy(issued.setup, "Copied. Paste this into your app server’s environment.")}><Copy size={16} /> Copy SDK setup</Button>
+        <Button onClick={() => setIssued(null)}>Hide key</Button></div>
     </div>}
     <div className="sdk-key-example">
-      <h3>Send an order from your server</h3>
-      <pre><code>{'import { createResolve } from "@resolve-paypal/sdk";\n\nawait createResolve().syncOrder({ id: "ORDER-123", status: "paid" });'}</code></pre>
+      <div className="code-head"><h4>Send an order from your server</h4>
+        <Button className="small-button" aria-label="Copy example code" onClick={() => void copy(example, "Example code copied.")}><Copy size={14} /> Copy</Button></div>
+      <div className="code-block"><pre><code>{example}</code></pre></div>
     </div>
-    {!!list?.keys.length && <ul className="sdk-key-list" aria-label="Active SDK keys">{list.keys.map((key) => (
+    {list && (count ? <ul className="sdk-key-list" aria-label="Active SDK keys">{list.keys.map((key) => (
       <li key={key.key_id}>
-        <div><strong>SDK key · {key.key_id.slice(0, 8)}</strong><p>Created {timeText(key.created_at)}</p></div>
+        <div><strong>SDK key · {key.key_id.slice(0, 8)}</strong><p className="card-note">Created {timeText(key.created_at)}</p></div>
         {revokeId === key.key_id ? <div className="sdk-revoke">
           <span>Your app will need a new key.</span>
-          <button type="button" className="site-button site-button-quiet" disabled={busy || !list.can_manage} onClick={() => void act(key.key_id)}>Confirm revoke</button>
-          <button type="button" className="site-button site-button-quiet" onClick={() => setRevokeId(null)}>Cancel</button>
-        </div> : <button type="button" className="site-button site-button-quiet" aria-label={"Revoke SDK key " + key.key_id.slice(0, 8)}
-          disabled={busy || !list.can_manage} onClick={() => setRevokeId(key.key_id)}><Trash2 size={15} /> Revoke</button>}
+          <Button className="small-button" disabled={busy || !list.can_manage} onClick={() => void act(key.key_id)}>Confirm revoke</Button>
+          <Button variant="ghost" className="small-button" onClick={() => setRevokeId(null)}>Cancel</Button>
+        </div> : <Button className="small-button" aria-label={"Revoke SDK key " + key.key_id.slice(0, 8)}
+          disabled={busy || !list.can_manage} onClick={() => setRevokeId(key.key_id)}><Trash2 size={15} /> Revoke</Button>}
       </li>
-    ))}</ul>}
+    ))}</ul> : <p className="panel-state">No SDK keys yet.</p>)}
   </section>;
 }

@@ -3,10 +3,11 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { MerchantSdkKeys } from "./merchant-sdk-keys";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, ArrowUpRight, Eye, EyeOff, FileCheck2, KeyRound, Link2, LogOut, ShieldCheck, Unlink2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, ArrowUpRight, Eye, EyeOff, FileCheck2, KeyRound, Link2, ShieldCheck, Unlink2 } from "lucide-react";
 import { readJson } from "@/lib/http";
 import { timeText, type Session } from "@/lib/domain";
-import { Brand, Notice } from "./ui";
+import { Brand, Button, Notice } from "./ui";
+import { WorkspaceShell } from "./workspace-shell";
 
 const notices: Record<string, string> = {
   linked: "PayPal sign-in is linked to this workspace.",
@@ -121,47 +122,51 @@ export function MerchantSettings({ notice }: { notice?: string }) {
     return () => { active = false; };
   }, []);
 
-  async function action(kind: "link" | "unlink" | "signout") {
+  async function action(kind: "link" | "unlink") {
     setBusy(true); setMessage(""); setSuccess(false);
     try {
       if (kind === "link") { await startPayPal("link"); return; }
-      const path = kind === "unlink" ? "/api/auth/paypal/link" : "/api/session";
-      await fetch(path, { method: "DELETE" }).then(readJson);
-      if (kind === "signout") { window.location.assign("/login"); return; }
+      await fetch("/api/auth/paypal/link", { method: "DELETE" }).then(readJson);
       setSession(await readSession());
       setMessage("PayPal sign-in was unlinked."); setSuccess(true); setConfirm(false);
     } catch (failure) { setMessage(describe(failure)); }
     finally { setBusy(false); }
   }
 
-  return <main className="access-shell">
-    <div className="access-inner settings-inner">
-      <div className="access-top"><Link href="/" className="site-brand" aria-label="Resolve home"><Brand /></Link>
-        <Link className="site-text-link" href="/workspace"><ArrowLeft size={16} /> Back to inbox</Link></div>
-      <section className="access-card settings-card">
-        <p className="site-kicker"><span /> MERCHANT WORKSPACE</p><h1>Account settings</h1>
-        {message && <Notice tone={success ? "success" : "error"}>{message}</Notice>}
-        {session?.merchant ? <>
-          <div className="settings-row"><span className="site-preview-icon"><ShieldCheck size={22} /></span>
-            <div><h2>{session.merchant.name}</h2><p>Signed in with {session.method === "paypal" ? "PayPal" : "a Resolve access key"}
-              {session.expires_at ? " · Session ends " + timeText(session.expires_at) : ""}</p></div></div>
-          <div className="settings-provider"><div className="settings-row"><span className="site-preview-icon"><Link2 size={22} /></span>
-            <div><h2>PayPal sign-in</h2><p>{!session.paypal_enabled ? "Not configured" : session.paypal_linked
-              ? "Linked to this workspace" : "Ready to link"}{session.paypal_environment === "sandbox" ? " · Sandbox" : ""}</p></div></div>
-            <p>Use PayPal to sign in to Resolve. Refunds still use the workspace’s configured PayPal connection and require a separate approval.</p>
-            {session.paypal_enabled && session.method === "key" && (!session.paypal_linked
-              ? <button type="button" className="site-button site-button-primary" disabled={busy} onClick={() => void action("link")}><Link2 size={17} /> Link PayPal</button>
-              : confirm ? <div className="settings-confirm">
-                <p>Unlinking ends active PayPal sign-ins. You can still use your Resolve access key.</p>
-                <div className="site-actions"><button type="button" className="site-button site-button-quiet" disabled={busy} onClick={() => void action("unlink")}>Confirm unlink</button>
-                  <button type="button" className="site-button site-button-quiet" disabled={busy} onClick={() => setConfirm(false)}>Cancel</button></div>
-              </div> : <button type="button" className="site-button site-button-quiet" disabled={busy} onClick={() => setConfirm(true)}><Unlink2 size={17} /> Unlink PayPal</button>)}
-            {session.paypal_enabled && <Link className="site-text-link" href="/login?next=settings">Sign in with an access key again <ArrowRight size={15} /></Link>}
-          </div>
-          <MerchantSdkKeys />
-          <button type="button" className="site-button site-button-quiet" disabled={busy} onClick={() => void action("signout")}><LogOut size={17} /> Sign out</button>
-        </> : <p>{message ? "Reload this page to retry." : "Checking your workspace…"}</p>}
-      </section>
-    </div>
-  </main>;
+  const merchant = session?.merchant;
+  const paypal = !session?.paypal_enabled ? { label: "Not configured", tone: "badge-pending" }
+    : session.paypal_linked ? { label: "Linked", tone: "badge-fulfilled" } : { label: "Ready to link", tone: "badge-waiting" };
+  return <WorkspaceShell active="settings" merchant={merchant} contentId="settings-content">
+    <div className="workspace-intro"><div><div className="eyebrow intro-eyebrow"><span /> Merchant workspace</div><h1>Account settings</h1>
+      <p>Manage how you sign in and which apps can sync orders to this workspace.</p></div></div>
+    {message && <Notice tone={success ? "success" : "error"}>{message}</Notice>}
+    {!merchant ? <p className="panel-state" role="status">{message ? "Reload this page to retry." : "Checking your workspace…"}</p>
+      : <div className="settings-grid">
+        <section className="section-card settings-section" aria-labelledby="account-heading">
+          <div className="section-head"><div className="settings-title"><span className="section-icon"><ShieldCheck size={20} /></span>
+            <div><div className="eyebrow">Account</div><h3 id="account-heading">{merchant.name}</h3></div></div>
+            <span className="badge badge-fulfilled"><span />Signed in</span></div>
+          <dl className="settings-facts">
+            <div><dt>Signed in with</dt><dd>{session.method === "paypal" ? "PayPal" : "Resolve access key"}</dd></div>
+            {session.expires_at && <div><dt>Session ends</dt><dd>{timeText(session.expires_at)}</dd></div>}
+          </dl>
+        </section>
+        <section className="section-card settings-section" aria-labelledby="paypal-heading">
+          <div className="section-head"><div className="settings-title"><span className="section-icon"><Link2 size={20} /></span>
+            <div><div className="eyebrow">Sign-in method</div><h3 id="paypal-heading">PayPal sign-in</h3></div></div>
+            <span className="settings-pills">{session.paypal_environment === "sandbox" && <span className="badge badge-pending"><span />Sandbox</span>}
+              <span className={`badge ${paypal.tone}`}><span />{paypal.label}</span></span></div>
+          <p className="card-note">Use PayPal to sign in to Resolve. Refunds still use the workspace’s configured PayPal connection and require a separate approval.</p>
+          {session.paypal_enabled && session.method === "key" && (!session.paypal_linked
+            ? <div className="card-actions"><Button variant="primary" disabled={busy} onClick={() => void action("link")}><Link2 size={16} /> Link PayPal</Button></div>
+            : confirm ? <div className="settings-confirm">
+              <p className="card-note">Unlinking ends active PayPal sign-ins. You can still use your Resolve access key.</p>
+              <div className="card-actions"><Button disabled={busy} onClick={() => void action("unlink")}>Confirm unlink</Button>
+                <Button variant="ghost" disabled={busy} onClick={() => setConfirm(false)}>Cancel</Button></div>
+            </div> : <div className="card-actions"><Button disabled={busy} onClick={() => setConfirm(true)}><Unlink2 size={16} /> Unlink PayPal</Button></div>)}
+          {session.paypal_enabled && <Link className="text-link" href="/login?next=settings">Sign in with an access key again <ArrowRight size={15} /></Link>}
+        </section>
+        <MerchantSdkKeys />
+      </div>}
+  </WorkspaceShell>;
 }

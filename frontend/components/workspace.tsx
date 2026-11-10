@@ -492,6 +492,7 @@ export function Workspace({ mode, initialCaseId = null }: { mode: "demo" | "merc
         <button type="button" aria-label="Case inbox" className={nav === "inbox" ? "rail-active" : ""} onClick={() => { setNav("inbox"); setMobileCase(false); }} aria-current={nav === "inbox" ? "page" : undefined}>
           <Inbox size={18} /> <span>Case inbox</span><ChevronRight className="rail-chevron" size={15} /></button>
         {!demo && <Link href="/workspace/orders" className="rail-link"><Package size={18} /> <span>Orders</span><ChevronRight className="rail-chevron" size={15} /></Link>}
+        {!demo && <Link href="/workspace/settings" className="rail-link"><Settings2 size={18} /> <span>Settings</span><ChevronRight className="rail-chevron" size={15} /></Link>}
         <button type="button" aria-label="Review queue" className={nav === "review" ? "rail-active" : ""} onClick={() => { setNav("review"); setMobileCase(false); }} aria-current={nav === "review" ? "page" : undefined}>
           <ClipboardList size={18} /> <span>Review queue</span><ChevronRight className="rail-chevron" size={15} /></button>
       </div>

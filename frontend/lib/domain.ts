@@ -175,6 +175,8 @@ export const pretty = (value: string) => value.replace(/[_-]/g, " ").toLowerCase
 export const shortId = (value: string) => value.startsWith("demo-") ? value.split("-").at(-1)! : value.slice(0, 7).toUpperCase();
 export const dateText = (value?: string | null) => value ? new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" }).format(new Date(value)) : "—";
 export const timeText = (value?: string | null) => value ? new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "UTC" }).format(new Date(value)) + " UTC" : "Not checked yet";
+/** Message times in the viewer's own time zone and locale, e.g. "Nov 7, 9:24 AM". */
+export const localTimeText = (value?: string | null) => value ? new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(value)) : "";
 export const uuid = () => globalThis.crypto.randomUUID();
 export function amountCents(value: string) {
   const result = /^(\d{1,10})(?:\.(\d{1,2}))?$/.exec(value.trim());

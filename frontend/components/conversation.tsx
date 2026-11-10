@@ -2,7 +2,7 @@
 
 import { useRef, useState, type FormEvent } from "react";
 import { MessageCircle, RefreshCw, Send } from "lucide-react";
-import { timeText, uuid } from "@/lib/domain";
+import { localTimeText, timeText, uuid } from "@/lib/domain";
 import type { Message } from "@/lib/customer";
 import { Button, Notice } from "./ui";
 
@@ -34,7 +34,7 @@ export function Conversation({ messages, viewer, onSend, onRefresh, refreshing, 
       <ol className="conversation-list" aria-label="Case messages" aria-live="polite">
         {messages.map((message) => <li key={message.id} className={message.sender === viewer ? "conversation-own" : ""}>
           <div><strong>{message.sender === viewer ? "You" : message.sender === "merchant" ? "Merchant" : "Customer"}</strong>
-            <time dateTime={message.created_at}>{timeText(message.created_at)}</time></div>
+            <time dateTime={message.created_at} title={timeText(message.created_at)} suppressHydrationWarning>{localTimeText(message.created_at)}</time></div>
           <p>{message.body}</p>
         </li>)}
       </ol>}

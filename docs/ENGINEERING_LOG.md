@@ -3725,6 +3725,121 @@ The overview timeline card also showed "Loading events…" forever, because
 - **Operations panel text:** its upper-case eyebrow ("RESOLUTION WORKFLOW") and
   its texts are Navneet's and were left unchanged.
 
+### CHG-055 - Case overview cleanup in our components
+
+**Date:** 11 November 2026 (Asia/Calcutta). Branch `feat/ai-part`. Frontend only;
+existing colour tokens only.
+
+**Scope:** only our components changed: the Next step card, Missing before
+refund, the AI explanation, the money summary, Promise check, Promise
+suggestions and the compact Recent activity card. Navneet's components were not
+changed: Promises & evidence, Zendesk, the automatic investigation, the
+resolution workflow, timeline loading and the Evidence timeline tab.
+
+**Files and resulting behavior:**
+
+- **`frontend/components/case-desk.tsx`, `NextStep`:**
+  - **"Review promise" (primary):** replaces "Refresh evidence" while a
+    promise needs work. That means an unfinished prerequisite of the refund
+    promise (for example the return milestone), or a refund promise that needs
+    review.
+  - **What the button does:** it opens that promise's row in the Promises &
+    evidence list, scrolls it into view and focuses its summary. The row is
+    found by its position, because the list renders `item.promises` in order;
+    Navneet's component is unchanged.
+  - **Other buttons kept:** "Refresh evidence" stays where refreshing really is
+    the action, such as after the return is confirmed and the payment evidence
+    is stale. "Check status" stays for a submitted refund.
+  - **Explanation on request only:** there is no summary text until the
+    merchant clicks "Explain with AI".
+  - **Short explanation:** the AI or template text is cut to at most two
+    sentences. Any clause that repeats the card's title, reason or steps is
+    dropped, using a word comparison in `brief()`. A clause with an amount stays
+    unless the card already shows that amount. If nothing is left, it says
+    "Nothing to add beyond the next step above."
+- **`case-desk.tsx`, `MoneySummary`:** "Checked …" now uses the viewer's local
+  time, with UTC in the tooltip.
+  - **Refund progress kept:** the "Refund progress %" bar came from Navneet's
+    original `PaymentPanel` (`2aa9327`) and was only moved into the money
+    summary in CHG-050. Under the instruction, it's his and stays.
+- **`case-desk.tsx`, `RecentActivity`:** event times use the viewer's local
+  time, with UTC in the tooltip. Navneet's Evidence timeline tab is unchanged.
+- **`frontend/components/case-checks.tsx`:** due labels ("Due Nov 14") use the
+  viewer's local date. This adds `brief()`.
+- **`frontend/lib/domain.ts`:** adds `localDateText`. Existing helpers are
+  unchanged.
+- **`frontend/components/promise-health.tsx`:** when there is no accepted refund
+  promise to check and the refund promise needs review, the card says "Paused –
+  promise needs review". Otherwise it keeps the earlier text.
+- **`frontend/components/promise-extraction.tsx`:** before any result, the
+  panel is one line: "Promise suggestions", the "Suggestions only…" note and the
+  "Extract promises from conversation" button. The full panel appears once
+  there is a result or an error.
+- **`frontend/app/globals.css`:** one-line suggestions row and the paused text.
+  Spacing, type and colour tokens only.
+
+**Tests:** `frontend/tests/promise-health.spec.ts`:
+
+- **Updated:**
+  - **Next step button:** shows "Review promise", not "Refresh evidence".
+  - **Explanation:** no text until requested. The template explanation is now
+    "Promised $30.00 after return; $0.00 refunded; $30.00 remaining.", without
+    the "return not confirmed → confirm the return" clauses the first step
+    already says.
+  - **Mocked AI text (synthetic):** shortened to "Promised $30.00 after the
+    return; nothing refunded yet."
+- **New, with viewer time zone Pacific/Kiritimati (UTC+14):**
+  - **Review promise:** opens and focuses the Return milestone row and scrolls
+    it into view.
+  - **Suggestions:** start as one line with the button.
+  - **Local dates:** due labels in Promise check and the money summary match
+    the local date of the API deadline.
+- **New, with mocked responses:** the summary sets the refund promise to
+  `needs_review` and promise health returns no items. Promise check then says
+  "Paused – promise needs review".
+
+**Reason and decision IDs:** DEC-091.
+
+**Validation actually performed:**
+
+- `npm run check`: passed.
+- **Affected specs:** `promise-health` and `promise-extraction` passed after
+  three test-only fixes:
+  - **Row locator:** the refund row's "Requires Return milestone" text matched
+    a hasText filter, so the test now matches on the row's summary.
+  - **Route regex:** the mock regex also matched the inbox URL; it's now
+    limited to case ids.
+  - **Mocked case id:** the mock needed the real case id.
+- **Screenshots:** before (`f42c73b`) and after, at 1280 and 390px, of the case
+  overview, the Next step after "Explain with AI", and the page after "Review
+  promise". The fixture backend was used and the screenshots aren't committed.
+  There is no overflow at 390px.
+- **Full default suite** (`PLAYWRIGHT_CHROMIUM_EXECUTABLE=<system Chrome> npx
+  playwright test`): 24 passed, 5 skipped, 1 failed.
+  - **The failure:** `workspace.spec.ts`, "an unauthenticated customer follows
+    a private link…", waiting for the merchant reply on the customer page. It
+    is the same failure recorded under CHG-054, in Navneet's customer-portal
+    flow.
+  - **Rerun alone:** `workspace.spec.ts` gave 8 passed, 3 skipped.
+  - **Repeated three times on its own:** the first run passed. The next two
+    failed on duplicate messages left in the shared fixture backend
+    (strict-mode violations), so a repeated run isn't a valid check for this
+    test.
+  - **Not fixed here:** it is outside this change.
+- **Platform suite:** not re-run; no platform-only code changed.
+- **Backend:** not changed, so not re-run.
+
+**Known limitations and follow-up:**
+
+- **Word-based trimming:** `brief()` compares words, so a reworded AI sentence
+  that restates a step can survive, and a new point that shares most of its
+  words with a step can be dropped. The backend fact guard is unchanged.
+- **Scroll target:** "Review promise" relies on the promise list keeping
+  `item.promises` order. A stable anchor on Navneet's rows would be sturdier,
+  but that needs his agreement.
+- **Paused message scope:** "Paused" is only shown for a refund promise that
+  needs review, because the check covers accepted refund promises only.
+
 ## Decision register
 
 ### DEC-001 - Keep FastAPI/Pydantic and the existing uv project
@@ -4553,6 +4668,14 @@ operations drafts survive tab changes. They take the same card shape and
 spacing as the overview cards. When a card's data hasn't been loaded, it says
 how to load it instead of showing a loading state that never ends.
 
+### DEC-091 - The next-step button does the action the card names
+
+The Next step's main button takes the merchant to the thing to act on, such as
+the promise to review, instead of a generic refresh. Explanations are opt-in
+and short, and never restate the card. Our dates and times use the viewer's
+zone, with UTC kept in tooltips. Shared components owned by Navneet are changed
+only with his agreement; ours work around them instead.
+
 ## Open work and boundaries
 
 1. Verify import (if needed), SSL connection, migration startup, and worker
@@ -4578,7 +4701,7 @@ how to load it instead of showing a loading state that never ends.
 ## Template for the next entry
 
 ```text
-### CHG-055 - Concrete change title
+### CHG-056 - Concrete change title
 Date:
 Objective:
 Files and resulting behavior:

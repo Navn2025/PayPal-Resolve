@@ -3690,3 +3690,37 @@ cite {
 .case-operations-panel summary {
   font-size: var(--fs-base);
 }
+
+/* Case overview cleanup: one-line empty suggestions, paused promise check. Existing colour tokens only. */
+.extraction-empty {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2) var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+}
+.extraction-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--sp-1) var(--sp-2);
+  margin: 0;
+  min-width: 0;
+  flex: 1 1 260px;
+}
+.extraction-line strong {
+  font-size: var(--fs-base);
+  color: var(--ink);
+}
+.extraction-empty .button {
+  white-space: normal;
+}
+.check-paused {
+  color: var(--amber);
+  font-style: normal;
+}
+.next-step-block .explain > div:first-child,
+.next-step-block .explain .ai-label {
+  justify-self: start;
+}

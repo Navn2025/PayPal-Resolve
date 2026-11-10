@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { dateText, type Requester } from "@/lib/domain";
+import { localDateText, type Requester } from "@/lib/domain";
 
 export type HealthStatus = "kept" | "partially_kept" | "at_risk" | "broken";
 export type PromiseHealth = {
@@ -35,12 +35,40 @@ export const worst = (items: PromiseHealth[]) => [...items].sort((a, b) => order
 /** "Due Nov 13" plus the rule behind the date, for a tooltip. */
 export function dueLabel(item: PromiseHealth, health: CaseHealth, next: NextAction | null) {
   const agreed = next?.facts.refunds.some((fact) => fact.promise_id === item.promise_id && fact.due_date);
-  const day = dateText(item.deadline);
+  const day = localDateText(item.deadline);
   return {
     text: item.status === "kept" ? "" : item.overdue ? `Overdue since ${day}` : `Due ${day}`,
     rule: agreed ? "The due date agreed on the promise."
       : `No due date was set, so Resolve counts ${health.overdue_after_days} days from when the promise was recorded.`,
   };
+}
+
+// Words that carry no meaning when comparing an explanation with the next step.
+const STOP = new Set(["the", "and", "any", "yet", "has", "have", "not", "are", "was", "for", "this", "that", "with", "before", "after", "then", "you", "your", "now", "first", "still"]);
+const stem = (word: string) => word.replace(/(ing|ed|es|e|s)$/, "");
+const words = (text: string) => (text.toLowerCase().replace(/\$[\d.,]+/g, " ").match(/[a-z]+/g) ?? [])
+  .filter((word) => word.length > 2 && !STOP.has(word)).map(stem);
+const amounts = (text: string) => text.match(/\$[\d,]+(?:\.\d+)?/g) ?? [];
+
+/**
+ * The explanation, kept short: at most two sentences, without the parts the next step already says.
+ * A clause stays if it carries an amount the next step doesn't show, or if most of its words are new.
+ */
+export function brief(text: string, shown: string[]) {
+  const seen = new Set(shown.flatMap(words));
+  const seenAmounts = new Set(shown.flatMap(amounts));
+  const sentences = text.split(/(?<=[.!?])\s+/).map((sentence) => {
+    const kept = sentence.replace(/[.!?]+$/, "").split(/\s*(?:;|→|, so )\s*/).filter((clause) => {
+      const found = amounts(clause);
+      if (found.length) return found.some((amount) => !seenAmounts.has(amount));
+      const own = words(clause);
+      return own.length > 0 && own.filter((word) => seen.has(word)).length / own.length < 0.6;
+    });
+    if (!kept.length) return "";
+    const joined = kept.join("; ");
+    return joined.charAt(0).toUpperCase() + joined.slice(1) + ".";
+  }).filter(Boolean);
+  return sentences.slice(0, 2).join(" ");
 }
 
 /** Promise health, missing information and the next-step explanation for one case. Merchant mode only. */

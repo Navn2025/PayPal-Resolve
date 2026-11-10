@@ -26,6 +26,7 @@ import {
 import { useEffect, useState, type ReactNode } from "react";
 import {
   dateText,
+  localTimeText,
   money,
   outcomeLabels,
   pretty,
@@ -47,6 +48,7 @@ import { workflowLabels, type Operations } from "@/lib/customer";
 import { DeferredDetails } from "./deferred-details";
 import { HelpdeskPanel } from "./helpdesk-panel";
 import {
+  brief,
   cents,
   days,
   dueLabel,
@@ -237,7 +239,7 @@ function MoneySummary({
               {demo
                 ? "Simulated evidence"
                 : refund.checked_at
-                  ? `Checked ${timeText(refund.checked_at)}`
+                  ? <span title={timeText(refund.checked_at)}>Checked {localTimeText(refund.checked_at)}</span>
                   : "No PayPal check yet"}
             </span>
             <span>
@@ -282,6 +284,18 @@ const orderedSteps = (missing: { code: string; text: string }[]) =>
     .sort((a, b) => stepOrder.indexOf(a.code) - stepOrder.indexOf(b.code))
     .map((entry) => ({ ...entry, text: stepText[entry.code] ?? entry.text }));
 
+/** Opens and scrolls to a promise in the list below, matched by its position (the list renders item.promises in order). */
+function openPromise(from: HTMLElement, promises: PromiseView[], id: string) {
+  const index = promises.findIndex((entry) => entry.id === id);
+  const row = from
+    .closest(".case-desk")
+    ?.querySelectorAll<HTMLDetailsElement>(".promise-section .promise-row")[index];
+  if (!row) return;
+  row.open = true;
+  row.scrollIntoView({ behavior: "smooth", block: "center" });
+  row.querySelector("summary")?.focus({ preventScroll: true });
+}
+
 /** The single next-step block: the action as the title, one short reason, one primary button, then ordered steps. */
 function NextStep({
   item,
@@ -305,6 +319,22 @@ function NextStep({
   const owed = checks.health?.items.find(
     (entry) =>
       entry.status !== "kept" && cents(entry.suggested_refund_amount) > 0,
+  );
+  // The promise to look at next: an unfinished prerequisite of the refund, or the refund promise itself when it needs review.
+  const prerequisite = refund?.terms.requires
+    .map((id) => item.promises.find((entry) => entry.id === id))
+    .find((entry) => entry && entry.outcome !== "fulfilled");
+  const toReview =
+    prerequisite ?? (refund?.outcome === "needs_review" ? refund : undefined);
+  const reviewButton = toReview && (
+    <Button
+      variant="primary"
+      onClick={(event) =>
+        openPromise(event.currentTarget, item.promises, toReview.id)
+      }
+    >
+      Review promise <ArrowRight size={16} />
+    </Button>
   );
   let kicker = "Next action",
     title: string,
@@ -339,6 +369,7 @@ function NextStep({
   } else if (!progress) {
     title = "Review the evidence";
     reason = payment.nextMessage;
+    buttons = reviewButton;
   } else {
     kicker = done
       ? "Verified outcome"
@@ -400,6 +431,8 @@ function NextStep({
           <Button onClick={payment.onCheckExecution} disabled={payment.busy}>
             <RefreshCw size={15} /> Check status
           </Button>
+        ) : !payment.canReview && !payment.canSubmit && reviewButton ? (
+          reviewButton
         ) : (
           !payment.canReview &&
           !payment.canSubmit && (
@@ -411,8 +444,12 @@ function NextStep({
       </>
     );
   }
-  // The code summary and its AI rewording only add value once a refund promise has amounts or progress.
+  // The explanation is offered once a refund promise has facts, and drops what this card already says.
   const hasFacts = !!next?.facts.refunds.length;
+  const shortText =
+    explanation &&
+    (brief(explanation.text, [title, reason, ...steps.map((step) => step.text)]) ||
+      "Nothing to add beyond the next step above.");
   const capped =
     owed &&
     payment.canReview &&
@@ -464,14 +501,13 @@ function NextStep({
       )}
       {next && hasFacts && (
         <div className="explain">
-          <h4>Summary</h4>
           {explanation?.source === "ai" && (
             <span className="badge badge-needs_review ai-label">
               <span />
               {explanation.label}
             </span>
           )}
-          <p className="explain-text">{explanation?.text ?? next.summary}</p>
+          {shortText && <p className="explain-text">{shortText}</p>}
           {explanation?.source === "template" && (
             <p className="card-note">
               Written from case facts. AI explanation not used:{" "}
@@ -734,7 +770,7 @@ function RecentActivity({
                 </strong>
                 <small>
                   {actorChanged(shown, index) && <>{event.actor} · </>}
-                  <time dateTime={event.time}>{timeText(event.time)}</time>
+                  <time dateTime={event.time} title={timeText(event.time)}>{localTimeText(event.time)}</time>
                 </small>
               </div>
             </li>
@@ -1003,7 +1039,16 @@ export function CaseDesk(props: DeskProps) {
                 Promises &amp; AI
               </h3>
               <PromiseCards {...props} />
-              {!demo && <PromiseCheckList checks={checks} />}
+              {!demo && (
+                <PromiseCheckList
+                  checks={checks}
+                  paused={item.promises.some(
+                    (p) =>
+                      p.terms.target.kind === "refund" &&
+                      p.outcome === "needs_review",
+                  )}
+                />
+              )}
               {props.assistant}
               {!demo && (
                 <DeferredDetails

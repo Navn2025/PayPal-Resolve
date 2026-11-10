@@ -88,11 +88,15 @@ export function PromiseExtractionPanel({ caseId, request, onUse }: {
     finally { setBusy(false); }
   }
   const visible = result?.proposals.map((proposal, index) => ({ proposal, index })).filter(({ index }) => !dismissed.includes(index)) ?? [];
+  if (!result && !error) return <section className="ai-card extraction-panel extraction-empty" aria-label="Promise suggestions" aria-busy={busy}>
+    <p className="extraction-line"><strong>Promise suggestions</strong>
+      <span className="card-note">{busy ? "Reading the stored conversation…" : "Suggestions only. Nothing is saved or paid until you confirm."}</span></p>
+    <Button className="small-button" disabled={busy} onClick={() => void extract()}>{busy ? "Reading conversation…" : "Extract promises from conversation"}</Button>
+  </section>;
   return <section className="ai-card extraction-panel" aria-label="Promise suggestions" aria-busy={busy}>
     <header className="card-head"><div><div className="eyebrow">AI suggestions</div><h3>Promise suggestions</h3></div>
       <Button disabled={busy} onClick={() => void extract()}>{busy ? "Reading conversation…" : "Extract promises from conversation"}</Button></header>
     <p className="card-note">Suggestions only. Nothing is saved or paid until you confirm.</p>
-    {!result && !error && <p className="panel-state">{busy ? "Reading the stored conversation…" : "No suggestions yet. Extract to read the stored conversation."}</p>}
     {error && <Notice>{error}</Notice>}
     {result && <p className="card-note" role="status">
       {result.cache_hit ? "cached, 0 tokens" : result.skipped_reason ? "No AI call made" : `${result.tokens} tokens`}

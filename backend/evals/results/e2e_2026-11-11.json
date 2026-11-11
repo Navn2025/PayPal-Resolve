@@ -1,0 +1,803 @@
+{
+  "label": "SYNTHETIC - local simulation; no PayPal, no AI provider, no real merchant data",
+  "seed": 11,
+  "incomplete_cases": 30,
+  "checks_passed": 103,
+  "checks_total": 103,
+  "sections": [
+    {
+      "metric": "case_to_payment_matching",
+      "readme": "Correct matching between cases and payments",
+      "checks": [
+        {
+          "name": "a payment links to its case",
+          "expected": 200,
+          "observed": 200,
+          "passed": true
+        },
+        {
+          "name": "linking the same payment again is a no-op",
+          "expected": 200,
+          "observed": 200,
+          "passed": true
+        },
+        {
+          "name": "a case cannot take a second payment",
+          "expected": 409,
+          "observed": 409,
+          "passed": true
+        },
+        {
+          "name": "a payment cannot be linked to a second case",
+          "expected": 409,
+          "observed": 409,
+          "passed": true
+        },
+        {
+          "name": "another merchant's payment is not found",
+          "expected": 404,
+          "observed": 404,
+          "passed": true
+        },
+        {
+          "name": "a refund promise above the captured amount is rejected",
+          "expected": 409,
+          "observed": 409,
+          "passed": true
+        },
+        {
+          "name": "a PayPal capture whose amount differs from the payment is refused",
+          "expected": "StoreError:409",
+          "observed": "StoreError:409",
+          "passed": true
+        }
+      ],
+      "passed": 7,
+      "total": 7
+    },
+    {
+      "metric": "incomplete_refund_detection",
+      "readme": "Detection of incomplete refund commitments",
+      "checks": [
+        {
+          "name": "case 1: over_two, not due -> status",
+          "expected": "kept",
+          "observed": "kept",
+          "passed": true
+        },
+        {
+          "name": "case 1: remaining amount",
+          "expected": "0.00",
+          "observed": "0.00",
+          "passed": true
+        },
+        {
+          "name": "case 2: partial, overdue -> status",
+          "expected": "at_risk",
+          "observed": "at_risk",
+          "passed": true
+        },
+        {
+          "name": "case 2: remaining amount",
+          "expected": "6.56",
+          "observed": "6.56",
+          "passed": true
+        },
+        {
+          "name": "case 3: partial, overdue -> status",
+          "expected": "at_risk",
+          "observed": "at_risk",
+          "passed": true
+        },
+        {
+          "name": "case 3: remaining amount",
+          "expected": "49.72",
+          "observed": "49.72",
+          "passed": true
+        },
+        {
+          "name": "case 4: none, overdue -> status",
+          "expected": "broken",
+          "observed": "broken",
+          "passed": true
+        },
+        {
+          "name": "case 4: remaining amount",
+          "expected": "17.42",
+          "observed": "17.42",
+          "passed": true
+        },
+        {
+          "name": "case 5: partial, not due -> status",
+          "expected": "partially_kept",
+          "observed": "partially_kept",
+          "passed": true
+        },
+        {
+          "name": "case 5: remaining amount",
+          "expected": "18.91",
+          "observed": "18.91",
+          "passed": true
+        },
+        {
+          "name": "case 6: none, not due -> status",
+          "expected": "at_risk",
+          "observed": "at_risk",
+          "passed": true
+        },
+        {
+          "name": "case 6: remaining amount",
+          "expected": "15.17",
+          "observed": "15.17",
+          "passed": true
+        },
+        {
+          "name": "case 7: none, overdue -> status",
+          "expected": "broken",
+          "observed": "broken",
+          "passed": true
+        },
+        {
+          "name": "case 7: remaining amount",
+          "expected": "59.12",
+          "observed": "59.12",
+          "passed": true
+        },
+        {
+          "name": "case 8: partial, not due -> status",
+          "expected": "partially_kept",
+          "observed": "partially_kept",
+          "passed": true
+        },
+        {
+          "name": "case 8: remaining amount",
+          "expected": "28.31",
+          "observed": "28.31",
+          "passed": true
+        },
+        {
+          "name": "case 9: none, overdue -> status",
+          "expected": "broken",
+          "observed": "broken",
+          "passed": true
+        },
+        {
+          "name": "case 9: remaining amount",
+          "expected": "50.94",
+          "observed": "50.94",
+          "passed": true
+        },
+        {
+          "name": "case 10: over_two, not due -> status",
+          "expected": "kept",
+          "observed": "kept",
+          "passed": true
+        },
+        {
+          "name": "case 10: remaining amount",
+          "expected": "0.00",
+          "observed": "0.00",
+          "passed": true
+        },
+        {
+          "name": "case 11: none, overdue -> status",
+          "expected": "broken",
+          "observed": "broken",
+          "passed": true
+        },
+        {
+          "name": "case 11: remaining amount",
+          "expected": "78.83",
+          "observed": "78.83",
+          "passed": true
+        },
+        {
+          "name": "case 12: full, not due -> status",
+          "expected": "kept",
+          "observed": "kept",
+          "passed": true
+        },
+        {
+          "name": "case 12: remaining amount",
+          "expected": "0.00",
+          "observed": "0.00",
+          "passed": true
+        },
+        {
+          "name": "case 13: over_two, overdue -> status",
+          "expected": "kept",
+          "observed": "kept",
+          "passed": true
+        },
+        {
+          "name": "case 13: remaining amount",
+          "expected": "0.00",
+          "observed": "0.00",
+          "passed": true
+        },
+        {
+          "name": "case 14: none, overdue -> status",
+          "expected": "broken",
+          "observed": "broken",
+          "passed": true
+        },
+        {
+          "name": "case 14: remaining amount",
+          "expected": "15.47",
+          "observed": "15.47",
+          "passed": true
+        },
+        {
+          "name": "case 15: none, not due -> status",
+          "expected": "at_risk",
+          "observed": "at_risk",
+          "passed": true
+        },
+        {
+          "name": "case 15: remaining amount",
+          "expected": "27.18",
+          "observed": "27.18",
+          "passed": true
+        },
+        {
+          "name": "case 16: over_two, not due -> status",
+          "expected": "kept",
+          "observed": "kept",
+          "passed": true
+        },
+        {
+          "name": "case 16: remaining amount",
+          "expected": "0.00",
+          "observed": "0.00",
+          "passed": true
+        },
+        {
+          "name": "case 17: full, overdue -> status",
+          "expected": "kept",
+          "observed": "kept",
+          "passed": true
+        },
+        {
+          "name": "case 17: remaining amount",
+          "expected": "0.00",
+          "observed": "0.00",
+          "passed": true
+        },
+        {
+          "name": "case 18: over_two, overdue -> status",
+          "expected": "kept",
+          "observed": "kept",
+          "passed": true
+        },
+        {
+          "name": "case 18: remaining amount",
+          "expected": "0.00",
+          "observed": "0.00",
+          "passed": true
+        },
+        {
+          "name": "case 19: none, overdue -> status",
+          "expected": "broken",
+          "observed": "broken",
+          "passed": true
+        },
+        {
+          "name": "case 19: remaining amount",
+          "expected": "30.18",
+          "observed": "30.18",
+          "passed": true
+        },
+        {
+          "name": "case 20: partial, overdue -> status",
+          "expected": "at_risk",
+          "observed": "at_risk",
+          "passed": true
+        },
+        {
+          "name": "case 20: remaining amount",
+          "expected": "17.67",
+          "observed": "17.67",
+          "passed": true
+        },
+        {
+          "name": "case 21: partial, not due -> status",
+          "expected": "partially_kept",
+          "observed": "partially_kept",
+          "passed": true
+        },
+        {
+          "name": "case 21: remaining amount",
+          "expected": "5.78",
+          "observed": "5.78",
+          "passed": true
+        },
+        {
+          "name": "case 22: over_two, overdue -> status",
+          "expected": "kept",
+          "observed": "kept",
+          "passed": true
+        },
+        {
+          "name": "case 22: remaining amount",
+          "expected": "0.00",
+          "observed": "0.00",
+          "passed": true
+        },
+        {
+          "name": "case 23: none, not due -> status",
+          "expected": "at_risk",
+          "observed": "at_risk",
+          "passed": true
+        },
+        {
+          "name": "case 23: remaining amount",
+          "expected": "27.43",
+          "observed": "27.43",
+          "passed": true
+        },
+        {
+          "name": "case 24: full, overdue -> status",
+          "expected": "kept",
+          "observed": "kept",
+          "passed": true
+        },
+        {
+          "name": "case 24: remaining amount",
+          "expected": "0.00",
+          "observed": "0.00",
+          "passed": true
+        },
+        {
+          "name": "case 25: over_two, not due -> status",
+          "expected": "kept",
+          "observed": "kept",
+          "passed": true
+        },
+        {
+          "name": "case 25: remaining amount",
+          "expected": "0.00",
+          "observed": "0.00",
+          "passed": true
+        },
+        {
+          "name": "case 26: none, overdue -> status",
+          "expected": "broken",
+          "observed": "broken",
+          "passed": true
+        },
+        {
+          "name": "case 26: remaining amount",
+          "expected": "57.26",
+          "observed": "57.26",
+          "passed": true
+        },
+        {
+          "name": "case 27: full, not due -> status",
+          "expected": "kept",
+          "observed": "kept",
+          "passed": true
+        },
+        {
+          "name": "case 27: remaining amount",
+          "expected": "0.00",
+          "observed": "0.00",
+          "passed": true
+        },
+        {
+          "name": "case 28: full, overdue -> status",
+          "expected": "kept",
+          "observed": "kept",
+          "passed": true
+        },
+        {
+          "name": "case 28: remaining amount",
+          "expected": "0.00",
+          "observed": "0.00",
+          "passed": true
+        },
+        {
+          "name": "case 29: partial, overdue -> status",
+          "expected": "at_risk",
+          "observed": "at_risk",
+          "passed": true
+        },
+        {
+          "name": "case 29: remaining amount",
+          "expected": "24.04",
+          "observed": "24.04",
+          "passed": true
+        },
+        {
+          "name": "case 30: over_two, not due -> status",
+          "expected": "kept",
+          "observed": "kept",
+          "passed": true
+        },
+        {
+          "name": "case 30: remaining amount",
+          "expected": "0.00",
+          "observed": "0.00",
+          "passed": true
+        }
+      ],
+      "passed": 60,
+      "total": 60,
+      "cases": 30,
+      "confusion": {
+        "tp": 17,
+        "fp": 0,
+        "fn": 0,
+        "tn": 13
+      },
+      "recall": 1.0,
+      "precision": 1.0,
+      "status_accuracy": 1.0
+    },
+    {
+      "metric": "pending_refunds",
+      "readme": "Correct treatment of pending refunds",
+      "checks": [
+        {
+          "name": "a pending refund is held as pending",
+          "expected": "30.00",
+          "observed": "30.00",
+          "passed": true
+        },
+        {
+          "name": "a pending refund is not counted as completed",
+          "expected": "0.00",
+          "observed": "0.00",
+          "passed": true
+        },
+        {
+          "name": "the remaining refundable amount subtracts the pending refund",
+          "expected": "70.00",
+          "observed": "70.00",
+          "passed": true
+        },
+        {
+          "name": "the uncovered commitment subtracts the pending refund",
+          "expected": "70.00",
+          "observed": "70.00",
+          "passed": true
+        },
+        {
+          "name": "the outstanding commitment still includes the pending amount",
+          "expected": "100.00",
+          "observed": "100.00",
+          "passed": true
+        },
+        {
+          "name": "no new refund is recommended while one is pending",
+          "expected": [
+            "refund_pending",
+            "0.00"
+          ],
+          "observed": [
+            "refund_pending",
+            "0.00"
+          ],
+          "passed": true
+        },
+        {
+          "name": "the suggested refund leaves the pending amount out",
+          "expected": "70.00",
+          "observed": "70.00",
+          "passed": true
+        },
+        {
+          "name": "the promise is not counted as kept while pending",
+          "expected": true,
+          "observed": true,
+          "passed": true
+        },
+        {
+          "name": "the next step names the unconfirmed pending refund",
+          "expected": true,
+          "observed": true,
+          "passed": true
+        },
+        {
+          "name": "once completed, it moves from pending to completed",
+          "expected": [
+            "0.00",
+            "30.00"
+          ],
+          "observed": [
+            "0.00",
+            "30.00"
+          ],
+          "passed": true
+        },
+        {
+          "name": "then the rest is recommended again",
+          "expected": "70.00",
+          "observed": "70.00",
+          "passed": true
+        }
+      ],
+      "passed": 11,
+      "total": 11
+    },
+    {
+      "metric": "duplicate_and_excessive_refunds_blocked",
+      "readme": "Duplicate and excessive refund attempts blocked",
+      "checks": [
+        {
+          "name": "an approval above the recommended amount is rejected",
+          "expected": 409,
+          "observed": 409,
+          "passed": true
+        },
+        {
+          "name": "an approval for the recommended amount is recorded",
+          "expected": 201,
+          "observed": 201,
+          "passed": true
+        },
+        {
+          "name": "the approved refund executes once",
+          "expected": [
+            201,
+            "completed"
+          ],
+          "observed": [
+            201,
+            "completed"
+          ],
+          "passed": true
+        },
+        {
+          "name": "replaying the same request returns the same execution",
+          "expected": [
+            200,
+            "c5fe4525-3fed-4303-8ea7-b85a22bd5c58"
+          ],
+          "observed": [
+            200,
+            "c5fe4525-3fed-4303-8ea7-b85a22bd5c58"
+          ],
+          "passed": true
+        },
+        {
+          "name": "a second execution of the same approval is rejected",
+          "expected": 409,
+          "observed": 409,
+          "passed": true
+        },
+        {
+          "name": "PayPal received exactly one refund request",
+          "expected": 1,
+          "observed": 1,
+          "passed": true
+        },
+        {
+          "name": "nothing is left to recommend after the full refund",
+          "expected": "0.00",
+          "observed": "0.00",
+          "passed": true
+        },
+        {
+          "name": "a new approval after the full refund is rejected",
+          "expected": 409,
+          "observed": 409,
+          "passed": true
+        },
+        {
+          "name": "a refund promise up to the capture is recorded",
+          "expected": 201,
+          "observed": 201,
+          "passed": true
+        },
+        {
+          "name": "a second refund promise on the same capture is rejected",
+          "expected": 409,
+          "observed": 409,
+          "passed": true
+        }
+      ],
+      "passed": 10,
+      "total": 10
+    },
+    {
+      "metric": "recovery_after_interrupted_request",
+      "readme": "Recovery from interrupted payment requests",
+      "checks": [
+        {
+          "name": "retry_after_restart: an interrupted request is recorded as unknown",
+          "expected": "unknown",
+          "observed": "unknown",
+          "passed": true
+        },
+        {
+          "name": "retry_after_restart: the balance stays reserved while unknown",
+          "expected": [
+            "execution_pending",
+            "0.00"
+          ],
+          "observed": [
+            "execution_pending",
+            "0.00"
+          ],
+          "passed": true
+        },
+        {
+          "name": "retry_after_restart: no second approval can be used meanwhile",
+          "expected": 409,
+          "observed": 409,
+          "passed": true
+        },
+        {
+          "name": "retry_after_restart: the refund completes",
+          "expected": "completed",
+          "observed": "completed",
+          "passed": true
+        },
+        {
+          "name": "retry_after_restart: the same PayPal request id is reused",
+          "expected": "4a7d5c6e-5dd7-482a-b48c-3673dc3e5fd3",
+          "observed": "4a7d5c6e-5dd7-482a-b48c-3673dc3e5fd3",
+          "passed": true
+        },
+        {
+          "name": "retry_after_restart: PayPal holds one refund for the case",
+          "expected": 1,
+          "observed": 1,
+          "passed": true
+        },
+        {
+          "name": "retry_after_restart: the payment is fulfilled",
+          "expected": "fulfilled",
+          "observed": "fulfilled",
+          "passed": true
+        },
+        {
+          "name": "recovery_worker: an interrupted request is recorded as unknown",
+          "expected": "unknown",
+          "observed": "unknown",
+          "passed": true
+        },
+        {
+          "name": "recovery_worker: the balance stays reserved while unknown",
+          "expected": [
+            "execution_pending",
+            "0.00"
+          ],
+          "observed": [
+            "execution_pending",
+            "0.00"
+          ],
+          "passed": true
+        },
+        {
+          "name": "recovery_worker: no second approval can be used meanwhile",
+          "expected": 409,
+          "observed": 409,
+          "passed": true
+        },
+        {
+          "name": "recovery_worker: the worker completes it",
+          "expected": 1,
+          "observed": 1,
+          "passed": true
+        },
+        {
+          "name": "recovery_worker: the refund completes",
+          "expected": "completed",
+          "observed": "completed",
+          "passed": true
+        },
+        {
+          "name": "recovery_worker: the same PayPal request id is reused",
+          "expected": "8331af65-febb-44c5-978e-7a693a179f97",
+          "observed": "8331af65-febb-44c5-978e-7a693a179f97",
+          "passed": true
+        },
+        {
+          "name": "recovery_worker: PayPal holds one refund for the case",
+          "expected": 1,
+          "observed": 1,
+          "passed": true
+        },
+        {
+          "name": "recovery_worker: the payment is fulfilled",
+          "expected": "fulfilled",
+          "observed": "fulfilled",
+          "passed": true
+        }
+      ],
+      "passed": 15,
+      "total": 15
+    },
+    {
+      "metric": "time_to_verified_resolution",
+      "readme": "Time to verified resolution",
+      "label": "SYNTHETIC - generated delays (run_resolution_eval.py), not observed refund times",
+      "seed": 7,
+      "definition": "first promise_recorded event -> first PayPal-verified COMPLETED refunds covering the promise",
+      "cases": 40,
+      "resolved": 24,
+      "unresolved": 16,
+      "median_hours": 86.49,
+      "p90_hours": 124.47,
+      "by_scenario": {
+        "one_refund": {
+          "cases": 8,
+          "resolved": 8,
+          "unresolved": 0,
+          "median_hours": 93.87,
+          "p90_hours": 115.52
+        },
+        "two_refunds": {
+          "cases": 8,
+          "resolved": 8,
+          "unresolved": 0,
+          "median_hours": 80.99,
+          "p90_hours": 174.15
+        },
+        "partial_only": {
+          "cases": 8,
+          "resolved": 0,
+          "unresolved": 8,
+          "median_hours": null,
+          "p90_hours": null
+        },
+        "no_refund": {
+          "cases": 8,
+          "resolved": 0,
+          "unresolved": 8,
+          "median_hours": null,
+          "p90_hours": null
+        },
+        "pending_then_completed": {
+          "cases": 8,
+          "resolved": 8,
+          "unresolved": 0,
+          "median_hours": 98.1,
+          "p90_hours": 124.47
+        }
+      },
+      "checks": [],
+      "passed": 0,
+      "total": 0
+    },
+    {
+      "metric": "extraction_and_injection",
+      "readme": "Commitment-extraction accuracy",
+      "label": "RECORDED EARLIER - live Groq calls on synthetic chats; not re-run by this harness",
+      "checks": [],
+      "passed": 0,
+      "total": 0,
+      "sources": {
+        "extraction": {
+          "file": "extraction_2026-11-08_r1.json",
+          "label": "live eval on synthetic data",
+          "date": "2026-11-08",
+          "model": "openai/gpt-oss-120b",
+          "chats": 160,
+          "precision": 0.951,
+          "recall": 0.992,
+          "f1": 0.971,
+          "amount_accuracy": 1.0,
+          "attacked_chats": 50,
+          "injection_successes": 0
+        },
+        "injection_stability": {
+          "file": "extraction_2026-11-08_injection_stability_partial.json",
+          "label": "live eval on synthetic data",
+          "date": "2026-11-08",
+          "model": "openai/gpt-oss-120b",
+          "chats": 14,
+          "runs": 2,
+          "disagreements": 0,
+          "injection_successes": [
+            0,
+            0
+          ],
+          "note": "partial: 14 of 50 injection chats re-run (see CHG-038)"
+        }
+      }
+    }
+  ],
+  "date": "2026-11-11"
+}

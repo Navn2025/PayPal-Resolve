@@ -4309,6 +4309,106 @@ code review, not by its own browser test. The flake's root cause wasn't
 reproduced; the test now waits for each save and retries the refresh, so a
 slower environment can't fail it.
 
+### CHG-061 - End-to-end evaluation harness for the README evaluation plan (synthetic)
+
+**Date:** 11 November 2026 (Asia/Calcutta). Branch `feat/ai-part`. Evals and
+tests only; no application code changed, including none of Navneet's.
+
+**Objective:** measure the README's evaluation plan end to end in one
+repeatable run, with a dated, clearly labelled results file. The roadmap item
+"Evaluate complete resolution workflows" covers this, but at the synthetic
+level only (see the limitations).
+
+**Files and resulting behavior:**
+
+- **`backend/evals/run_e2e_eval.py` (new):**
+  - **Setup:** runs the real API on a temporary SQLite database with one
+    synthetic merchant.
+  - **`SyntheticPayPal`:** a local provider with no network, written for the
+    harness (the tests are not imported). Provider refunds go through the
+    store's own recorder, as in the backend tests.
+  - **Each scenario records every check** as expected vs observed:
+    - **Case-to-payment matching (7 checks):** link and re-link; a second
+      payment and a second case are rejected; another merchant's payment
+      returns 404; a promise above the capture is rejected; a PayPal capture
+      with a different amount is refused.
+    - **Incomplete refund detection (2 checks per seeded case):**
+      - **Shapes:** refunds of none, partial, full or two-part, each due or
+        overdue.
+      - **Checked:** the promise-health status and the remaining amount,
+        against `expected_status()`, a rule written from the README rather
+        than imported from `app.promise_health`.
+      - **Reported:** recall, precision and status accuracy.
+    - **Pending refunds (11 checks):** follows the documented reconciliation
+      rules in `backend/README.md`.
+    - **Duplicate and excessive refunds (10 checks):** an approval above the
+      recommendation, an execution replay, a second execution, exactly one
+      PayPal request, no recommendation after a full refund, and a second
+      refund promise on the same capture.
+    - **Recovery after an interrupted request (15 checks):** the provider
+      accepts the refund but the response is lost. Both the retry after an app
+      restart and `app.worker.run_once` are covered: the balance stays
+      reserved, no new approval is possible, the refund completes with the same
+      PayPal request ID, and there is one refund.
+    - **Time to verified resolution:** reuses
+      `evals/run_resolution_eval.run` (seed 7, generated delays).
+    - **Extraction and injection:** quoted from
+      `results/extraction_2026-11-08_r1.json` and
+      `results/extraction_2026-11-08_injection_stability_partial.json`. They
+      are labelled "recorded earlier, live Groq on synthetic chats, not re-run".
+  - **Output:** writes `results/e2e_<date>.json` and `.md`, both headed
+    "SYNTHETIC - local simulation; no PayPal, no AI provider, no real merchant
+    data". The exit code is 1 if any check fails.
+- **`backend/evals/results/e2e_2026-11-11.{json,md}` (new):** seed 11 with 30
+  seeded cases: **103 of 103 checks passed**.
+  - **Incomplete-commitment detection:** recall 1.0 and precision 1.0 (TP 17,
+    FP 0, FN 0, TN 13); status accuracy 1.0.
+  - **Time to verified resolution:** the same as
+    `resolution_time_2026-11-10`, median 86.49 h and p90 124.47 h
+    (24 of 40 resolved).
+- **`backend/evals/README.md` (new):** what each script measures, how to run
+  it, what each README metric checks, and the limits.
+- **`backend/tests/test_e2e_eval.py` (new):** a small seed must pass every
+  check in all seven sections. The files are dated and labelled, and the
+  expected-status rule is checked against the README cases.
+
+**Correction during development (recorded, not hidden):** the first draft
+expected a recommended refund of $70.00 while $30.00 was pending. The backend
+recommends $0.00 until no refund is pending, and `backend/README.md` documents
+exactly that ("`recommended_refund_amount` is zero until … no refund is
+pending"). The expectation was corrected to the documented rules:
+
+- **Subtract the pending refund:** the remaining refundable amount and the
+  uncovered commitment.
+- **Include the pending amount:** the outstanding commitment.
+- **Recommendation:** none while the refund is pending, and the rest
+  recommended again once it completes.
+
+No backend behaviour was changed to make a check pass.
+
+**Reason and decision IDs:** DEC-095.
+
+**Validation actually performed:**
+
+- `uv run python evals/run_e2e_eval.py --date 2026-11-11`: 103/103.
+- `pytest tests/test_e2e_eval.py`: 3 passed.
+- **Full backend suite:** 502 passed, 63 skipped.
+- `uvx ruff check` on the new files: passed.
+- **Frontend:** not changed, so not re-run.
+
+**Known limitations:**
+
+- **Synthetic only:** no PayPal Sandbox, webhook or hosted-database behaviour
+  is exercised.
+- **Detection figures:** the precision and recall compare the API with a rule
+  written from the README. They show the full path works end to end; they
+  aren't a statistical accuracy estimate on real cases.
+- **Extraction figures:** taken from earlier live-on-synthetic runs, not
+  produced here. The injection-stability rerun is still partial (14 of 50
+  chats; CHG-038).
+- **Next step:** a Sandbox-backed variant of the recovery and pending
+  scenarios, run once hosted webhooks are verified.
+
 ## Decision register
 
 ### DEC-001 - Keep FastAPI/Pydantic and the existing uv project
@@ -5171,6 +5271,16 @@ promises and publishing the offer are two separate merchant actions. Both
 re-check the balance on the server, and both reuse the existing promise and
 offer endpoints and the one-refund-promise-per-capture rule.
 
+### DEC-095 - One synthetic harness answers the README evaluation plan
+
+Each README evaluation metric has a scenario that runs the real API and records
+expected against observed outcomes. Expectations come from the README and the
+backend README, never from the module under test. When a check disagrees with
+documented behaviour, the expectation is corrected and the correction is logged;
+the code is not changed to make a check pass. Every figure keeps its own
+provenance: local simulation, generated delays, or earlier live runs on
+synthetic data.
+
 ## Open work and boundaries
 
 1. Verify import (if needed), SSL connection, migration startup, and worker
@@ -5202,7 +5312,7 @@ offer endpoints and the one-refund-promise-per-capture rule.
 ## Template for the next entry
 
 ```text
-### CHG-061 - Concrete change title
+### CHG-062 - Concrete change title
 Date:
 Objective:
 Files and resulting behavior:

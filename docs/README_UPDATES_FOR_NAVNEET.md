@@ -19,12 +19,15 @@ wording is below; keep, change or drop it as you see fit.
    - `- [x] Add broken-promise detection, missing-information checks and code-built remedy suggestions` (CHG-047, CHG-048, CHG-058)
    - `- [ ] Add a merchant accept step that turns a reviewed AI proposal into a promise in one action`
    - `- [ ] Run the live (account-backed) AI evaluation and finish the CHG-038 injection runs`
-3. **"Evaluate complete resolution workflows":** leave it unticked. Only the
-   synthetic time-to-verified-resolution evaluation exists
-   (`backend/evals/results/resolution_time_2026-11-10.*`), not a full workflow
-   evaluation.
-4. **Evaluation plan, "Time to verified resolution":** you could link the
-   synthetic results above and note that they are synthetic.
+3. **"Evaluate complete resolution workflows":** a synthetic end-to-end harness
+   now covers every metric in the README evaluation plan
+   (`backend/evals/run_e2e_eval.py`; results in
+   `backend/evals/results/e2e_2026-11-11.md`, 103/103 checks; CHG-061).
+   Suggested line:
+   `- [x] Evaluate complete resolution workflows (synthetic; Sandbox-backed run pending)`.
+   You may prefer to keep it unticked until a Sandbox-backed run exists.
+4. **Evaluation plan:** you could link `backend/evals/README.md`, which maps
+   each metric to its synthetic check and states the limits.
 
 ## docs/BUILD_STATUS.md
 

@@ -19,6 +19,7 @@ const rules = {
     `resolution-cases/${id}/(?:customer-link|customer-messages)`,
     `resolution-cases/${id}/operations/read`,
     "cases", `cases/${id}/(?:refund-approvals|refund-executions)`,
+    `cases/${id}/paypal-refund-history/refresh`,
     `cases/${id}/refund-executions/${id}/refresh`,
     `review-queue/${id}/resolve`,
     `resolution-cases/${id}/ai/extract-promises`, `resolution-cases/${id}/ai/explain-next-action`,

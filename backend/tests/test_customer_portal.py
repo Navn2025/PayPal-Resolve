@@ -34,8 +34,9 @@ def test_customer_sees_limited_case_without_merchant_auth(client):
     data = response.json()
     assert data["title"] == "Return update" and data["order_reference"] is None
     assert data["promises"][0]["promise"] == "We agreed to refund $30.00."
-    assert data["refund"]["confirmed_amount"] == "0.00"
-    assert data["refund"]["outstanding_amount"] == "30.00"
+    assert data["refund"]["confirmed_amount"] is None
+    assert data["refund"]["outstanding_amount"] is None
+    assert data["refund"]["verification"] == "unverified"
     for value in (
         "PRIVATE SUPPORT NOTE",
         "PRIVATE-ORDER-REF",

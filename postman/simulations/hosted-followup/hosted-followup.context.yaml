@@ -42,4 +42,15 @@ assumptions:
     reason: The simulation used synthetic credentials and local fixtures. Real accounts, a verified sending domain, and hosting were not configured.
     source: docs/HOSTED_FOLLOWUP.md
     updated_at: '2026-11-07'
-fingerprints: []
+  - id: chg055-webhook-regression
+    status: supported
+    claim: After restoring the configured client on the public webhook route, the tested local transport and follow-up scenarios complete with signature checks and durable deduplication intact.
+    reason: The initial audit reproduced a NameError before verification; the fix does not infer merchant identity from unverified event data.
+    verification: On 2026-11-11, CHG-055 reran five provider test modules through this simulation; 48 passed with 369 mocked requests and zero pass-through. No real provider account or email delivery was used.
+    source: backend/app/workspace_routes.py ; backend/tests/test_paypal_history_simulation.py ; backend/tests/test_hosted_followup_simulation.py ; docs/testing/testing-report.md
+    updated_at: '2026-11-11'
+fingerprints:
+  - id: chg056-controlled-failure-regression
+    date: '2026-11-11'
+    cli: '1.82.0'
+    evidence: Final five-module run 49 passed, 380 mocked requests and zero pass-through. Buyer unverified amounts are nullable until provider history is current. Real HTTPX/disposable storage execute; delivery/store/carrier/helpdesk accounts remain unverified. Actual USD 1 Sandbox evidence is separately scoped, not inferred from this simulation.

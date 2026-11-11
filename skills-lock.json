@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "skills": {
+    "video-shotcraft": {
+      "source": "SunCl8/video-shotcraft-skill",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "2ee0ff42b247d29161dd88273f8792dcbacf07ce40bedee87f93d90dd5e6cda6"
+    }
+  }
+}

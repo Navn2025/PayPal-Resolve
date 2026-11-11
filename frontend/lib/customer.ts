@@ -43,7 +43,7 @@ export interface CustomerCase {
   outcome: Outcome;
   expires_at: string;
   promises: { kind: Remedy; promise: string; outcome: Outcome; due_at?: string | null; provider_confirmed: boolean }[];
-  refund: { promised_amount: string; confirmed_amount: string; pending_amount: string; outstanding_amount: string; currency: "USD"; environment: "sandbox" } | null;
+  refund: { promised_amount: string; confirmed_amount: string | null; pending_amount: string | null; outstanding_amount: string | null; verification: "current" | "unverified"; currency: "USD"; environment: "sandbox" } | null;
   messages: Message[];
   evidence: Evidence[];
   timeline: CustomerMilestone[];
@@ -53,25 +53,6 @@ export interface CustomerCase {
 export const customerLabels: Record<Outcome, string> = {
   waiting: "In progress", pending: "Awaiting confirmation", needs_review: "Under review", fulfilled: "Resolved",
 };
-export const demoCustomer: CustomerCase = {
-  title: "Your headphone return", order_reference: "ORD-4821", outcome: "waiting", expires_at: "",
-  promises: [
-    { kind: "return", promise: "Confirm receipt of the returned headphones.", outcome: "fulfilled", provider_confirmed: false },
-    { kind: "refund", promise: "Refund $30.00 to your original payment method after we receive the return.", outcome: "waiting", provider_confirmed: false },
-  ],
-  refund: { promised_amount: "30.00", confirmed_amount: "10.00", pending_amount: "0.00", outstanding_amount: "20.00", currency: "USD", environment: "sandbox" },
-  messages: [
-    { id: "sample-reply", sender: "merchant", body: "We received your return. The first $10.00 refund is confirmed, and we're checking the remaining $20.00.", created_at: "2026-11-07T09:24:00Z" },
-  ],
-  evidence: [],
-  timeline: [
-    { label: "Request received", occurred_at: "2026-11-07T08:30:00Z", source: "customer_submitted" },
-    { label: "Return confirmed", occurred_at: "2026-11-07T09:12:00Z", source: "merchant_recorded" },
-    { label: "PayPal confirmed a refund", occurred_at: "2026-11-07T09:24:00Z", source: "provider_confirmed" },
-  ],
-  next_step: { actor: "merchant", action: "The merchant needs to approve the remaining refund.", due_at: null, overdue: false },
-};
-
 export function customerRequest<T>(action: "view" | "messages" | "intake-view" | "intake", token: string, data?: Record<string, unknown>) {
   return fetch("/api/customer-portal/" + action, {
     method: "POST", credentials: "omit", cache: "no-store", headers: { "Content-Type": "application/json" },

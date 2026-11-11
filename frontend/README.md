@@ -1,5 +1,23 @@
 # Resolve merchant UI
 
+For the production audit, run `npx playwright test --config playwright.audit.config.ts`
+from this directory. It builds a disposable source copy, uses synthetic storage,
+checks page widths at desktop/tablet/mobile sizes and captures real application
+screenshots under `docs/user-manual/screenshots`. Optional `RESOLVE_AUDIT_SCENARIO`
+values `paypal-email` and `google` require their corresponding local Postman TLS
+simulations. Never use this fixture against an owner's configured database.
+See the [deployment guide](../docs/deployment/deployment-guide.md) for Render;
+no hosted production URL has been verified by this audit.
+
+Public documentation lives at `/docs`, linked from the landing page and workspace.
+Ten guides are authored in `content/docs.json`; static article pages and search
+use that source. `npm run docs:export` refreshes `../docs/RESOLVE_GUIDE.md` and the
+public guide/OpenAPI downloads; `npm run docs:check` detects stale exports. Normal
+and preview build commands export these assets first. Documentation requires no
+backend or sign-in. `npx playwright test -c playwright.docs.config.ts` checks the
+compiled pages, search, copy/download actions and small-screen navigation using
+an isolated source copy with no API server.
+
 
 Aftercare assurance (SDK 0.7) adds refund tracing, reusable support context and
 return policy/label workflows. See [the workflow guide](../docs/AFTERCARE_RELIABILITY.md).
@@ -37,10 +55,11 @@ SDK. Merchants can browse and search orders and open a case from its details.
 Generate and revoke commerce keys in **Settings → SDK keys**; copy the server
 configuration with the key and the web app’s `/api/sdk` URL.
 
-The Next.js app opens with a public landing page. The separate demo has a merchant
-inbox, case detail, promises and evidence, a review queue, and a buyer receipt
-that can be printed or saved as a PDF. A separate
-[customer portal](http://127.0.0.1:3000/customer?demo=1) opens directly.
+The Next.js app opens with a public landing page. Sign in to the real backend for
+the merchant inbox, case detail, promises, evidence, review queue and printable
+buyer receipt. The [customer portal](http://127.0.0.1:3000/customer) needs a private
+case/intake link. `/demo` redirects to sign-in; legacy sample query strings never
+create fake records or successful financial outcomes.
 
 For normal local use, run the optimized preview from this directory:
 
@@ -69,11 +88,10 @@ npm ci
 npm run dev
 ```
 
-Open <http://127.0.0.1:3000> and choose **Explore the demo**. The demo at
-`/demo` needs no credentials or backend.
-To try the duplicate-refund branch, approve the sample refund and choose
-**Simulate outside refund** beside the submission action. Use **Reset demo**
-to try the normal submission path again. Demo changes are kept in memory.
+Open <http://127.0.0.1:3000>, create/sign into your merchant account and use the
+configured backend. Missing provider credentials produce an unavailable/error
+state. Product code has no mock fallback. Controlled test doubles remain confined
+to opt-in automated tests and are never evidence of real provider success.
 
 To work with actual local case records:
 
@@ -105,12 +123,12 @@ reference. The link opens the intake form, then the case timeline, evidence
 uploads, and conversation. Choose **Manage case** to set assignment, due date,
 and whether the case is waiting on the buyer. The inbox can filter by workflow
 or unread messages; **Customer portal** contains the buyer's files and replies.
-See [the full walkthrough](../docs/CUSTOMER_WORKFLOW.md) or open the
-[sample intake](http://127.0.0.1:3000/customer?intake=1).
+See [the full walkthrough](../docs/CUSTOMER_WORKFLOW.md). Use the actual issued
+intake link; `?intake=1` does not bypass authorization.
 
 The optional [hosted follow-up setup](../docs/HOSTED_FOLLOWUP.md) enables email
 invites, the **My cases** email sign-in screen, and an optional merchant
-Zendesk card. Copyable invites still work in the local demo without email.
+Zendesk card. Copyable private invites work through the backend without email.
 
 `npm run check` checks TypeScript; `npm run build` builds production
 assets. To run browser tests, install Playwright's Chromium with
@@ -133,3 +151,10 @@ The simulated provider tests use fake credentials. The Playwright readiness
 checks for local services bypass the provider proxy. For product and implementation
 scope, see the [frontend plan](../docs/FRONTEND_PLAN.md) and
 [engineering log](../docs/ENGINEERING_LOG.md).
+
+Merge integration checks include the platform workflows above and the incoming
+promise-health/settings screens. Run the compiled isolated checks with
+`RESOLVE_UI_PRODUCTION_TEST=1` and `npx playwright test -c
+playwright.investigations.config.ts` from this directory (PowerShell: set the
+variable with `$env:RESOLVE_UI_PRODUCTION_TEST='1'`). The API's canonical export
+and local schema references are checked by backend `tests/test_openapi_contract.py`.

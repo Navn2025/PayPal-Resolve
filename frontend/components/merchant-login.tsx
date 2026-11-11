@@ -99,7 +99,7 @@ export function MerchantLogin({ notice, next }: { notice?: string; next: "/works
               <KeyRound size={17} /> {busy === "key" ? "Signing in…" : "Sign in with access key"} <ArrowRight size={17} />
             </button>
           </form>
-          <div className="access-bottom"><Link href="/customer">Looking for your case?</Link><Link href="/demo">Try the demo <ArrowUpRight size={14} /></Link></div>
+          <div className="access-bottom"><Link href="/customer">Looking for your case?</Link><Link href="/docs">Read the guide <ArrowUpRight size={14} /></Link></div>
         </section>
       </div>
     </div>
@@ -140,7 +140,7 @@ export function MerchantSettings({ notice }: { notice?: string }) {
     <div className="workspace-intro"><div><div className="eyebrow intro-eyebrow"><span /> Merchant workspace</div><h1>Account settings</h1>
       <p>Manage how you sign in and which apps can sync orders to this workspace.</p></div></div>
     {message && <Notice tone={success ? "success" : "error"}>{message}</Notice>}
-    {!merchant ? <p className="panel-state" role="status">{message ? "Reload this page to retry." : "Checking your workspace…"}</p>
+    {!merchant ? <p className="panel-state" role="status">{message && !success ? "Reload this page to retry." : "Checking your workspace…"}</p>
       : <div className="settings-grid">
         <section className="section-card settings-section" aria-labelledby="account-heading">
           <div className="section-head"><div className="settings-title"><span className="section-icon"><ShieldCheck size={20} /></span>

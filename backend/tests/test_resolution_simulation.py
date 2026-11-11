@@ -50,6 +50,41 @@ def linked(client):
     return workspace(client, linked=refund), refund, capture
 
 
+def test_public_refund_amounts_require_current_provider_history(resolution_client):
+    from test_customer_portal import buyer_view, issue
+
+    client = resolution_client
+    url, refund, capture = linked(client)
+    cash = record(client, url, {"kind": "refund", "amount": "30.00"})
+    token = issue(client, url)
+    unseen = buyer_view(client, token).json()["refund"]
+    assert unseen["verification"] == "unverified"
+    assert unseen["confirmed_amount"] is None
+    assert unseen["pending_amount"] is None
+    assert unseen["outstanding_amount"] is None
+    external(client, capture, 1000)
+    assert refresh(client, url, cash).status_code == 200
+    current = buyer_view(client, token).json()["refund"]
+    assert current["verification"] == "current"
+    assert current["confirmed_amount"] == "10.00"
+    assert current["pending_amount"] == "0.00"
+    assert current["outstanding_amount"] == "20.00"
+    # Unchanged refund details are deduplicated, but a successful fresh history
+    # read must refresh the public SDK journey's verification timestamp.
+    from datetime import datetime, timedelta, timezone
+    old = (datetime.now(timezone.utc) - timedelta(minutes=10)).isoformat()
+    with client.app.state.store.transaction(write=True) as db:
+        db.execute("UPDATE paypal_refund_verifications SET checked_at=? WHERE capture_id=?", (old, capture))
+    renewed = refresh(client, url, cash)
+    assert renewed.status_code == 200
+    assert datetime.fromisoformat(renewed.json()["checked_at"]) > datetime.fromisoformat(old)
+    synced = client.post("/commerce/orders/sync", json={"case_id": url.rsplit("/", 1)[1], "source": "fresh-history-qa", "order_reference": "STOREORDER1", "revision": 1})
+    assert synced.status_code == 200, synced.text
+    journey = client.post("/platform/buyer/assurance", json={"token": token})
+    assert journey.status_code == 200
+    assert journey.json()["journey"]["resolution"]["refund"]["verification"] == "current"
+
+
 def test_conditional_refund_external_history_and_replacement_in_one_case(
     resolution_client,
 ):

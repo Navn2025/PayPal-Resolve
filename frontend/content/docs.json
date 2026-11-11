@@ -1,0 +1,1124 @@
+{
+  "edition": "SDK 0.7 · PayPal Sandbox",
+  "articles": [
+    {
+      "slug": "getting-started",
+      "title": "Start your first resolution",
+      "description": "Learn the basics and try a merchant-to-buyer case without connecting a payment account.",
+      "group": "Start here",
+      "sections": [
+        {
+          "id": "basics",
+          "title": "What Resolve does",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "Resolve is a payment aftercare platform. It brings a customer issue, merchant commitments, evidence, messages and resolution progress together. Merchants work in a workspace; buyers use a private case link or the support flow inside a connected store."
+            },
+            {
+              "type": "paragraph",
+              "text": "A request is what a customer asks for. A promise is what the merchant agrees to do. Evidence records what happened. A refund approval authorizes one reviewed action; submission and provider confirmation are separate steps."
+            },
+            {
+              "type": "note",
+              "title": "Current scope",
+              "text": "Payment verification and refund execution use PayPal Sandbox. SDK 0.7 is a local Node.js preview. Physical returns, tracing references and manually entered dispute updates retain their merchant-recorded source."
+            }
+          ]
+        },
+        {
+          "id": "first-case",
+          "title": "Create a practice case",
+          "blocks": [
+            {
+              "type": "links",
+              "items": [
+                {
+                  "label": "Create a workspace or sign in",
+                  "href": "/account"
+                }
+              ]
+            },
+            {
+              "type": "steps",
+              "items": [
+                "Open /account and choose Create workspace. Enter your store name, name, email and a password of at least 12 characters. If you registered already, sign in.",
+                "Open Cases → New case. Enter “Customer received a damaged item” and optional order reference TEST-001.",
+                "Choose No linked payment, then Create case. This practice case needs no provider credentials.",
+                "Choose Add promise. Record the agreed remedy, its source, due date and any prerequisites.",
+                "Open Customer portal → Create customer link. Open the issued link in a private browser window to try the buyer view.",
+                "Send a message or upload sample evidence. Refresh the merchant conversation to see the update."
+              ]
+            },
+            {
+              "type": "paragraph",
+              "text": "Already using a full merchant key? Sign in with that key at /login, then open /account?claim=1 to create the first individual owner for the same workspace. Creating a separate workspace gives it separate records."
+            }
+          ]
+        },
+        {
+          "id": "next",
+          "title": "Choose your next step",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "A standalone case supports promises, messages, evidence and sharing. Item returns require a registered order with items. Refund reconciliation requires a linked payment and the relevant provider configuration."
+            },
+            {
+              "type": "links",
+              "items": [
+                {
+                  "label": "Merchant workspace",
+                  "href": "/docs/merchant-workspace"
+                },
+                {
+                  "label": "Buyer portal",
+                  "href": "/docs/buyer-portal"
+                },
+                {
+                  "label": "SDK integration",
+                  "href": "/docs/sdk-integration"
+                },
+                {
+                  "label": "Run Resolve locally",
+                  "href": "/docs/running-resolve"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "merchant-workspace",
+      "title": "Run the merchant workspace",
+      "description": "Handle cases, evidence, offers, overdue work and individual staff permissions.",
+      "group": "For merchants",
+      "sections": [
+        {
+          "id": "daily-work",
+          "title": "A practical daily workflow",
+          "blocks": [
+            {
+              "type": "steps",
+              "items": [
+                "Open Cases. Search by order or case reference and use workflow filters or At risk to find work needing attention.",
+                "Select a case. Read the next step, money summary, promises, due dates and evidence sources.",
+                "Record only the remedy actually agreed to, its source and prerequisites. Customer preferences remain separate until a merchant records a promise.",
+                "Use Customer portal to send a public update, collect evidence and create or revoke a private buyer link.",
+                "Open Operations → Missed promises → Scan workspace for overdue work and customer-update drafts. Review and send drafts through your chosen channel.",
+                "Use Manage case to close completed work. Case closure and verified payment completion remain separate facts."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "sources",
+          "title": "Read evidence by source",
+          "blocks": [
+            {
+              "type": "table",
+              "columns": [
+                "Label",
+                "Meaning"
+              ],
+              "rows": [
+                [
+                  "Merchant recorded",
+                  "A staff member or connected app recorded a fact or finding."
+                ],
+                [
+                  "Provider confirmed",
+                  "A supported provider returned evidence for this record; check timestamp and scope."
+                ],
+                [
+                  "Needs review",
+                  "Evidence is missing, conflicting, stale or awaiting a required decision."
+                ],
+                [
+                  "Pending",
+                  "An operation or prerequisite has not reached its final outcome."
+                ]
+              ]
+            },
+            {
+              "type": "paragraph",
+              "text": "The timeline loads when opened. Secondary Zendesk, investigation, offer, return and dispute sections load on expansion. Refresh explicitly when you need newly arrived case data. AI suggestions and investigation reviews are advisory; they never authorize payment."
+            }
+          ]
+        },
+        {
+          "id": "offers",
+          "title": "Let a buyer accept an offer",
+          "blocks": [
+            {
+              "type": "steps",
+              "items": [
+                "Record current promise terms in the case.",
+                "Expand Buyer resolution offers. Choose up to four remedies and an expiry, then publish.",
+                "Share the current private buyer link. The buyer accepts one exact version or declines.",
+                "If terms change, publish current terms. Expired, replaced or stale offers cannot be accepted. Refunds still need separate approval and payment checks."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "roles",
+          "title": "People and permissions",
+          "blocks": [
+            {
+              "type": "table",
+              "columns": [
+                "Role",
+                "Typical access"
+              ],
+              "rows": [
+                [
+                  "Owner",
+                  "Workspace, team, connections, policies and financial work."
+                ],
+                [
+                  "Manager",
+                  "Case work and refund approval; no execution."
+                ],
+                [
+                  "Finance",
+                  "Refund approval and execution; owner-only configuration remains restricted."
+                ],
+                [
+                  "Agent",
+                  "Case handling, messages and ordinary evidence work; no financial approval or execution."
+                ],
+                [
+                  "Viewer",
+                  "Read-only access."
+                ]
+              ]
+            },
+            {
+              "type": "paragraph",
+              "text": "Invite staff under Operations → Team and share the private invitation link. It expires after two days and is single-use; it is not emailed automatically. Role changes or disabling a member revoke their sessions. Policy exceptions and sensitive actions have additional role checks."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "buyer-portal",
+      "title": "Help a buyer without starting over",
+      "description": "Use a private case to exchange messages, review offers, save labels and understand refund progress.",
+      "group": "For buyers",
+      "sections": [
+        {
+          "id": "access",
+          "title": "Open the right case",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "Use the private link supplied by the merchant, or open support from your authenticated store order page. Keep the case link private. A replacement link invalidates the earlier case link. My cases can show cases tied to a verified email when optional sign-in is configured."
+            },
+            {
+              "type": "note",
+              "title": "Customer ownership",
+              "text": "A merchant app must authenticate its customer and verify order ownership before calling the SDK. Knowing an order number alone is not a sign-in method."
+            }
+          ]
+        },
+        {
+          "id": "participate",
+          "title": "Work through your resolution",
+          "blocks": [
+            {
+              "type": "steps",
+              "items": [
+                "Read the agreed remedy and next action. A requested refund or replacement may still need merchant agreement.",
+                "Reply in the existing conversation. Use Refresh messages to check for new replies.",
+                "Attach relevant receipts or photos. Case uploads support PDF, PNG and JPEG subject to the displayed size limit.",
+                "Review a current offer and accept the option you agree to. Remaining conditions still apply.",
+                "If returns are available, select actual order items and quantities, add a reason and request review.",
+                "Wait for approval and instructions. Save the uploaded PDF label so you can print it later, and keep your drop-off receipt."
+              ]
+            }
+          ]
+        },
+        {
+          "id": "refunds",
+          "title": "Understand refund progress",
+          "blocks": [
+            {
+              "type": "table",
+              "columns": [
+                "Status or reference",
+                "What it establishes"
+              ],
+              "rows": [
+                [
+                  "Promised",
+                  "An agreed commitment; no confirmed transfer yet."
+                ],
+                [
+                  "Provider pending",
+                  "The provider operation is still processing."
+                ],
+                [
+                  "Sent to original payment method",
+                  "Processor completion, without independent bank-receipt verification."
+                ],
+                [
+                  "Needs verification or review",
+                  "Evidence is unavailable, stale or conflicting. Unknown amounts are not zero."
+                ],
+                [
+                  "ARN / STAN / RRN / bank reference",
+                  "A merchant-supplied reference to help trace a recorded refund."
+                ]
+              ]
+            },
+            {
+              "type": "paragraph",
+              "text": "If a store uses SDK receipt acknowledgement, it is buyer-reported and changes no payment ledger. Private merchant tracing notes are not shown. Ask for a new case link if yours expired or was revoked. Revoking a server SDK key does not itself revoke previously issued buyer links."
+            },
+            {
+              "type": "links",
+              "items": [
+                {
+                  "label": "Returns and replacements",
+                  "href": "/docs/returns-and-replacements"
+                },
+                {
+                  "label": "Troubleshooting",
+                  "href": "/docs/troubleshooting"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "returns-and-replacements",
+      "title": "Guide returns and replacements",
+      "description": "Review real order items, disclose terms, save labels and record fulfillment milestones.",
+      "group": "For merchants",
+      "sections": [
+        {
+          "id": "before",
+          "title": "Before requesting an item return",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "Register the order and item quantities through the SDK or commerce API and associate it with the case. A typed order reference does not create an item catalog. Existing non-rejected requests reserve quantities and reduce what remains available."
+            },
+            {
+              "type": "links",
+              "items": [
+                {
+                  "label": "Register orders with the SDK",
+                  "href": "/docs/sdk-integration"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "policy",
+          "title": "Configure review rules",
+          "blocks": [
+            {
+              "type": "steps",
+              "items": [
+                "As an owner, open Operations → Connections → Return policy and review checks.",
+                "Enable the policy and set the delivery-based return window, shipping payer, disclosed fee, evidence requirements and inspection requirement.",
+                "Add products needing an exception and write default instructions, then save the current revision.",
+                "Review flagged dates, exclusions, missing evidence or repeated requests. Owners/managers can record documented policy exceptions where permitted."
+              ]
+            },
+            {
+              "type": "note",
+              "title": "Costs and eligibility",
+              "text": "An inactive policy does not quote a free return. Confirm eligibility, shipping costs and fees before shipping. Flags are review prompts, not proof of fraud. No fee is charged automatically and quantity limits cannot be overridden."
+            }
+          ]
+        },
+        {
+          "id": "labels",
+          "title": "Give clear instructions and a reusable label",
+          "blocks": [
+            {
+              "type": "steps",
+              "items": [
+                "Open Guided returns and replacements in the case. Review the request and approve or decline it.",
+                "Expand Return instructions, saved labels and inspection. Save the address, instructions and shipping payer.",
+                "Upload an already arranged PDF return label, up to 2 MiB. Up to ten labels are stored per return; identical bytes reuse the existing label.",
+                "The buyer opens the same section in the private portal and chooses Save label PDF. They can print it later."
+              ]
+            },
+            {
+              "type": "paragraph",
+              "text": "Resolve does not purchase postage or arrange carrier pickup. Actual shipment stays with the merchant and carrier."
+            }
+          ]
+        },
+        {
+          "id": "milestones",
+          "title": "Keep milestones separate",
+          "blocks": [
+            {
+              "type": "table",
+              "columns": [
+                "Stage",
+                "Record it when"
+              ],
+              "rows": [
+                [
+                  "Requested / approved",
+                  "The buyer asks and the merchant reviews."
+                ],
+                [
+                  "Return in transit",
+                  "The merchant records the carrier, tracking and shipment reference."
+                ],
+                [
+                  "Warehouse received",
+                  "The warehouse confirms receipt; carrier delivery is a separate fact."
+                ],
+                [
+                  "Inspection passed",
+                  "A current item/quantity review satisfies active policy and return revisions."
+                ],
+                [
+                  "Replacement shipped / complete",
+                  "A replacement shipment or final workflow result is recorded."
+                ]
+              ]
+            },
+            {
+              "type": "paragraph",
+              "text": "These are merchant-recorded findings. A dependent refund still needs its acceptance, condition, evidence and payment gates. Changed policy or return terms can make an earlier review stale."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "refunds-and-disputes",
+      "title": "Review refunds and disputes",
+      "description": "Understand balances, separate approvals, overlap holds and reason-specific evidence packages.",
+      "group": "For merchants",
+      "sections": [
+        {
+          "id": "balances",
+          "title": "Read the money summary",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "Link the correct payment record. Refund promises are cumulative commitments, not instructions to add the whole amount again on each attempt. Cases sharing a capture use one shared balance."
+            },
+            {
+              "type": "table",
+              "columns": [
+                "Amount",
+                "How to read it"
+              ],
+              "rows": [
+                [
+                  "Promised",
+                  "The current agreed cumulative amount."
+                ],
+                [
+                  "Completed",
+                  "Completed ledger observations; current independent provider evidence is shown separately."
+                ],
+                [
+                  "Pending",
+                  "Refunds still processing, kept separate from completed amounts."
+                ],
+                [
+                  "Outstanding",
+                  "What remains after applicable completed and pending amounts."
+                ]
+              ]
+            },
+            {
+              "type": "paragraph",
+              "text": "The Operations dashboard labels recorded balances separately from provider proof. Unavailable provider history is not a verified zero."
+            }
+          ]
+        },
+        {
+          "id": "approval",
+          "title": "Follow the financial review flow",
+          "blocks": [
+            {
+              "type": "steps",
+              "items": [
+                "Check the linked capture, current PayPal history, prerequisites, conditions and any required buyer acceptance.",
+                "Refresh evidence where necessary. Missing/stale proof, conflicting history, disputes or uncertain previous submissions can block another action.",
+                "An owner, manager or finance user reviews an exact permitted amount and records a state-bound approval.",
+                "An owner or finance user submits the separately approved Sandbox refund when writes are explicitly enabled. Approval alone sends nothing.",
+                "Check execution and provider outcome. Reconcile an uncertain response using its original identity rather than issuing another refund."
+              ]
+            },
+            {
+              "type": "note",
+              "title": "Payment scope",
+              "text": "This write path is PayPal Sandbox with explicit opt-ins. A support key, buyer acceptance or AI suggestion cannot execute a refund."
+            }
+          ]
+        },
+        {
+          "id": "trace",
+          "title": "Trace a recorded refund",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "An owner/finance user can add a provider-supplied ARN, STAN, RRN or bank reference for a refund already recorded on this capture. The buyer sees the labelled reference and stage; the private note stays private. Processor completion does not prove bank receipt, and Resolve does not fetch these references from a live bank."
+            }
+          ]
+        },
+        {
+          "id": "disputes",
+          "title": "Hold overlapping remedies and prepare evidence",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "After linking the payment, an owner/manager/finance user can record reviewed dispute updates. API integrations retain stable event IDs and increasing versions. Older updates are ignored; conflicts are rejected. Active or reimbursed disputes hold the shared capture. A later manual close cannot erase reimbursement or override current provider-confirmed active dispute evidence."
+            },
+            {
+              "type": "paragraph",
+              "text": "Stripe and bank names here describe merchant-recorded references, not live connectors. A new hold cannot recall an already-sent payment request."
+            },
+            {
+              "type": "steps",
+              "items": [
+                "Classify owned delivery, product, policy, authorization, cancellation or credit evidence.",
+                "Open Dispute evidence packages and choose the actual reason. Prepare the immutable snapshot.",
+                "Inspect source labels and missing requirements. Replacement delivery is not original-delivery evidence.",
+                "An owner/manager reviews before export. Changed sources require a fresh package and review."
+              ]
+            },
+            {
+              "type": "paragraph",
+              "text": "A checklist shows recorded support, not authenticity or a guaranteed outcome. Exporting does not submit anything to PayPal."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "sdk-integration",
+      "title": "Integrate the SDK",
+      "description": "Put order support inside your store with scoped server keys and durable request IDs.",
+      "group": "For developers",
+      "sections": [
+        {
+          "id": "install",
+          "title": "Install the local preview",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "SDK 0.7 requires server-side Node.js 22.12 or newer. It is not published to npm. Pack the repository SDK, then install the archive in your merchant app."
+            },
+            {
+              "type": "code",
+              "language": "powershell",
+              "text": "# From the Resolve repository\nNew-Item -ItemType Directory -Force .local/artifacts\nSet-Location sdk/typescript\nnpm pack --pack-destination ../../.local/artifacts\n\n# From your merchant app; replace the absolute path\nnpm install C:/path/to/resolve-paypal-sdk-0.7.0.tgz"
+            }
+          ]
+        },
+        {
+          "id": "key",
+          "title": "Create a support integration key",
+          "blocks": [
+            {
+              "type": "steps",
+              "items": [
+                "As an owner, open Operations → Connections → Customer support inside your store.",
+                "Choose a stable source such as my-store. Generate a support key and save the copied values on your app server.",
+                "Use the same source for order registration and support. Order-only keys do not automatically gain aftercare access."
+              ]
+            },
+            {
+              "type": "code",
+              "language": "dotenv",
+              "text": "RESOLVE_API_URL=http://127.0.0.1:3000/api/sdk\nRESOLVE_API_KEY=<your-support-integration-key>\nRESOLVE_APP_SOURCE=my-store"
+            },
+            {
+              "type": "paragraph",
+              "text": "The website gateway exposes allowed commerce/aftercare actions. Full merchant helpers require direct FastAPI and full-key permissions. Never put a key in browser code or NEXT_PUBLIC variables."
+            }
+          ]
+        },
+        {
+          "id": "register",
+          "title": "Register trusted order data",
+          "blocks": [
+            {
+              "type": "code",
+              "language": "typescript",
+              "text": "import { createResolve } from \"@resolve-paypal/sdk\";\nconst resolve = createResolve();\n\n// Read this from your app’s trusted order record.\nawait resolve.syncOrder({\n  id: \"ORDER-123\", version: 1, status: \"paid\",\n  items: [{ product_id: \"CUP-01\", name: \"Ceramic cup\",\n    quantity: 1, unit_amount: \"25.00\" }],\n});"
+            },
+            {
+              "type": "paragraph",
+              "text": "Use a stable app order ID and increment version when its snapshot changes. Optional app payment references are merchant-reported until independently checked."
+            }
+          ]
+        },
+        {
+          "id": "support",
+          "title": "Add the support flow",
+          "blocks": [
+            {
+              "type": "code",
+              "language": "typescript",
+              "text": "// First authenticate the customer and verify ownership\n// of this order in your own app database.\nconst orderId = \"ORDER-123\";\nconst requestId = savedComplaintUuid; // Persist once.\nconst receipt = await resolve.openIssue({\n  orderId, requestId, reason: \"damaged_item\",\n  message: \"The cup handle arrived broken.\",\n  requestedResolution: \"replacement\",\n});\nconst progress = await resolve.getOrderResolution(orderId);\nconst journey = await resolve.getRefundJourney(orderId);\nconst context = await resolve.getSupportContext(orderId);\n\n// Only on an explicit action by the owning buyer:\nconst portal = await resolve.createSupportLink(orderId);"
+            },
+            {
+              "type": "paragraph",
+              "text": "Status reads create no case and make no provider call. Opening an issue records a customer request, not an approved promise. Creating a support link replaces the previous case link, so do not rotate it while polling."
+            }
+          ]
+        },
+        {
+          "id": "methods",
+          "title": "Other useful methods",
+          "blocks": [
+            {
+              "type": "table",
+              "columns": [
+                "Method",
+                "Purpose"
+              ],
+              "rows": [
+                [
+                  "lookupIssue",
+                  "Recover a receipt using the original order/request UUID."
+                ],
+                [
+                  "getReturnEligibility",
+                  "Check items, flags and disclosed terms."
+                ],
+                [
+                  "requestOrderReturn / getOrderReturns",
+                  "Submit a stable request or read its workflow."
+                ],
+                [
+                  "getReturnGuide / downloadReturnLabel",
+                  "Show instructions and save a merchant-supplied PDF."
+                ],
+                [
+                  "pullEvents / PostgresResolutionConsumer",
+                  "Reconcile missed state into your app database."
+                ]
+              ]
+            },
+            {
+              "type": "links",
+              "items": [
+                {
+                  "label": "API reliability",
+                  "href": "/docs/api-and-reliability"
+                },
+                {
+                  "label": "Download OpenAPI",
+                  "href": "/docs/resolve.openapi.json"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "api-and-reliability",
+      "title": "Use the API reliably",
+      "description": "Choose the right authentication boundary and recover from duplicates, missed updates and timeouts.",
+      "group": "For developers",
+      "sections": [
+        {
+          "id": "auth",
+          "title": "Authentication and API families",
+          "blocks": [
+            {
+              "type": "table",
+              "columns": [
+                "Boundary",
+                "Purpose"
+              ],
+              "rows": [
+                [
+                  "Full merchant key / staff session",
+                  "Merchant actions with ownership and role checks."
+                ],
+                [
+                  "Support integration key",
+                  "Source-granted commerce/aftercare calls from the app server."
+                ],
+                [
+                  "Buyer capability",
+                  "Only the case covered by the current private link."
+                ]
+              ]
+            },
+            {
+              "type": "paragraph",
+              "text": "Direct API calls use Authorization: Bearer. Website merchant sessions use HttpOnly cookies. Your app must still verify which buyer owns an order."
+            },
+            {
+              "type": "table",
+              "columns": [
+                "Path",
+                "Purpose"
+              ],
+              "rows": [
+                [
+                  "/resolution-cases",
+                  "Promises, evidence and timelines."
+                ],
+                [
+                  "/platform",
+                  "Accounts, team, connections, offers, returns and packages."
+                ],
+                [
+                  "/commerce/orders",
+                  "Register and compare app orders."
+                ],
+                [
+                  "/aftercare",
+                  "Issues, status, context, return guidance and event pulls."
+                ],
+                [
+                  "/cases/{id}/refund-approvals and /refund-executions",
+                  "Separate financial review and submission."
+                ]
+              ]
+            },
+            {
+              "type": "paragraph",
+              "text": "Interactive local API documentation is at http://127.0.0.1:8000/docs. Use your configured backend address when hosted. The downloaded contract has exact methods, schemas and validation rules."
+            },
+            {
+              "type": "links",
+              "items": [
+                {
+                  "label": "Download OpenAPI",
+                  "href": "/docs/resolve.openapi.json"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "retries",
+          "title": "Keep identity after an uncertain response",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "A timeout does not establish whether a request committed. Persist one UUID before sending and retain the original intent on retries. lookupIssue retrieves its receipt; reusing an ID with changed content conflicts."
+            },
+            {
+              "type": "paragraph",
+              "text": "Retry-safe SDK actions get up to three attempts by default within the deadline. Authentication, validation, conflicts, cancellation and long rate limits return to the caller. Portal rotation, merchant mutations and financial actions are not automatically retried. Reconcile an unknown refund rather than issuing another one."
+            }
+          ]
+        },
+        {
+          "id": "events",
+          "title": "Recover missed state",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "pullEvents reads a source-scoped state journal with a cursor and increasing order revisions. Pulls reconcile bounded connected orders; the operations worker also refreshes projections. Poll on a schedule for larger workspaces. This is a pull stream, not an outbound webhook subscription, and it recovers current state rather than every transient transition."
+            }
+          ]
+        },
+        {
+          "id": "consumer",
+          "title": "Commit the app update and cursor together",
+          "blocks": [
+            {
+              "type": "code",
+              "language": "typescript",
+              "text": "import { PostgresResolutionConsumer } from \"@resolve-paypal/sdk\";\nconst page = await resolve.pullEvents();\nconst consumer = new PostgresResolutionConsumer(pool, {\n  merchantId: page.merchant_id, source: page.source,\n  consumerId: \"order-support\",\n});\nawait consumer.initialize();\nawait consumer.poll(resolve, async (event, transaction) => {\n  const resolution = event.snapshot.resolution;\n  if (!resolution || typeof resolution !== \"object\" ||\n      !(\"stage\" in resolution) ||\n      typeof resolution.stage !== \"string\") {\n    throw new Error(\"Missing resolution state\");\n  }\n  await transaction.query(\n    \"UPDATE my_orders SET support_stage=$1 WHERE order_id=$2\",\n    [resolution.stage, event.order_reference],\n  );\n});"
+            },
+            {
+              "type": "paragraph",
+              "text": "Supply your writable PostgreSQL pool and adapt the example’s app table and columns. Explicit initialization creates two SDK tables. Keep a stable consumer ID and use the supplied transaction: errors roll back app writes and cursor together. Enqueue remote notifications in your own transactional outbox; external effects still need independent idempotency."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "connections",
+      "title": "Connect supported services",
+      "description": "Configure the owning workspace’s providers and understand their current scope.",
+      "group": "Set up and operate",
+      "sections": [
+        {
+          "id": "setup",
+          "title": "Save and check a connection",
+          "blocks": [
+            {
+              "type": "steps",
+              "items": [
+                "As an owner, open Operations → Connections.",
+                "Enable the provider and enter its required configuration and secrets. Blank secret fields retain existing secrets.",
+                "Save and choose Check connection. Returned status is redacted.",
+                "Verify an actual owned record separately. Working credentials do not prove capture ownership or payment outcome."
+              ]
+            },
+            {
+              "type": "paragraph",
+              "text": "Saved workspace credentials need a stable RESOLVE_PLATFORM_ENCRYPTION_KEY in the backend and workers. Back it up privately; replacing it can make saved secrets unreadable."
+            }
+          ]
+        },
+        {
+          "id": "scope",
+          "title": "Supported scope",
+          "blocks": [
+            {
+              "type": "table",
+              "columns": [
+                "Service",
+                "What it does"
+              ],
+              "rows": [
+                [
+                  "PayPal",
+                  "Sandbox payment/refund evidence and separately gated Sandbox refunds; optional merchant sign-in."
+                ],
+                [
+                  "Zendesk",
+                  "Ticket imports and signed webhook intake; uncertain order matches require confirmation."
+                ],
+                [
+                  "Shopify / EasyPost",
+                  "Optional read-only order/return/tracking evidence; postage and fulfillment remain external."
+                ],
+                [
+                  "SMTP / Resend",
+                  "Optional customer mail through the follow-up worker."
+                ],
+                [
+                  "Google",
+                  "Optional buyer sign-in for My cases."
+                ],
+                [
+                  "Groq / OpenRouter",
+                  "Optional advisory suggestions/explanations/investigations under configured policy."
+                ]
+              ]
+            },
+            {
+              "type": "paragraph",
+              "text": "Stripe/bank references are manual records, not live connectors. Hosted OAuth and callbacks require account-backed configuration."
+            }
+          ]
+        },
+        {
+          "id": "zendesk",
+          "title": "Preserve support context",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "Enter a Zendesk ticket number under Support imports. Unique exact order matches may link a case; otherwise select and confirm a match. Source IDs and public/private labels are retained. Private imported comments are not copied into buyer conversations."
+            },
+            {
+              "type": "paragraph",
+              "text": "For automation, configure the displayed workspace webhook URL and matching signing secret, then run the operations worker. Hosted providers need a reachable HTTPS URL; localhost alone cannot receive callbacks."
+            }
+          ]
+        },
+        {
+          "id": "sender",
+          "title": "Set a customer-visible sender",
+          "blocks": [
+            {
+              "type": "code",
+              "language": "dotenv",
+              "text": "RESOLVE_CUSTOMER_EMAIL_ENABLED=false\nRESOLVE_CUSTOMER_EMAIL_TRANSPORT=smtp\nRESOLVE_SMTP_HOST=<hostname-from-your-email-provider>\nRESOLVE_SMTP_PORT=587\nRESOLVE_SMTP_SECURE=false\nRESOLVE_SMTP_USER=<your-smtp-login>\nRESOLVE_SMTP_PASSWORD=<your-smtp-credential>\nRESOLVE_SMTP_FROM=Resolve Support <support@example.com>"
+            },
+            {
+              "type": "paragraph",
+              "text": "Use a sender your provider authorizes. SMTP_USER is the login; SMTP_FROM is the visible sender. Follow your provider’s port/TLS requirements. Enable delivery after configuring mail and the required merchant binding. Saving settings does not send mail; the follow-up worker performs delivery."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "running-resolve",
+      "title": "Run and configure Resolve",
+      "description": "Start a responsive local preview and keep settings and workers in the correct environment.",
+      "group": "Set up and operate",
+      "sections": [
+        {
+          "id": "requirements",
+          "title": "Prerequisites",
+          "blocks": [
+            {
+              "type": "list",
+              "items": [
+                "Python 3.12 or newer and uv.",
+                "Node.js 22.12 or newer for the SDK, which also satisfies the frontend requirement.",
+                "SQLite for a local start, or explicitly configured PostgreSQL.",
+                "Provider credentials only for integrations you enable."
+              ]
+            },
+            {
+              "type": "paragraph",
+              "text": "Use ignored local files or a deployment secret store. Examples contain placeholders. Preserve your existing database settings when preparing a separate test environment."
+            }
+          ]
+        },
+        {
+          "id": "start",
+          "title": "Start the API and optimized website",
+          "blocks": [
+            {
+              "type": "code",
+              "language": "powershell",
+              "text": "# Terminal 1, from the repository root\nSet-Location backend\nuv sync\nuv run uvicorn app.main:app --host 127.0.0.1 --port 8000\n\n# Terminal 2, from the repository root\nnpm --prefix frontend ci\nnpm --prefix frontend run build:preview\nnpm --prefix frontend run preview"
+            },
+            {
+              "type": "paragraph",
+              "text": "Open http://127.0.0.1:3000/account and keep both processes running. Stop another frontend on port 3000 first. The compiled preview uses .next-preview; rebuild and restart after source/configuration changes. Use npm --prefix frontend run dev for automatic reload while editing, instead of the compiled preview."
+            }
+          ]
+        },
+        {
+          "id": "environment",
+          "title": "Configuration locations",
+          "blocks": [
+            {
+              "type": "table",
+              "columns": [
+                "Location",
+                "Purpose"
+              ],
+              "rows": [
+                [
+                  "backend/.env",
+                  "Database, ordinary providers, email, origins and switches. See backend/.env.example."
+                ],
+                [
+                  "frontend/.env.local",
+                  "Backend URL and website origins. See frontend/.env.example."
+                ],
+                [
+                  "Private PowerShell AI environment",
+                  "Copy backend/ai-env.example.ps1 and explicitly load the private copy into API/worker processes."
+                ],
+                [
+                  "Merchant app server",
+                  "RESOLVE_API_URL, RESOLVE_API_KEY and RESOLVE_APP_SOURCE."
+                ]
+              ]
+            },
+            {
+              "type": "paragraph",
+              "text": "AI settings use process variables rather than ordinary dotenv loading. Enable only configured features. Keep browser origins consistent and hosted callbacks on HTTPS."
+            }
+          ]
+        },
+        {
+          "id": "workers",
+          "title": "Run only the workers you need",
+          "blocks": [
+            {
+              "type": "table",
+              "columns": [
+                "Command from backend",
+                "Work"
+              ],
+              "rows": [
+                [
+                  "uv run python -m app.operations_worker --loop",
+                  "Imports, overdue scans and projections; no mail or financial submission."
+                ],
+                [
+                  "uv run python -m app.investigation_worker --loop",
+                  "Automatic evidence investigations under configured policy."
+                ],
+                [
+                  "uv run python -m app.followup_worker --loop",
+                  "Customer follow-up jobs and optional email delivery."
+                ],
+                [
+                  "uv run python -m app.worker --loop",
+                  "Configured refund recovery/reconciliation; review its CLI/payment settings first."
+                ]
+              ]
+            },
+            {
+              "type": "paragraph",
+              "text": "Workers need the correct database, encryption key and environment. The website does not start them. Use --help for interval/limit controls. Keep numbered migrations immutable and test schema changes against disposable storage. Hosted operation also needs stable origins, backups, secret management and account-backed checks."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "troubleshooting",
+      "title": "Troubleshoot common problems",
+      "description": "Find a useful next check for login, returns, refunds, background jobs and preview updates.",
+      "group": "Set up and operate",
+      "sections": [
+        {
+          "id": "access",
+          "title": "Login and support access",
+          "blocks": [
+            {
+              "type": "table",
+              "columns": [
+                "Symptom",
+                "Next check"
+              ],
+              "rows": [
+                [
+                  "Cannot sign in",
+                  "Use an individual account or full merchant key. Commerce/support keys cannot sign in."
+                ],
+                [
+                  "Empty workspace",
+                  "Check the merchant account; newly created workspaces have separate records."
+                ],
+                [
+                  "SDK 403",
+                  "Verify app source and explicit support grant; order-only keys cannot use aftercare."
+                ],
+                [
+                  "Invalid buyer link",
+                  "Ask for a current link; expired, replaced and revoked links cannot be reused."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "id": "returns",
+          "title": "Orders, returns and evidence",
+          "blocks": [
+            {
+              "type": "table",
+              "columns": [
+                "Symptom",
+                "Next check"
+              ],
+              "rows": [
+                [
+                  "No return items",
+                  "Register owned items, connect the order to the case and check existing reservations."
+                ],
+                [
+                  "Stale return review",
+                  "Reload current policy/return versions and record a current review or permitted exception."
+                ],
+                [
+                  "No saved label",
+                  "The merchant must arrange and upload a PDF; postage is external."
+                ],
+                [
+                  "Stale evidence export",
+                  "Build a fresh package, inspect sources and review before export."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "id": "refunds",
+          "title": "Refund progress and timeouts",
+          "blocks": [
+            {
+              "type": "table",
+              "columns": [
+                "Symptom",
+                "Next check"
+              ],
+              "rows": [
+                [
+                  "Unknown amounts",
+                  "Refresh evidence; unavailable/stale proof is not zero."
+                ],
+                [
+                  "Approval blocked",
+                  "Read acceptance/conditions, provider history, balance, pending refunds, disputes and uncertain executions."
+                ],
+                [
+                  "Processor complete, bank money missing",
+                  "Check provider proof and any merchant tracing reference. Bank receipt is not independently verified."
+                ],
+                [
+                  "Network timeout",
+                  "Retain the original UUID and recover/reconcile that request instead of creating another refund."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "id": "background",
+          "title": "Workers and AI",
+          "blocks": [
+            {
+              "type": "table",
+              "columns": [
+                "Symptom",
+                "Next check"
+              ],
+              "rows": [
+                [
+                  "Imports or alerts not updating",
+                  "Check the operations worker, connection status and owning database/key."
+                ],
+                [
+                  "Investigation queued",
+                  "Run its worker and inspect status. Missing advice does not authorize anything."
+                ],
+                [
+                  "No email",
+                  "Check enabled transport, sender, merchant binding, queue and follow-up worker."
+                ],
+                [
+                  "AI fallback",
+                  "Check process credentials, switches, policy, routes and budgets; abstention can be valid."
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "id": "preview",
+          "title": "Website updates",
+          "blocks": [
+            {
+              "type": "steps",
+              "items": [
+                "Use the compiled preview for normal viewing; a development route may compile before loading.",
+                "After a frontend edit or merge, rebuild with npm --prefix frontend run build:preview and restart npm --prefix frontend run preview.",
+                "Refresh with Ctrl + Shift + R for new assets, and refresh messages/details for newly arrived data.",
+                "Check http://127.0.0.1:8000/health and RESOLVE_BACKEND_URL if the API is unreachable. Hosted database network latency still affects reads."
+              ]
+            },
+            {
+              "type": "links",
+              "items": [
+                {
+                  "label": "Run Resolve",
+                  "href": "/docs/running-resolve"
+                },
+                {
+                  "label": "API reliability",
+                  "href": "/docs/api-and-reliability"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -6,6 +6,11 @@ from uuid import uuid4
 
 import pytest
 import httpx
+import json
+import time
+import re
+from pathlib import Path
+from urllib.parse import urlsplit
 from fastapi.testclient import TestClient
 from psycopg import sql
 from pydantic import SecretStr
@@ -14,6 +19,71 @@ from app.main import create_app
 from app.paypal import PayPalSandboxClient
 from app.postgres import PostgresStore
 from app.settings import Settings
+
+
+def pytest_addoption(parser):
+    parser.addoption("--audit-output", default=None, help="Sanitized local endpoint/test evidence JSON")
+
+
+def pytest_configure(config):
+    if not config.getoption("--audit-output"):
+        return
+    from starlette.testclient import TestClient as StarletteClient
+    config._resolve_audit = {"requests": [], "tests": {}, "nodeid": None}
+    original = StarletteClient.request
+    config._resolve_original_request = original
+    contract = json.loads((Path(__file__).resolve().parents[2] / "postman/contracts/resolve.openapi.json").read_text(encoding="utf-8"))
+    patterns = []
+    for target, operations in sorted(contract["paths"].items(), key=lambda pair: (pair[0].count("{"), pair[0])):
+        expression = re.sub(r"\\\{[^{}]+\\\}", "[^/]+", re.escape(target))
+        patterns.append((target, re.compile(expression), set(operations)))
+
+    def observed(client, method, url, *args, **kwargs):
+        path = urlsplit(str(url)).path
+        template = None
+        # FastAPI can retain included routers as nested route objects. Match the
+        # exported contract instead of silently missing those actual requests.
+        # Use the freshly exported contract once, not expensive schema generation
+        # for every disposable app. test_openapi_contract verifies export parity.
+        for target, pattern, methods in patterns:
+            if method.lower() in methods and pattern.fullmatch(path):
+                template = target
+                break
+        started = time.perf_counter()
+        try:
+            result = original(client, method, url, *args, **kwargs)
+            if template:
+                config._resolve_audit["requests"].append({"test": config._resolve_audit["nodeid"], "method": method.upper(), "path": template, "status": result.status_code, "milliseconds": round((time.perf_counter()-started)*1000, 3)})
+            return result
+        except Exception as failure:
+            if template:
+                config._resolve_audit["requests"].append({"test": config._resolve_audit["nodeid"], "method": method.upper(), "path": template, "exception": type(failure).__name__})
+            raise
+
+    StarletteClient.request = observed
+
+
+def pytest_runtest_setup(item):
+    if hasattr(item.config, "_resolve_audit"):
+        item.config._resolve_audit["nodeid"] = item.nodeid
+
+
+def pytest_sessionfinish(session, exitstatus):
+    config = session.config
+    if not hasattr(config, "_resolve_audit"):
+        return
+    terminal = config.pluginmanager.get_plugin("terminalreporter")
+    for outcome, reports in terminal.stats.items():
+        for report in reports:
+            if hasattr(report, "nodeid"):
+                config._resolve_audit["tests"][report.nodeid] = outcome
+    config._resolve_audit.pop("nodeid", None)
+    config._resolve_audit["exit_status"] = int(exitstatus)
+    target = Path(config.getoption("--audit-output")).resolve()
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(json.dumps(config._resolve_audit, indent=2) + "\n", encoding="utf-8")
+    from starlette.testclient import TestClient as StarletteClient
+    StarletteClient.request = config._resolve_original_request
 
 
 @pytest.fixture

@@ -128,7 +128,22 @@ assumptions:
     verification: Two browser tests passed with 19 mocked requests and zero pass-through. The receipt displayed the original complaint, refund guidance and explicit merchant confirmation of return fees when no policy was enabled. A teardown socket-reset notice did not fail the run. No bank receipt or live provider behavior was verified.
     source: examples/checkout-store/test/checkout.test.mjs ; docs/AFTERCARE_RELIABILITY.md
     updated_at: '2026-11-10'
+  - id: chg055-compiled-browser-regression
+    status: supported
+    claim: The compiled merchant and buyer UI completes the tested key, PayPal identity, email, approved Sandbox refund and stale-submission flows against local stand-ins.
+    reason: Real Next.js gateways and FastAPI routes used disposable SQLite and the existing TLS PayPal mock. It does not establish hosted callbacks, actual consent or provider permissions.
+    verification: On 2026-11-11, CHG-055 final browser scenario passed 28 checks, skipped Google for a separate run, and handled 33 mocked requests with zero pass-through. The separate checkout-store simulation passed 2 checks with 19 mocked requests and zero pass-through after enabling Node environment proxy support; capture replay and external refund discrepancy were verified. An ignored socket-reset notice occurred during teardown.
+    source: frontend/playwright.audit.config.ts ; frontend/tests/site-auth.spec.ts ; frontend/tests/workspace.spec.ts ; examples/checkout-store/test/checkout.test.mjs ; docs/testing/testing-report.md
+    updated_at: '2026-11-11'
 fingerprints:
+  - id: chg056-real-one-dollar-sandbox
+    date: '2026-11-11'
+    cli: '1.82.0'
+    evidence: Explicit owner-approved actual order, private buyer approval, capture, full-refund approval/execution and independent COMPLETED reads; one persisted USD 1.00 refund, zero remaining. Existing adapter/SDK and backend gates on disposable storage. No live funds. See production-integration-report.md and CHG-056; no clean commit asserted.
+  - id: chg056-controlled-provider-regression
+    date: '2026-11-11'
+    cli: '1.82.0'
+    evidence: Backend provider regression 49 passed, 380 mocked requests and zero pass-through. Affected compiled workspace browser file 9 passed, 33 mocked requests and zero pass-through. Read-only history refresh after completed execution is explicitly allowed by the Next gateway. No real outage/rate-limit/identity claim.
   - id: paypal-read-local
     date: '2026-11-07'
     commit: e87c933af341888b9973be99aa79978d5c7a1085

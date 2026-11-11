@@ -52,6 +52,18 @@ def main():
             os.environ["RESOLVE_TEST_DATABASE_URL"] = (
                 "postgresql://resolve_synthetic@127.0.0.1:56440/resolve_operations"
             )
+        if "--postgres-audit" in args:
+            args.remove("--postgres-audit")
+            os.environ["RESOLVE_TEST_DATABASE_URL"] = (
+                "postgresql://resolve_synthetic@127.0.0.1:56441/postgres"
+            )
+        for option, variable in (
+            ("--paypal-simulation", "RESOLVE_RUN_PAYPAL_SIMULATION"),
+            ("--followup-simulation", "RESOLVE_RUN_FOLLOWUP_SIMULATION"),
+        ):
+            if option in args:
+                args.remove(option)
+                os.environ[variable] = "1"
         if "--storage-postgres" in args:
             args.remove("--storage-postgres")
             os.environ["RESOLVE_TEST_STORAGE"] = "postgres"

@@ -36,6 +36,26 @@
         }
       }
     },
+    "/ready": {
+      "get": {
+        "summary": "Readiness",
+        "description": "Read-only database readiness; never expose storage or exception details.",
+        "operationId": "readiness_ready_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "503": {
+            "description": "Database unavailable"
+          }
+        }
+      }
+    },
     "/cases": {
       "post": {
         "summary": "Create Case",
@@ -1929,8 +1949,11 @@
             "required": false,
             "schema": {
               "enum": [
+                
                 "open",
+               
                 "resolved"
+              
               ],
               "type": "string",
               "default": "open",
@@ -5620,6 +5643,58 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/RemedyRanking"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resolution case not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/resolution-cases/{case_id}/ai/explain-next-action": {
+      "post": {
+        "tags": [
+          "AI promise extraction"
+        ],
+        "summary": "Explain Next Action",
+        "description": "One-sentence explanation of the next action, written from structured case facts only.\n\nUses the extraction switch, data policy, cache, token cap and daily budget. Text whose\namounts, dates or numbers are not in the facts is replaced by the code template.\nAdvisory only: it never approves, submits or records anything.",
+        "operationId": "explain_next_action_resolution_cases__case_id__ai_explain_next_action_post",
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Explanation"
                 }
               }
             }
@@ -14183,10 +14258,15 @@
         "additionalProperties": false,
         "type": "object",
         "required": [
+          
           "kind",
+         
           "reference",
+         
           "id",
+         
           "linked_at"
+        
         ],
         "title": "LinkedEvidenceRecord"
       },
@@ -14212,10 +14292,15 @@
         },
         "type": "object",
         "required": [
+          
           "ticket_id",
+         
           "status",
+         
           "checked_at",
+         
           "url"
+        
         ],
         "title": "LinkedTicket"
       },
@@ -14240,9 +14325,13 @@
         "additionalProperties": false,
         "type": "object",
         "required": [
+          
           "source",
+         
           "order_reference",
+         
           "request_id"
+        
         ],
         "title": "LookupIssue"
       },
@@ -14258,7 +14347,9 @@
         "additionalProperties": false,
         "type": "object",
         "required": [
+          
           "through"
+        
         ],
         "title": "MarkRead"
       },
@@ -14291,9 +14382,13 @@
           "finding": {
             "type": "string",
             "enum": [
+              
               "note",
+             
               "confirmed",
+             
               "not_confirmed"
+            
             ],
             "title": "Finding",
             "default": "note"
@@ -14302,8 +14397,11 @@
         "additionalProperties": false,
         "type": "object",
         "required": [
+          
           "expected_revision",
+         
           "note"
+        
         ],
         "title": "MerchantEvidence"
       },
@@ -14329,9 +14427,13 @@
         "additionalProperties": false,
         "type": "object",
         "required": [
+          
           "name",
+         
           "id",
+         
           "created_at"
+        
         ],
         "title": "MerchantIdentity"
       },
@@ -14347,7 +14449,9 @@
         "additionalProperties": false,
         "type": "object",
         "required": [
+          
           "key"
+        
         ],
         "title": "MerchantKeyInput"
       },
@@ -14359,9 +14463,13 @@
           "method": {
             "type": "string",
             "enum": [
+              
               "key",
+             
               "paypal",
+             
               "password"
+            
             ],
             "title": "Method"
           },
@@ -14389,10 +14497,15 @@
         },
         "type": "object",
         "required": [
+          
           "merchant",
+         
           "method",
+         
           "expires_at",
+         
           "paypal_linked"
+        
         ],
         "title": "MerchantSession"
       },
@@ -14413,8 +14526,11 @@
         "additionalProperties": false,
         "type": "object",
         "required": [
+          
           "request_id",
+         
           "body"
+        
         ],
         "title": "MessageCreate"
       },
@@ -14527,6 +14643,373 @@
           "expected_revision"
         ],
         "title": "OfferChoiceDraft"
+      },
+      "OfferCreate": {
+        "properties": {
+          "choices": {
+            "items": {
+              "$ref": "#/components/schemas/OfferChoice"
+            },
+            "type": "array",
+            "maxItems": 4,
+            "minItems": 1,
+            "title": "Choices"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "choices",
+          "expires_at"
+        ],
+        "title": "OfferCreate"
+      },
+      "OfferDecision": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "format": "password",
+            "title": "Token",
+            "writeOnly": true
+          },
+          "offer_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Offer Id"
+          },
+          "expected_revision": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Expected Revision"
+          },
+          "choice_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Choice Id"
+          },
+          "decision": {
+            "type": "string",
+            "pattern": "^(accept|decline)$",
+            "title": "Decision"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "token",
+          "offer_id",
+          "expected_revision",
+          "decision"
+        ],
+        "title": "OfferDecision"
+      },
+      "OfferOption": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "promise_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Promise Id"
+          },
+          "promise_revision": {
+            "type": "integer",
+            "title": "Promise Revision"
+          },
+          "promise": {
+            "type": "string",
+            "title": "Promise"
+          },
+          "target": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/RefundTarget-Output"
+              },
+              {
+                "$ref": "#/components/schemas/ReturnTarget"
+              },
+              {
+                "$ref": "#/components/schemas/ReplacementTarget"
+              },
+              {
+                "$ref": "#/components/schemas/OrderCancellationTarget"
+              },
+              {
+                "$ref": "#/components/schemas/SubscriptionTarget"
+              },
+              {
+                "$ref": "#/components/schemas/StoreCreditOrExchangeTarget-Output"
+              },
+              {
+                "$ref": "#/components/schemas/BillingCorrectionTarget"
+              },
+              {
+                "$ref": "#/components/schemas/DisputeHandoffTarget"
+              }
+            ],
+            "title": "Target",
+            "discriminator": {
+              "propertyName": "kind",
+              "mapping": {
+                "billing_correction": "#/components/schemas/BillingCorrectionTarget",
+                "dispute_handoff": "#/components/schemas/DisputeHandoffTarget",
+                "order_cancellation": "#/components/schemas/OrderCancellationTarget",
+                "refund": "#/components/schemas/RefundTarget-Output",
+                "replacement": "#/components/schemas/ReplacementTarget",
+                "return": "#/components/schemas/ReturnTarget",
+                "store_credit_or_exchange": "#/components/schemas/StoreCreditOrExchangeTarget-Output",
+                "subscription": "#/components/schemas/SubscriptionTarget"
+              }
+            }
+          },
+          "requires": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Requires"
+          },
+          "due_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "promise_id",
+          "promise_revision",
+          "promise",
+          "target",
+          "requires",
+          "due_at"
+        ],
+        "title": "OfferOption"
+      },
+      "OfferPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/OfferView"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "OfferPage"
+      },
+      "OfferView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "case_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Case Id"
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          },
+          "choices": {
+            "items": {
+              "$ref": "#/components/schemas/OfferOption"
+            },
+            "type": "array",
+            "title": "Choices"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "published",
+              "accepted",
+              "declined",
+              "superseded"
+            ],
+            "title": "Status"
+          },
+          "selected_choice": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selected Choice"
+          },
+          "decision_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision At"
+          },
+          "decision_actor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision Actor"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "case_id",
+          "revision",
+          "choices",
+          "expires_at",
+          "status",
+          "selected_choice",
+          "decision_at",
+          "decision_actor",
+          "created_at"
+        ],
+        "title": "OfferView"
+      },
+      "MissingItem": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "no_linked_payment",
+              "no_refund_promise",
+              "no_amount",
+              "agreement_not_accepted",
+              "no_deadline",
+              "unmet_condition",
+              "pending_refund_unconfirmed"
+            ],
+            "title": "Code"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "promise_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Promise Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "text"
+        ],
+        "title": "MissingItem"
+      },
+      "NextAction": {
+        "properties": {
+          "case_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Case Id"
+          },
+          "facts": {
+            "$ref": "#/components/schemas/CaseFacts"
+          },
+          "missing": {
+            "items": {
+              "$ref": "#/components/schemas/MissingItem"
+            },
+            "type": "array",
+            "title": "Missing"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          }
+        },
+        "type": "object",
+        "required": [
+          "case_id",
+          "facts",
+          "missing",
+          "summary"
+        ],
+        "title": "NextAction"
+      },
+      "OfferChoice": {
+        "properties": {
+          "promise_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Promise Id"
+          },
+          "expected_revision": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Expected Revision"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "promise_id",
+          "expected_revision"
+        ],
+        "title": "OfferChoice"
       },
       "OfferCreate": {
         "properties": {
@@ -16841,16 +17324,45 @@
             "title": "Promised Amount"
           },
           "confirmed_amount": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Confirmed Amount"
           },
           "pending_amount": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Pending Amount"
           },
           "outstanding_amount": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Outstanding Amount"
+          },
+          "verification": {
+            "type": "string",
+            "enum": [
+              "current",
+              "unverified"
+            ],
+            "title": "Verification"
           },
           "currency": {
             "type": "string",
@@ -16870,7 +17382,8 @@
           "promised_amount",
           "confirmed_amount",
           "pending_amount",
-          "outstanding_amount"
+          "outstanding_amount",
+          "verification"
         ],
         "title": "PublicRefund"
       },

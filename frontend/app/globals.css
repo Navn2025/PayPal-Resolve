@@ -4025,3 +4025,64 @@ cite {
 .text-button:hover {
   color: var(--blue-deep);
 }
+
+/* Preserve the case-loading branch's narrow-screen constraints after merging layout styles. */
+.desk-pane,
+.case-desk,
+.desk-content,
+.desk-pane > details {
+  min-width: 0;
+}
+.desk-pane > details > summary {
+  padding: 10px 12px;
+  cursor: pointer;
+  font-weight: 650;
+}
+@media (max-width: 880px) {
+  .topbar {
+    flex-wrap: wrap;
+  }
+  .topbar-actions {
+    min-width: 0;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  .sidebar .rail-link {
+    justify-content: center;
+    padding: 8px;
+  }
+  .sidebar .rail-link > span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+@media (max-width: 700px) {
+  .topbar {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+  .topbar-actions {
+    flex: 1 1 240px;
+    min-width: 0;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  .workspace-intro,
+  .intro-actions,
+  .linked-panel {
+    flex-wrap: wrap;
+  }
+  .case-tabs {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+  .case-tabs button {
+    flex-shrink: 0;
+  }
+}

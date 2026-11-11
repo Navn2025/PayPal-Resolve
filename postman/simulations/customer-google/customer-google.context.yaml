@@ -10,4 +10,9 @@ claims:
     status: supported
     claim: Google may not be authoritative for third-party email addresses even with email_verified.
     source: https://developers.google.com/identity/gsi/web/guides/verify-google-id-token
-    verification: A browser test used four mocked requests and no pass-through to open a matching buyer case with email delivery disabled. Tests reject non-authoritative addresses and invalid signatures. The local mock does not represent an actual Google account.
+    verification: A browser test used four mocked requests and no pass-through to open a matching buyer case with email delivery disabled. Tests reject non-authoritative addresses and invalid signatures. The local mock does not represent an actual Google account. Repeated on 2026-11-11 for CHG-055 against compiled isolated Next.js; one browser test passed, four mocked requests and zero pass-through. Hosted Google consent/callbacks remain unverified.
+  - id: chg056-controlled-browser-google
+    status: supported
+    claim: The compiled buyer Google flow works against the specified local controls; actual account access remains unverified.
+    verification: On 2026-11-11 the isolated compiled browser check passed, with four mocked requests and zero pass-through. Actual Google client ID/secret are absent from inspected ordinary configuration; real consent/callback remains BLOCKED. No product demo or mock fallback was introduced.
+    source: frontend/tests/customer-google.spec.ts ; docs/testing/production-integration-report.md ; CHG-056

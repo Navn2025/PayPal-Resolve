@@ -3,9 +3,9 @@ import { ArrowDown, ArrowRight, ArrowUpRight, Check, CircleDollarSign, Clock3, F
 import { Brand } from "@/components/ui";
 
 const milestones = [
-  { title: "Request received", source: "Customer submitted", time: "10:04 AM", Icon: FileText },
-  { title: "Return confirmed", source: "Merchant recorded", time: "10:18 AM", Icon: PackageCheck },
-  { title: "Partial refund verified", source: "PayPal confirmed", time: "10:32 AM", Icon: ShieldCheck },
+  { title: "Report the issue", source: "A private customer conversation", Icon: FileText },
+  { title: "Record the agreement", source: "Merchant terms and supporting evidence", Icon: PackageCheck },
+  { title: "Check the outcome", source: "Read configured provider records", Icon: ShieldCheck },
 ];
 const steps = [
   { title: "Capture the issue", text: "Send a private order link. Buyers report the problem and attach photos, receipts, or return slips.", Icon: FileText },
@@ -20,7 +20,7 @@ export default function Home() {
       <div className="site-wrap site-nav">
         <Link href="/" className="site-brand" aria-label="Resolve home"><Brand /></Link>
         <nav className="site-nav-links" aria-label="Main navigation">
-          <a href="#workflow">How it works</a><Link href="/customer">Customer portal</Link>
+          <Link href="/docs">Docs</Link><a href="#workflow">How it works</a><Link href="/customer">Customer portal</Link>
         </nav>
         <Link href="/login" className="site-button site-button-quiet">Merchant sign in <ArrowUpRight size={16} /></Link>
       </div>
@@ -32,25 +32,24 @@ export default function Home() {
           <h1>From payment issue <em>to verified resolution.</em></h1>
           <p className="site-lead">Give buyers a clear next step and give your team one place to prove what happened after checkout.</p>
           <div className="site-actions">
-            <Link className="site-button site-button-primary" href="/demo">Explore the demo <ArrowRight size={18} /></Link>
+            <Link className="site-button site-button-primary" href="/account">Open your workspace <ArrowRight size={18} /></Link>
             <Link className="site-button site-button-quiet" href="/customer">Track my case <ArrowUpRight size={16} /></Link>
           </div>
-          <p className="site-hero-note"><ShieldCheck size={16} /> Demo uses sample records. No money moves.</p>
+          <p className="site-hero-note"><ShieldCheck size={16} /> Provider checks require an enabled merchant connection.</p>
         </div>
-        <div className="site-visual" aria-label="Example buyer timeline">
+        <div className="site-visual" aria-label="Resolution workflow overview">
           <div className="site-orbit site-orbit-one" /><div className="site-orbit site-orbit-two" />
-          <div className="site-preview-label"><span /> SAMPLE CASE <span className="site-preview-id">/ 4821</span></div>
+          <div className="site-preview-label"><span /> HOW RESOLVE WORKS</div>
           <article className="site-preview">
             <header className="site-preview-head">
               <span className="site-preview-icon"><PackageCheck size={23} /></span>
-              <div><p>ORDER #4821</p><h2>Headphone return</h2></div>
-              <span className="site-tag site-tag-positive"><Check size={12} /> Verified</span>
+              <div><p>PAYMENT AFTERCARE</p><h2>From issue to evidence</h2></div>
             </header>
-            <ol className="site-events">{milestones.map(({ title, source, time, Icon }) => (
+            <ol className="site-events">{milestones.map(({ title, source, Icon }) => (
               <li key={title}><span className="site-event-icon"><Icon size={16} /></span>
-                <div><strong>{title}</strong><span>{source}</span></div><time>{time}</time></li>
+                <div><strong>{title}</strong><span>{source}</span></div></li>
             ))}</ol>
-            <footer className="site-preview-footer"><CircleDollarSign size={20} /><span><strong>$20.00</strong> verified refund</span><span>USD</span></footer>
+            <footer className="site-preview-footer"><FileCheck2 size={20} /><span>Review the source before acting.</span></footer>
           </article>
           <div className="site-visual-foot"><span>ORDER SUPPORT</span><span>EVIDENCE TIMELINE</span></div>
         </div>
@@ -75,6 +74,6 @@ export default function Home() {
       </section>
     </main>
     <footer className="site-footer"><div className="site-wrap"><Link href="/" className="site-brand" aria-label="Resolve home"><Brand small /></Link>
-      <span>Payment aftercare for merchants and buyers.</span><Link href="/demo">Try the demo <ArrowUpRight size={15} /></Link></div></footer>
+      <span>Payment aftercare for merchants and buyers.</span><Link href="/docs">Documentation</Link><Link href="/account">Merchant account <ArrowUpRight size={15} /></Link></div></footer>
   </div>;
 }

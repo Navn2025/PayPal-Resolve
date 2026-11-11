@@ -7,5 +7,5 @@ export default async function WorkspacePage({ searchParams }: { searchParams: Pr
   const requested = (await searchParams).case;
   const caseId = typeof requested === "string" && /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(requested)
     ? requested.toLowerCase() : null;
-  return <Workspace key={caseId ?? "inbox"} mode="merchant" initialCaseId={caseId} />;
+  return <Workspace key={caseId ?? "inbox"} initialCaseId={caseId} />;
 }

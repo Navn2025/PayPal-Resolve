@@ -9,7 +9,7 @@ async function signInWithKey(page: Page) {
   await expect(page.getByRole("heading", { name: "Resolution workspace" })).toBeVisible();
 }
 
-test("landing has working merchant, buyer and demo entry points on mobile", async ({ page }, info) => {
+test("landing has working merchant and buyer entry points without sample records", async ({ page }, info) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "From payment issue to verified resolution." })).toBeVisible();
@@ -18,8 +18,10 @@ test("landing has working merchant, buyer and demo entry points on mobile", asyn
   await page.getByRole("link", { name: "Track my case" }).click();
   await expect(page.getByRole("heading", { name: "Track your resolution" })).toBeVisible();
   await page.getByRole("link", { name: "Resolve home" }).click();
-  await page.getByRole("link", { name: "Explore the demo" }).click();
-  await expect(page.getByText("Demo mode", { exact: true })).toBeVisible();
+  await page.getByRole("link", { name: "Open your workspace", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Sign in to your workspace" })).toBeVisible();
+  await page.goto("/demo");
+  await expect(page).toHaveURL(/\/login$/);
   expect((await page.request.get("/api/resolve/resolution-cases")).status()).toBe(401);
 });
 
@@ -71,7 +73,7 @@ test("PayPal sign-in links an existing merchant and uses a one-time browser call
   await signInWithKey(page);
   await page.getByRole("link", { name: "Account settings" }).click();
   await page.getByRole("button", { name: "Link PayPal" }).click();
-  await expect(page.getByRole("status")).toContainText("PayPal sign-in is linked");
+  await expect(page.getByRole("status").filter({ hasText: "PayPal sign-in is linked" })).toBeVisible();
   await page.getByRole("button", { name: "Sign out" }).click();
   await page.getByRole("button", { name: /Log in with PayPal/ }).click();
   await expect(page).toHaveURL(/\/workspace$/);

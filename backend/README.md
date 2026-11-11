@@ -1,5 +1,28 @@
 # Resolve backend
 
+Production preparation is documented in the [Render deployment guide](../docs/deployment/deployment-guide.md)
+and [readiness report](../docs/deployment/production-readiness-report.md).
+`GET /health` and the existing `POST /health` are liveness checks;
+`GET /ready` performs a read-only database probe and returns a sanitized 503 when
+storage is unavailable. API responses use private/no-store and nosniff headers.
+The public Sandbox PayPal webhook uses its configured app/webhook/merchant binding,
+not a browser merchant session. Hosted deployment and delivery remain unverified.
+
+The [real integration report](../docs/testing/production-integration-report.md)
+records the owner-authorized USD 1.00 official Sandbox order/capture/full-refund
+and independent persistence/UI checks. Other services remain explicitly blocked
+where credentials, consent or delivery authorization are missing. See the
+[project-specific SDK guide](../docs/user-manual/sdk-integration-guide.md).
+Public customer refund responses now include `verification`; confirmed, pending
+and outstanding amounts are null until PayPal history is current. Consumers must
+handle null rather than treating missing proof as a confirmed zero.
+
+The website’s public `/docs` includes user and developer guides; the downloadable
+OpenAPI file is copied from the canonical contract, never from configured customer
+data. See [Resolve guide](../docs/RESOLVE_GUIDE.md). After an API change, regenerate
+the canonical contract as usual and run `npm --prefix frontend run docs:export`
+from the repository root to refresh its website download.
+
 [Embedded order aftercare](../docs/SDK_AFTERCARE.md) adds bounded
 `POST /aftercare/issues`, `/aftercare/status` and `/aftercare/portal` for the
 SDK's customer-support workflow. Owners issue support keys with an explicit app
@@ -30,6 +53,14 @@ from this directory to process queued imports and daily alerts. It reads the
 ordinary backend settings and never sends email or executes refunds.
 
 Automatic resolution investigations use a durable evidence revision queue and
+reuse a selected linked resource from verified evidence only when the resource
+belongs to this case and its observation is newer than both five minutes and
+the configured freshness limit. A recent failed check is not a cache hit;
+stale evidence, incomplete history and foreign references remain blocked.
+Snapshot reuse is recorded as `investigation_read_cache_hit`; it grants no
+payment authority. The background worker still needs to be running. See CHG-060.
+
+Investigations run in
 the separate `python -m app.investigation_worker` process. Groq triage and
 OpenRouter recommendations are optional and disabled by default; the default
 strict data policy fails closed for direct Groq. Finished and blocked results
@@ -106,7 +137,8 @@ workers or verify provider credentials. `.env`, `.env.ai.ps1` and frontend local
 settings are ignored by Git; the example files must contain no real secrets.
 
 The [merchant UI](../frontend/README.md) can also connect to this backend
-using the same merchant key. Its built-in demo works without FastAPI.
+using the same merchant key. All workspace and buyer actions require the real
+FastAPI service; retired demo URLs do not provide simulated records.
 The [customer portal](../docs/CUSTOMER_PORTAL.md) uses expiring case links to
 show the customer-facing summary and conversation without merchant credentials.
 
@@ -155,7 +187,9 @@ New keys do not revoke older keys automatically. Revocation blocks subsequent
 requests using that key. Tokens currently have no automatic expiry. These commands
 require trusted access to the database file; they are not exposed through HTTP.
 The [merchant sign-in guide](../docs/MERCHANT_SIGN_IN.md) covers the browser
-session endpoints and optional PayPal identity. Team roles remain future work.
+session endpoints and optional PayPal identity. Individual staff accounts and
+owner/manager/finance/agent/viewer roles are implemented; see
+[merchant operations](../docs/PLATFORM_EXPANSION.md).
 
 ### Existing anonymous development records
 

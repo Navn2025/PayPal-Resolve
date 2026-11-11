@@ -59,8 +59,19 @@ def health():
     return {
         "status": "ok",
         "service": "case-management-api",
-        "mode": "development",
+        "mode": "sandbox",
     }
+
+
+@router.get("/ready", status_code=200, responses={503: {"description": "Database unavailable"}})
+def readiness(store: Store):
+    """Read-only database readiness; never expose storage or exception details."""
+    try:
+        with store.transaction() as connection:
+            connection.execute("SELECT 1").fetchone()
+    except Exception:
+        return JSONResponse(status_code=503, content={"status": "unavailable"})
+    return {"status": "ready"}
 
 
 @router.post("/cases", response_model=CaseResponse, status_code=201)
@@ -414,6 +425,8 @@ def create_app(
     @application.middleware("http")
     async def operation_audit(request, call_next):
         response = await call_next(request)
+        response.headers["Cache-Control"] = "private, no-store"
+        response.headers["X-Content-Type-Options"] = "nosniff"
         intent = getattr(request.state, "audit_intent", None)
         if intent:
             from .platform_identity import audit

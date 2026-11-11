@@ -1,13 +1,20 @@
 # Resolve for PayPal
 
 ### From refund promise to verified resolution.
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-paypal--resolve.vercel.app-2563EB?style=for-the-badge&logo=vercel&logoColor=white)](https://paypal-resolve.vercel.app)
+### 🔗 [Live demo → paypal-resolve.vercel.app](https://paypal-resolve.vercel.app)
 
 Resolve is a payment aftercare platform for PayPal merchants. It connects customer-support commitments with payment records, identifies incomplete refunds, and helps merchants coordinate authorized remedies.
 
+Its automatic investigation worker gathers linked evidence when case revisions
+are queued, uses bounded model triage, and validates the proposed next step.
+Fresh owned provider facts can satisfy a selected evidence read without another
+request. This is an evidence workflow; investigation review never authorizes a
+payment. A real Groq-backed investigation of the filmed completed Sandbox refund
+has now been verified, alongside the controlled regression checks (CHG-060).
+
 A successful payment does not always mean a successful purchase. Resolve helps buyers and merchants understand what was agreed, what has happened, and what still needs to be done.
 
-> **Status:** The public landing page links to a sample demo, private buyer portal, and authenticated merchant workspace. PayPal sign-in for merchants and Google or email sign-in for buyers are optional. Email notices, automatic provider checks, and Zendesk linking are optional. Hosted OAuth and payment webhook delivery still need account-backed verification. PayPal Sandbox refund writes default to disabled.
+> **Status:** The application uses real API-backed workspace and private buyer records. Product demo/sample modes have been retired; `/demo` redirects to sign-in. PayPal merchant identity and Google/email buyer identity are optional. Missing verification is displayed as unavailable. An explicitly authorized real USD 1 PayPal Sandbox order → buyer approval → capture → full refund was independently verified and persisted. This verifies that scoped Sandbox workflow; hosted production and other account-backed integrations remain unverified. Sandbox refund writes default to disabled.
 
 The [resolution workspace](docs/RESOLUTION_WORKSPACE.md) can track several
 promises in one case: refunds, returns, replacements, cancellation, subscriptions,
@@ -20,6 +27,39 @@ For a responsive local preview, build once with
 `npm --prefix frontend run preview` alongside the backend. This serves compiled
 pages on port 3000 without development-time compilation. Rebuild after frontend
 changes. See [performance and local preview](docs/PERFORMANCE.md).
+
+## Documentation
+
+The [production-readiness assessment](docs/deployment/production-readiness-report.md)
+and [testing report](docs/testing/testing-report.md) distinguish local evidence
+from unverified hosted behavior. The [Render deployment guide](docs/deployment/deployment-guide.md)
+accompanies `render.yaml`; deployment/account/billing and reviewed source publication
+are still required. No production URL is claimed. The illustrated
+[PDF user manual](docs/user-manual/user-manual.pdf),
+[screenshot index](docs/user-manual/screenshots/README.md),
+[video script](docs/presentation/video-script.md) and
+[recording checklist](docs/presentation/recording-checklist.md) support demonstrations.
+The [current Resolve film](video-production/README.md) has a complete 4:30 master,
+an exact 1.5× / 3:00 reference, and a 2:57 submission derived from that master.
+It follows the actual USD 8 Sandbox purchase, approval/capture, support, refund
+and genuine Groq-backed automatic investigation. Local files are delivered in
+`Resolve_Hackathon_Demo`, with captions, script, timeline, thumbnail and no-music
+versions. PayPal uses REST alongside the first-party Resolve SDK; hosted
+deployment and actual incoming webhook delivery remain unverified. Earlier
+films in `video-production` and `PayPal_Resolve_Demo` are preserved.
+The [English narrated videos](docs/presentation/video/README.md) include a 7:32
+project overview and a 24:31 detailed guide, using actual screenshots with
+captions and chapters. [Open the local player](docs/presentation/video/watch.html)
+after downloading the separately delivered MP4 files into that directory.
+The [real integration report](docs/testing/production-integration-report.md) and
+[SDK implementation guide](docs/user-manual/sdk-integration-guide.md) distinguish
+the verified official Sandbox flow from unavailable providers and controlled tests.
+
+Open `/docs` on the running website for ten guides covering first cases, merchant
+and buyer workflows, returns, refunds/disputes, SDK/API integration, connections,
+configuration and troubleshooting. The pages include local search, copyable
+examples and printable articles. Download the complete guide and OpenAPI contract
+from the documentation home. A repository copy is [Resolve guide](docs/RESOLVE_GUIDE.md).
 
 ## Integrate Resolve into your app
 
@@ -81,7 +121,7 @@ Other languages can use the [OpenAPI contract](postman/contracts/resolve.openapi
 
 - [Build status and handoff: completed features, local setup, fixes, and remaining work](docs/BUILD_STATUS.md)
 
-- [Merchant UI: run the demo or connect your local backend](frontend/README.md)
+- [Merchant UI: run against your backend](frontend/README.md)
 - [Customer portal: case links, access, and messaging](docs/CUSTOMER_PORTAL.md)
 - [Buyer sign-in with Google and optional email delivery](docs/CUSTOMER_SIGN_IN.md)
 - [Customer intake, evidence, and merchant triage](docs/CUSTOMER_WORKFLOW.md)
@@ -151,7 +191,7 @@ The buyer receives a resolution record showing:
 - Outstanding conditions or amounts
 - The next action and its owner
 
-## Planned Features
+## Implemented capabilities
 
 ### Commitment Tracking
 
@@ -182,16 +222,16 @@ The buyer receives a resolution record showing:
 - Action history
 - Final resolution receipt
 
-### Future Extensions
+### Integrations and extension boundary
 
 - Commerce and helpdesk integrations
 - Return and replacement workflows
 - Dispute evidence preparation
-- Supported PayPal Disputes API workflows
+- Direct PayPal dispute submission remains future work; current packages are reviewed exports.
 
 ## AI and Backend Responsibilities
 
-AI will help interpret conversations, identify missing information, and explain recommendations.
+Optional advisory AI can interpret conversations, identify missing information, and explain recommendations. It defaults off and is subject to configured privacy and model policies.
 
 Backend code will control:
 
@@ -205,7 +245,7 @@ Backend code will control:
 
 An AI recommendation alone will not authorize a financial action.
 
-## Planned Technology Stack
+## Implemented technology stack
 
 | Layer | Technology |
 | --- | --- |
@@ -216,7 +256,7 @@ An AI recommendation alone will not authorize a financial action.
 | Database | SQLite locally or PostgreSQL (Neon recommended for hosting) |
 | Authentication | Merchant access keys or linked PayPal accounts; buyer email sign-in |
 | Evidence storage | Case-scoped database attachments |
-| AI integration | OpenAI API with structured outputs |
+| AI integration | Optional Groq/OpenRouter adapters with validated structured outputs |
 | Payment integration | PayPal REST APIs |
 | Background processing | Python workers and database queues |
 | Testing | pytest and Playwright |
@@ -239,31 +279,36 @@ SQLite is the credential-free default. FastAPI and both workers use PostgreSQL
 when `RESOLVE_DATABASE_URL` is set. The [migration guide](docs/POSTGRES_MIGRATION.md)
 shows how to verify a copy of the existing database before switching.
 
-Local merchant access currently uses administrator-provisioned bearer tokens.
+Merchant access supports individual email/password accounts and administrator-provisioned bearer tokens.
 Create a merchant with `uv run python -m app.manage create-merchant --name "My store"`
 from the backend directory, then use the returned token in the UI's Connect
 account dialog or in Swagger. See the backend guide for key revocation and legacy-data assignment.
 PayPal sign-in must be linked from an existing merchant workspace.
-Team roles remain separate work.
+Owners manage staff invitations and owner/manager/finance/agent/viewer roles in Operations.
 
-## Proposed Repository Structure
+## Repository structure
 
 ```text
 resolve/
 ├── backend/
 │   ├── app/
 │   │   ├── main.py
-│   │   ├── api/
-│   │   ├── models/
-│   │   ├── services/
-│   │   └── integrations/
+│   │   ├── models.py
+│   │   ├── storage.py
+│   │   ├── postgres.py
+│   │   └── *_routes.py / workflow services / provider adapters
+│   ├── migrations/
 │   └── tests/
 ├── frontend/
+├── sdk/typescript/
+├── examples/checkout-store/
+├── postman/
 ├── docs/
+├── render.yaml
 └── README.md
 ```
 
-This structure is a development plan and will evolve with the implementation.
+See the [complete application inventory](docs/testing/application-inventory.md) for all routes, API operations, forms, roles, integrations and database operations.
 
 ## Development Roadmap
 
@@ -279,13 +324,13 @@ This structure is a development plan and will evolve with the implementation.
 - [x] Verify OAuth authentication with the configured PayPal Sandbox app
 - [x] Verify the client's capture read with the owner's PayPal Sandbox account
 - [x] Save the actual sandbox capture through authenticated case endpoints
-- [ ] Integrate approved PayPal Sandbox refunds and complete refund history
+- [x] Implement approved PayPal Sandbox refunds and order-scoped history (account-wide completeness remains unverified)
 - [x] Add persistent, state-bound merchant approvals and decision audit events
 - [x] Add paginated case browsing, safe commitment revisions and a shared timeline
 - [x] Add a local recovery worker for already-approved executions
 - [x] Add durable first full-capture sandbox refunds and provider idempotency
 - [x] Add partial and repeated refunds behind verified Sandbox order history
-- [ ] Add AI commitment extraction
+- [x] Add opt-in advisory AI commitment extraction and synthetic evaluation
 - [x] Implement Sandbox webhook signature verification and event reconciliation
 - [x] Add case attachments, close/reopen and the merchant review queue
 - [x] Build the local merchant workspace and printable buyer receipt

@@ -61,7 +61,7 @@ read setup, the cold read took 2.939 seconds; warm reads took 1.211 and 1.182 se
 These are local connectivity measurements, not whole-page or provider timings.
 Network distance still affects hosted database reads.
 
-The isolated production browser check observed five distinct initial API paths
+The CHG-051 isolated production browser check observed five distinct initial API paths
 for a simple case, no unopened secondary-panel requests, one timeline request
 across a return visit and no customer-panel refetch on a tab return. It checked
 rapid case changes and a 390px viewport. The complete merchant/buyer workflow also
@@ -87,3 +87,24 @@ The pool bounds apply per process, so size the total deployment's connection bud
 before increasing worker/replica counts.
 
 Pool lifecycle follows the [Psycopg connection pool documentation](https://www.psycopg.org/psycopg3/docs/advanced/pool.html).
+
+After merge repair CHG-053, the initial case check observes eight distinct API
+paths: the incoming promise-health, next-action and inbox-risk reads add three
+paths. Unopened secondary panels remain deferred; timeline reuse, draft retention
+and mobile overflow checks still pass. The new layout's recent-activity area
+invites opening the evidence timeline until those events have been loaded.
+
+## CHG-056 bounded load and query reduction
+
+The current inbox batches operations/message-count/intake reads for at most 100
+cases at a time, within the same transaction. The dashboard groups complaint
+categories once. No session, role, approval or financial result is cached across
+requests. A 105-case test checks query growth, filtered pagination totals and
+equality with ordinary projections; SQLite and actual PostgreSQL checks pass.
+
+The five-route local workload now issues 220 SQL statements per 20 requests,
+versus 428 before this change. At 1/10/50/100 closed-loop users, all 3,220 final
+requests returned 200. Measured P95 values were 9.086/97.620/820.103/1702.320ms.
+Host activity differed between runs; these are bounded local observations, not
+a controlled speedup percentage or production capacity. See
+[full workload, CPU/RSS and limitations](testing/performance-report.md).

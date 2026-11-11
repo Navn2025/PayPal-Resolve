@@ -25,7 +25,7 @@ const providerFields: Record<string, { config: [string, string][]; secrets: [str
 };
 
 export function OperationsNavigation() {
-  return <nav className="ops-navigation" aria-label="Workspace navigation"><Link href="/workspace">Cases</Link><Link href="/workspace/orders">Orders</Link><Link href="/workspace/operations">Operations</Link><Link href="/workspace/settings">Settings</Link></nav>;
+  return <nav className="ops-navigation" aria-label="Workspace navigation"><Link href="/workspace">Cases</Link><Link href="/workspace/orders">Orders</Link><Link href="/workspace/operations">Operations</Link><Link href="/workspace/settings">Settings</Link><Link href="/docs">Docs</Link></nav>;
 }
 
 function ConnectionEditor({ provider, current, owner, saved }: { provider: string; current?: Connection; owner: boolean; saved: () => Promise<void> }) {

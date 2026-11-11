@@ -569,6 +569,9 @@ def test_dispute_package_is_reviewed_immutable_and_tenant_scoped(api):
     path = f"/platform/cases/{identifier}/dispute-packages/{package['id']}"
     assert api.get(path + "/export").status_code == 409
     assert api.post(path + "/review").status_code == 200
+    exported = api.get(path + "/export")
+    assert exported.status_code == 200
+    assert exported.json()["reviewed"] is True
     original = api.get(path).json()
     promise(api, identifier)
     assert api.get(path).json()["snapshot"] == original["snapshot"]
@@ -711,6 +714,9 @@ def test_encrypted_ticket_import_matching_webhook_and_failure_retry(api, zendesk
     response = api.post("/platform/imports/zendesk", json={"ticket_id": 123})
     assert response.status_code == 200, response.text
     imported = response.json()
+    assert api.get("/platform/imports/" + imported["id"]).json()["id"] == imported["id"]
+    matched = api.put("/platform/imports/" + imported["id"] + "/match", json={"case_id": identifier})
+    assert matched.status_code == 200 and matched.json()["case_id"] == identifier
     assert imported["case_id"] == identifier
     assert imported["suggestions"]["skipped_reason"] == "extraction_disabled"
     assert len(imported["messages"]) == 2

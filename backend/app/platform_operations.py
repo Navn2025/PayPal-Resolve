@@ -717,6 +717,12 @@ class Operations:
                 "SELECT * FROM resolution_cases WHERE merchant_id=?", (str(merchant),)
             ).fetchall()
             outcomes, remedies, reasons = Counter(), Counter(), Counter()
+            reasons.update({row["issue_type"]: row["count"] for row in db.execute(
+                """SELECT i.issue_type,count(*) AS count FROM customer_intake_invites i
+                   JOIN resolution_cases c ON c.id=i.resolution_id AND c.merchant_id=i.merchant_id
+                   WHERE c.merchant_id=? AND i.issue_type IS NOT NULL GROUP BY i.issue_type""",
+                (str(merchant),),
+            ) if row["issue_type"]})
             overdue = awaiting = 0
             for case in cases:
                 view = self.workspace._view(db, case)
@@ -728,12 +734,6 @@ class Operations:
                         p.evidence_source != "provider_confirmed"
                         and p.outcome != "fulfilled"
                     )
-                row = db.execute(
-                    "SELECT issue_type FROM customer_intake_invites WHERE resolution_id=?",
-                    (case["id"],),
-                ).fetchone()
-                if row and row["issue_type"]:
-                    reasons[row["issue_type"]] += 1
             # Shared captures are one balance. Use maximum cumulative commitment per
             # capture rather than summing overlapping promises on multiple cases.
             balances = {}

@@ -177,3 +177,10 @@
 .sdk-key-list li strong { font-size: 13px; }
 .sdk-key-list li p { margin: 3px 0 0; }
 .sdk-revoke { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 12px; }
+
+/* Keep documentation discoverable in the compact public header. */
+@media (max-width:700px) {
+  .site-nav { flex-wrap:wrap; height:auto; min-height:60px; padding-block:10px; }
+  .site-nav-links { display:flex; gap:12px; margin-left:auto; }
+  .site-nav-links a:not([href="/docs"]) { display:none; }
+}

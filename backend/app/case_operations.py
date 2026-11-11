@@ -2,6 +2,7 @@
 
 from datetime import datetime, timezone
 from decimal import Decimal
+from itertools import batched
 from typing import Literal
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
@@ -94,8 +95,8 @@ def _basis(db, store, case):
     return store._reconcile(db, legacy)
 
 
-def derive(db, store, case, view, basis=None):
-    row = _row(db, case)
+def derive(db, store, case, view, basis=None, *, triage=None):
+    row = _row(db, case) if triage is None else triage["row"]
     now = datetime.now(timezone.utc)
     if basis is None:
         basis = _basis(db, store, case)
@@ -179,13 +180,13 @@ def derive(db, store, case, view, basis=None):
             "The merchant is reviewing the case and will share the next update.",
         )
     threshold = row["read_through"] if row else 0
-    counts = db.execute(
+    counts = triage["counts"] if triage is not None else db.execute(
         """SELECT COALESCE(max(sequence),0) AS watermark,
            COALESCE(sum(CASE WHEN sequence>? THEN 1 ELSE 0 END),0) AS unread
            FROM customer_portal_messages WHERE resolution_id=? AND merchant_id=? AND sender='customer'""",
         (threshold, case["id"], case["merchant_id"]),
     ).fetchone()
-    intake = db.execute(
+    intake = triage["intake"] if triage is not None else db.execute(
         "SELECT issue_type FROM customer_intake_invites WHERE resolution_id=?",
         (case["id"],),
     ).fetchone()
@@ -217,6 +218,28 @@ class CaseOperations:
             case = self.workspace._case(db, case_id, merchant_id)
             return derive(db, self.store, case, self.workspace._view(db, case))
 
+    @staticmethod
+    def _triage_batch(db, merchant, cases):
+        """Bounded, transaction-local reads; never cache financial/tenant state."""
+        ids = [case["id"] for case in cases]
+        placeholders = ",".join("?" for _ in ids)
+        parameters = (merchant, *ids)
+        settings = {row["resolution_id"]: row for row in db.execute(
+            f"SELECT * FROM resolution_operations WHERE merchant_id=? AND resolution_id IN ({placeholders})", parameters
+        )}
+        counts = {row["resolution_id"]: row for row in db.execute(
+            f"""SELECT m.resolution_id,max(m.sequence) AS watermark,
+                sum(CASE WHEN m.sequence>COALESCE(o.read_through,0) THEN 1 ELSE 0 END) AS unread
+                FROM customer_portal_messages m LEFT JOIN resolution_operations o
+                ON o.resolution_id=m.resolution_id AND o.merchant_id=m.merchant_id
+                WHERE m.merchant_id=? AND m.resolution_id IN ({placeholders}) AND m.sender='customer'
+                GROUP BY m.resolution_id,o.read_through""", parameters
+        )}
+        intake = {row["resolution_id"]: row for row in db.execute(
+            f"SELECT resolution_id,issue_type FROM customer_intake_invites WHERE merchant_id=? AND resolution_id IN ({placeholders})", parameters
+        )}
+        return {identifier: {"row": settings.get(identifier), "counts": counts.get(identifier, {"watermark": 0, "unread": 0}), "intake": intake.get(identifier)} for identifier in ids}
+
     def inbox(self, merchant_id, filter_by, query, limit, offset):
         merchant = str(merchant_id)
         base = "SELECT * FROM resolution_cases WHERE merchant_id=?"
@@ -235,31 +258,36 @@ class CaseOperations:
                 total = 0
                 rows = db.execute(base + order, (merchant,))
             items = []
-            for case in rows:
-                if needle:
-                    settings = _row(db, case)
-                    if not any(
-                        needle in value.casefold()
-                        for value in (
-                            case["title"],
-                            case["order_reference"] or "",
-                            case["id"],
-                            (settings["assignee"] or "") if settings else "",
-                        )
-                    ):
+            for batch in batched(rows, 100):
+                triage = self._triage_batch(db, merchant, batch)
+                for case in batch:
+                    item = self._inbox_item(db, case, triage[case["id"]], needle, filter_by)
+                    if item is None:
                         continue
-                view = self.workspace._view(db, case)
-                ops = derive(db, self.store, case, view)
-                if filter_by not in ("all", view.outcome, ops.workflow) and not (
-                    filter_by == "unread" and ops.unread_count
-                ):
-                    continue
-                if filter_by != "all" or needle:
-                    total += 1
-                    if total <= offset or len(items) == limit:
-                        continue
-                items.append(InboxItem(**view.model_dump(), operations=ops))
-        return InboxPage(items=items, total=total, limit=limit, offset=offset)
+                    if filter_by != "all" or needle:
+                        total += 1
+                        if total <= offset or len(items) == limit:
+                            continue
+                    items.append(item)
+            return InboxPage(items=items, total=total, limit=limit, offset=offset)
+
+    def _inbox_item(self, db, case, triage, needle, filter_by):
+        settings = triage["row"]
+        if needle and not any(
+            needle in value.casefold()
+            for value in (
+                case["title"], case["order_reference"] or "", case["id"],
+                (settings["assignee"] or "") if settings else "",
+            )
+        ):
+            return None
+        view = self.workspace._view(db, case)
+        ops = derive(db, self.store, case, view, triage=triage)
+        if filter_by not in ("all", view.outcome, ops.workflow) and not (
+            filter_by == "unread" and ops.unread_count
+        ):
+            return None
+        return InboxItem(**view.model_dump(), operations=ops)
 
     def update(self, case_id, merchant_id, payload):
         with self.store.transaction(write=True) as db:

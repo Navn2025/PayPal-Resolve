@@ -20,6 +20,73 @@ real customer data.
 
 ## Current implementation
 
+- CHG-062 delivers the complete **4:30 Resolve master**, an exact **1.5× / 3:00**
+  reference, and the **2:57 submission** derived from the same master. All ten
+  scenes and narration remain; only opening/closing narration-free holds are
+  removed before submission speedup. The local `Resolve_Hackathon_Demo` package
+  includes all three music/no-music pairs and presentation materials. Full media,
+  source/SQL, playback, voice and independent review passed within documented
+  scope. Previous movies remain intact; no app/payment change or upload occurred.
+
+- CHG-061 delivers the **2:57 PayPal Resolve submission film** with a purpose-led
+  opening, native-speed new stock neural narration, actual PayPal approval and
+  refund, real follow-up typing and an actual Groq-backed automatic investigation.
+  The local `PayPal_Resolve_Demo` package includes both MP4 editions, script,
+  subtitles, thumbnail, ten scene WAVs and measured/independent review evidence.
+  No upload or new financial action was performed; prior movies are preserved.
+- CHG-060 fixes reuse of a selected current owned provider fact in the existing
+  investigation worker without weakening freshness, tenant/revision checks or
+  financial gates. Targeted tests **41 passed**; final isolated backend
+  **1,008 passed / 63 skipped**. Actual provider/model retest finished with three
+  linked facts and no financial writes. OpenRouter escalation and hosted rollout
+  remain unverified.
+
+- CHG-058 delivers a separate 4:30, 1080p/30 fps interaction-led hackathon film
+  with Video Shotcraft/Remotion, actual browser typing/PayPal approval and a
+  verified USD 8.00 Sandbox purchase/full refund. Application code is unchanged.
+  Exact SDK/source, stock neural narration, captions, no-music edition and
+  reusable production scripts are supplied. AI responses, actual webhook delivery
+  and hosted deployment remain unverified; see the appended scope and QA.
+
+- CHG-057 delivers English narrated screenshot videos: a 7:32 overview and
+  24:31 detailed, 46-chapter guide, with 1080p captions, offline player and
+  editable narration sources. Actual UI captures and earlier verified Sandbox
+  evidence remain separately labelled. Media/player validation passed; no new
+  payment, paid generation or hosted deployment is claimed. See the appended entry.
+
+- CHG-056 supersedes CHG-055's product demo modes and active delivery artifacts.
+  Workspace and buyer actions use the actual backend; `/demo` redirects to login
+  and sample buyer query strings cannot bypass private-link authorization.
+  Missing/current provider verification is explicit; unverified totals are nullable.
+  The owner-approved real USD 1.00 official PayPal Sandbox order, private buyer
+  approval, capture and full refund completed; independent reads, SDK/database
+  persistence and merchant/buyer values were verified. This is scoped Sandbox
+  evidence, not hosted production acceptance. Transaction-local triage batches
+  and a grouped dashboard query reduce repeated reads without caching tenant or
+  financial state. Final regression/performance/documentation results follow below.
+
+- CHG-055 adds a verified local release audit and Render preparation: credential
+  hydration protection, tablet header/icon-rail repair, public webhook crash fix,
+  DB-backed `/ready`, cache/security headers and truthful documentation. It supplies
+  a 36-page illustrated manual, 80 real local synthetic screenshots, deployment /
+  rollback guidance and a video plan. Production URL, hosted screenshots and
+  account-backed rollout remain blocked on Render/source/billing access; no
+  deployment, commit or push is claimed. See `docs/testing/testing-report.md`.
+
+- CHG-054 adds public documentation at `/docs`: ten static guides for merchants,
+  buyers, SDK/API integrations, providers, local setup and troubleshooting. Search,
+  code copying, section anchors, print styles and Markdown/OpenAPI downloads are
+  available without a backend or sign-in. `frontend/content/docs.json` is the
+  authored source; `docs:export` refreshes repository/public artifacts and build
+  scripts run it automatically. No new dependency or provider behavior is added.
+
+- CHG-053 repairs integration errors from merge 13ac7ed: restores React hook
+  imports, inbox risk input, case-scoped component reset, deferred AI/Zendesk
+  tools, offers/returns/dispute workflows and mobile constraints within the new
+  layout. The OpenAPI export includes both branches' schemas again and a regression
+  checks export equality/reference completeness. Prior duplicate CHG IDs introduced
+  by the merged histories are preserved; new IDs continue after the existing 052.
+
 - CHG-051 addresses slow case opening/tab changes: bounded PostgreSQL connection
   reuse, one identity lookup per browser read with fresh write authorization,
   progressive case detail, deferred secondary tools, retained customer drafts,
@@ -3566,7 +3633,7 @@ passed the promise-health map (from CHG-050) to `InboxPane`, so `risk` was
 - **The new test catches the bug:** with `risk={risk}` removed temporarily, it
   failed (`.case-row-risk` not found). The fix was then restored.
 - **Full Playwright suite** (`PLAYWRIGHT_CHROMIUM_EXECUTABLE=<system Chrome> npx
-  playwright test`): 20 passed, 5 skipped, 4 failed. Rerunning the four
+playwright test`): 20 passed, 5 skipped, 4 failed. Rerunning the four
   failing specs gave the same results. None of the four depend on the inbox
   risk map, and none could be checked before the merge, because `/workspace`
   did not compile or render there:
@@ -3689,10 +3756,11 @@ The overview timeline card also showed "Loading events…" forever, because
     The screenshots aren't committed.
   - **Width at 390px:**
 
-    | Page | Merged | Restored |
-    | --- | --- | --- |
-    | Case overview | 501px | 390px |
-    | Settings | 410px | 390px |
+    | Page          | Merged | Restored |
+    | ------------- | ------ | -------- |
+    | Case overview | 501px  | 390px    |
+    | Settings      | 410px  | 390px    |
+
 - **Specs on their own:** `investigations`, `promise-health` and `settings`:
   8 passed and 1 failed (the order-dependent proxy test). After the gate fix,
   the investigations and proxy pair passed.
@@ -3707,7 +3775,7 @@ The overview timeline card also showed "Loading events…" forever, because
     passed, 3 skipped) and in the final full run. Treated as order- or
     timing-dependent and not changed.
 - **Full default suite, final run** (`PLAYWRIGHT_CHROMIUM_EXECUTABLE=<system
-  Chrome> npx playwright test`, platform specs now excluded): 23 passed,
+Chrome> npx playwright test`, platform specs now excluded): 23 passed,
   5 skipped, 0 failed.
 - **Platform suite** (`npx playwright test -c playwright.platform.config.ts`,
   system Chrome): 2 passed. This includes Navneet's performance test, which
@@ -3815,7 +3883,7 @@ resolution workflow, timeline loading and the Evidence timeline tab.
   promise". The fixture backend was used and the screenshots aren't committed.
   There is no overflow at 390px.
 - **Full default suite** (`PLAYWRIGHT_CHROMIUM_EXECUTABLE=<system Chrome> npx
-  playwright test`): 24 passed, 5 skipped, 1 failed.
+playwright test`): 24 passed, 5 skipped, 1 failed.
   - **The failure:** `workspace.spec.ts`, "an unauthenticated customer follows
     a private link…", waiting for the merchant reply on the customer page. It
     is the same failure recorded under CHG-054, in Navneet's customer-portal
@@ -3909,17 +3977,18 @@ The existing workflow steps are unchanged.
   were also captured with the new link. The screenshots aren't committed.
 - **Width at 390px:**
 
-  | State | Width |
-  | --- | --- |
-  | Before | 390px |
+  | State            | Width              |
+  | ---------------- | ------------------ |
+  | Before           | 390px              |
   | After, first try | 406px (mobile nav) |
-  | After, fixed | 390px |
+  | After, fixed     | 390px              |
 
   The case inbox and settings were also 390px wide at 390px.
+
 - **Platform suite** (`npx playwright test -c playwright.platform.config.ts`,
   system Chrome): 2 passed. This includes Navneet's performance test.
 - **Full default suite** (`PLAYWRIGHT_CHROMIUM_EXECUTABLE=<system Chrome> npx
-  playwright test`): 25 passed, 5 skipped, 0 failed.
+playwright test`): 25 passed, 5 skipped, 0 failed.
 - **Backend:** not changed, so not re-run.
 
 **Known limitations and follow-up:**
@@ -5313,6 +5382,7 @@ synthetic data.
 
 ```text
 ### CHG-062 - Concrete change title
+### CHG-055 - Concrete change title
 Date:
 Objective:
 Files and resulting behavior:
@@ -6512,3 +6582,419 @@ workers before scaling. Message refresh is explicit and all financial action
 checks remain fresh/backend-authoritative. Daily compiled viewing now requires
 rebuilding after source/configuration changes; development reload remains opt-in
 through `npm run dev`. No deployment, commit or push was performed.
+
+### CHG-053 - Repair merged workspace integration and generated API contract
+
+**Date:** 2026-11-10 (Asia/Calcutta).
+
+**Objective:** Repair merge 13ac7ed while retaining the incoming workspace layout,
+next-step/promise-risk/privacy features and the case-loading branch's operations
+and performance behavior. Initial audit was read-only; fixes were explicitly
+requested afterwards. Earlier entries from both histories reuse IDs 044–051;
+those historical entries remain unchanged, and this new entry uses unique 053.
+
+**Files / decisions:** `frontend/components/case-desk.tsx` restores useState/
+useEffect imports, deferred Zendesk mounting and an honest unloaded-timeline hint.
+`workspace.tsx` supplies the existing risk map to the inbox, keys CaseDesk by case
+(to reset visited panels/context), passes the AI tools into the new layout's
+assistant slot, and restores the missing CaseOperationsPanel (offers, returns,
+disputes and connected-app requests) while retaining drafts across tabs. The
+investigation wrapper mounts only when opened and stops polling when collapsed.
+New source layout and review/financial gates are retained rather than reverting
+one branch wholesale. `app/globals.css` restores narrow-screen wrapping/local
+case-tab scrolling lost in the merge; body overflow is not masked.
+
+`postman/contracts/resolve.openapi.json` was regenerated from the complete merged
+FastAPI application, restoring 12 omitted definitions (including refund journeys,
+return inspections, offers, injection flags and next-action facts). No API schema
+was manually fabricated. SDK generated types/build were refreshed from it. New
+`backend/tests/test_openapi_contract.py` compares the saved contract to the runtime
+export and resolves every local reference, catching future incomplete merge
+artifacts. No backend business logic, schema/migration, credential, provider mock
+or financial permission changed in this repair.
+
+`frontend/playwright.investigations.config.ts` includes incoming promise-health
+and settings regressions in the same isolated fixture workflow. Its investigation
+test now opens the one restored deferred wrapper instead of clicking a second,
+nonexistent detail label. Existing complete platform/performance tests caught the
+missing operation panel, missing support request load, and 501px body overflow on
+a 390px viewport; repairs restore those paths without weakening their assertions.
+
+**Validation so far:** TypeScript check passes after the missing hooks/prop were
+restored. `uv run python scripts/isolated.py scripts/export_openapi.py` passed;
+SDK `npm test` regenerated types, built successfully and completed **8 passed,
+3 skipped** (provider/PostgreSQL opt-ins). Full isolated backend regression:
+**470 passed, 62 skipped** in 132.10 seconds, including the new canonical-contract/
+reference test and merged backend tests. Targeted Ruff F/E9 passed. Provider-
+backed and optional PostgreSQL checks were not enabled for this repair; prior
+entries' results are historical, not repeated live evidence.
+
+Final browser/build/runtime results are appended below after observation. No
+commit, push, deployment, real customer record, payment or notification was made.
+
+**Final observed validation and runtime:**
+
+- Compiled isolated platform/performance run: **2 passed (45.3 seconds including
+  build/start)**. End-to-end merchant/buyer operations passed, including restored
+  offers, returns, labels, dispute holds, tracing, packages and role boundaries.
+  Focused performance test passed in 3.5 seconds; it observed **8 distinct initial
+  API paths**, with incoming inbox-risk/promise-health/next-action reads adding
+  three to CHG-051's historical five. Unopened secondary tools still issue no
+  requests, timeline loads once, customer drafts survive tab changes, late old-
+  case responses are ignored, and the page fits a 390px viewport. The saved mobile
+  screenshot was visually inspected. `docs/PERFORMANCE.md` distinguishes the new
+  count from the historical benchmark; frontend README documents expanded checks.
+- Expanded compiled isolated investigation/promise-health/settings run:
+  **7 passed (39.0 seconds including build/start)**. Tests verify advisory review
+  never creates financial approval/execution, refund suggestions remain capped by
+  backend recommendations, explanations survive late reconciliation, no payment
+  or promise writes occur, settings copy/sign-out work, viewer-local times are
+  correct and mobile width fits. The race test's reconciliation gate was moved
+  before sign-in navigation: auto-selection could otherwise finish the request
+  before the gate existed and leave its response wait unsatisfied. An outdated
+  second investigation-detail click was removed; there is one deferred wrapper.
+  Early runs exposed these integration/timing issues and lost mobile constraints;
+  only the final successful results above are claimed as passing.
+- Final `npm --prefix frontend run build:preview` passed compile, TypeScript and
+  all 14 static pages after the unloaded-timeline hint copy was corrected.
+  `npm --prefix frontend run check`, Ruff F/E9 for the new contract test, and
+  `git diff --check` passed. Existing deprecation/development color notices remain.
+  A preliminary browser command was issued from the repository root and failed
+  to find its config; rerunning from frontend produced the results above. No
+  repository dependency or lockfile was changed by that preliminary invocation.
+- Restarted only the recorded local backend and compiled-preview process trees
+  after successful checks. Backend `/health` and frontend `/account`/`/demo`
+  returned **200**. The running backend OpenAPI exactly equals the repaired saved
+  export after adding the exporter's documented local server entry, confirming
+  the runtime also includes the merged routes. The frontend reported ready in
+  304ms. Owner cookies/configuration/storage were preserved; no accounts, keys,
+  cases, workers, financial actions or notifications were created/run there.
+- No numbered migration changed and no provider-backed check was performed.
+  Both branches' historical engineering-log entries remain intact. No commit,
+  push or hosted deployment was made. Refresh existing browser tabs to load the
+  new compiled assets; future frontend edits require rebuilding the preview.
+
+### CHG-054 - Publish a complete Resolve guide inside the website
+
+**Date:** 2026-11-10 (Asia/Calcutta).
+
+**Objective:** Provide a proper product/user/integration document and make it
+available through the existing Resolve website. Interpret “doc” as an online
+reference with a downloadable Markdown guide, rather than introducing an unrelated
+Word/Docs service or replacing the repository website.
+
+**Files and resulting behavior:**
+
+- `frontend/content/docs.json` authors ten guides: first resolution, merchant
+  workspace, buyer portal, returns/replacements, refunds/disputes, SDK integration,
+  API reliability, provider connections/SMTP sender, local configuration/workers,
+  and troubleshooting. Content was checked against current handlers, roles, SDK
+  signatures, provider boundaries, environment examples and worker CLI flags.
+  Examples use reserved/synthetic data and placeholders, never owner settings.
+- `app/docs/layout.tsx`, `page.tsx`, `[slug]/page.tsx`, `docs.css`,
+  `lib/documentation.ts`, `components/docs-navigation.tsx`, `docs-block.tsx` and
+  `docs-actions.tsx`: public static hub and ten build-generated article routes,
+  searchable guide contents, active navigation, previous/next links, accessible
+  headings/tables, section anchors, copy actions and print styling. Mobile has a
+  native guide selector; code and table scrolling stay within their containers.
+  Search uses the authored public text locally and makes no API call. Only search,
+  navigation and copy/print controls need client code; article bodies render on
+  the server. Unknown guide slugs return 404.
+- New `scripts/export-docs.mjs` and package `docs:export`/`docs:check` scripts render
+  `docs/RESOLVE_GUIDE.md`, `public/docs/resolve-guide.md`, and a byte-exact public
+  copy of `postman/contracts/resolve.openapi.json`. Normal/preview builds export
+  first. Slugs, section IDs and authored guide links are checked. Markdown chapter
+  links work within the complete document; API resource links use the appropriate
+  repository/download context. No runtime local file or configured customer data
+  is exposed. Plain download anchors avoid prefetching the larger JSON contract.
+- Landing header/footer, operations navigation, merchant sidebar/shared shell and
+  local guide modal link to documentation. The compact landing header preserves
+  its Docs link. Root/backend/frontend READMEs describe the public guide and
+  maintenance commands. Existing private/workspace routes retain authorization.
+- New `playwright.docs.config.ts` and `tests/documentation.spec.ts` test the compiled
+  public docs against an isolated source copy, with no API server at its configured
+  backend port. No schema, migration, dependency, existing API payload or provider
+  behavior changed. Earlier uncommitted changes from CHG-053 were preserved.
+
+**Decisions and limits:** Reuse the established Next/brand system with static
+routes instead of an additional docs framework/runtime Markdown parser. A typed
+block renderer reads one authored JSON source; generated Markdown and the public
+API download have a stale-export check. This keeps website and downloadable
+content aligned without new packages. The guide distinguishes customer requests,
+promises, reviewed offers, payment approval/submission and provider proof. It
+states Sandbox-only financial scope, manual Stripe/bank references and physical
+fulfillment, no independently verified bank receipt, advisory AI and pull-stream
+(not outbound-webhook) guarantees. The SDK is documented as a local preview, not
+a published npm package. Print is per article; the complete download is Markdown,
+not a generated PDF/Word document.
+
+**Validation actually performed so far:**
+
+- `npm --prefix frontend run docs:export`, `docs:check` and `check` passed. SDK
+  TypeScript code blocks were assembled with declared app-owned UUID/pool bindings
+  into a disposable `.mts` file and checked using installed TypeScript with strict
+  NodeNext/noEmit. The first check caught the generated event snapshot's unknown
+  type; the published consumer example now validates its resolution/stage shape,
+  and the subsequent strict check passed. No example was executed against a provider.
+- Compiled documentation browser check passed: **1 passed (1.9 minutes including
+  isolated build/start; test 14.5 seconds)** after full-text search was added. All
+  ten article headings/section IDs, case-insensitive SMTP search, no-results state,
+  active navigation, clipboard copy, complete guide and API download content,
+  unknown-route 404, 320px/390px navigation/overflow and mobile homepage Docs entry
+  were verified. No `/api` request was observed and no backend was running for
+  that docs test. Earlier basic-search run also passed. Desktop/mobile screenshots
+  were visually inspected; the final screenshot capture resets scroll to avoid
+  a sticky-header artifact in a full-page image.
+- Existing compiled platform/performance regression: **2 passed (2.0 minutes with
+  build/start)**. Merchant/buyer operations remained usable; eight initial API
+  paths, timeline reuse, retained customer drafts, late-case response rejection
+  and 390px layout checks remained intact. No real merchant records/provider calls
+  were used. These are synthetic/local checks, not hosted production evidence.
+- Long shell-based authoring invocations were rejected before execution; content
+  was safely authored in smaller local patches. Temporary authoring/typing files
+  are under ignored `.local`. A temporary authoring-script parenthesis error was
+  corrected before the canonical content/export was produced. No partial app
+  content was accepted as validation. Existing development color notices remain.
+
+Final local build/startup and whitespace checks are recorded below once observed.
+No hosted publication, account modification, financial action, email, worker run,
+commit or push is part of this documentation task.
+
+**Final observed build/runtime checks:**
+
+- Final `npm --prefix frontend run build:preview` exported the assets and passed
+  compilation, TypeScript and all **25 static pages**, including the hub and ten
+  generated article routes. The corrected onboarding link/legacy-owner guidance,
+  typed SDK consumer example and direct download anchors are included in this
+  final build. Final `docs:check`, TypeScript and `git diff --check` passed.
+- Restarted only the recorded local compiled frontend process tree with the
+  existing configuration. `/docs`, `/docs/getting-started`, `/docs/sdk-integration`,
+  the Markdown download and JSON contract download all returned **200** on port 3000. The served API contract is byte-identical to the canonical checked-in
+  contract. The existing backend `/health` remained **200** and was not restarted.
+- The downloadable complete guide is **28,251 bytes** and the public contract
+  **538,084 bytes** in this build. No download includes configured secrets, owner
+  contacts or raw customer evidence. The repository guide uses a repository-relative
+  contract link; the website download uses a sibling resource link.
+- Backend/financial/provider suites were not repeated for this documentation-only
+  change; CHG-053's 470-test backend result remains historical. No provider or
+  permission behavior changed. Local documentation is ready to use; a public host
+  still needs the owner's ordinary deployment process. No commit/push was made.
+
+### CHG-055 - Production audit, credential form protection and delivery preparation
+
+**Recorded:** 2026-11-11.
+
+**Objective:** Audit the existing application, exercise its compiled pages and workflows with disposable data, fix demonstrated defects and prepare deployment/presentation deliverables without claiming unverified hosted results.
+
+**Changes and decisions (in progress):** `frontend/components/workspace-account.tsx` now uses explicit POST submission and disables credential controls until hydration, matching the existing merchant-key form. Before this change its default GET fallback could put a password in a URL if scripts were unavailable. A busy guard prevents repeated submission. `frontend/tests/readiness.spec.ts` checks the no-script fallback and native validation. `frontend/playwright.audit.config.ts` uses a compiled isolated source copy and disposable backend rather than the owner's configured runtime. `scripts/audit_inventory.py` generates a route/API/form/database/configuration inventory without reading secrets. Existing uncommitted work is preserved. No numbered migration is edited.
+
+**Validation observed so far:** frontend TypeScript check passed; production npm audit reported zero vulnerabilities. Backend and browser suites are pending; final results and remaining limits will be appended to this entry. Docker CLI exists but its Linux daemon is unavailable. No deployment credential names were present in the inspected environment. No production deployment, provider write, mail delivery, commit or push has occurred.
+
+**Next:** Run page/workflow/security checks, fix reproduced defects, prepare the deployment configuration, generate the illustrated PDF manual and record final evidence. Public screenshots and production verification require a reachable deployed instance.
+
+**Final CHG-055 implementation and decisions:**
+
+- `backend/app/workspace_routes.py` restores the globally configured PayPal client for the public Sandbox webhook. Local TLS simulation reproduced an undefined `merchant` variable before signature verification. A public webhook has no merchant browser session; the existing configured app/webhook/Resolve-merchant binding must select verification scope. Unverified payload fields must not select a tenant. This preserves the existing global webhook contract; arbitrary per-workspace PayPal webhook routing remains unimplemented.
+- `backend/app/main.py` adds GET `/ready` with a read-only `SELECT 1` and a sanitized 503, retains both `/health` methods and labels financial scope Sandbox, and applies private/no-store plus nosniff to API responses. Liveness alone is insufficient for host health checks. `backend/tests/test_readiness.py` covers available/unavailable DB, sanitized output/headers and an unconfigured public webhook failing closed. No schema migration was added or changed.
+- `frontend/app/globals.css` repairs a measured 793px document at a 768px viewport by wrapping header actions and collapsing link labels accessibly in the existing icon rail. No page-wide overflow hiding or redesign was used. `frontend/next.config.ts` adds MIME/referrer/frame headers while retaining stricter buyer policies. `frontend/components/merchant-login.tsx` keeps a successful PayPal callback in a loading state rather than showing retry copy. Account form POST/hydration protection is described above.
+- `frontend/playwright.audit.config.ts`, `tests/audit-fixture.py`, `tests/readiness.spec.ts` provide compiled, secret-isolated scenarios, all main page widths and actual screenshots. Existing settings/auth tests now account for optional enabled identity and use scoped locators. `tests/isolated-next.mjs` limits static-generation workers to two only in disposable test sources, and `playwright.platform.config.ts` allows bounded slower startup. Initial concurrent builds timed out; sequential bounded builds succeeded without changing production architecture. `examples/checkout-store/test/checkout.test.mjs` adds an opt-in actual receipt capture hook; existing checkout behavior is unchanged.
+- `render.yaml` uses the existing native Node/Python stack, managed PostgreSQL and four separate workers rather than introducing a new framework, Docker requirement or object storage. Defaults disable optional provider writes/mail/AI. Render generates one base64 256-bit Fernet-compatible group key; its format was checked locally without printing the generated value. Origins prompt per service because Render ignores `sync:false` in environment groups. Existing data must keep its existing key. Shared worker origins, resource cost/capacity and callback setup require account configuration. No new application dependency was added. Docker's Linux daemon was unavailable; native builds are the chosen Render path, not a claimed container result.
+- Regenerated `postman/contracts/resolve.openapi.json` with `uv run python scripts/export_openapi.py` from backend; refreshed public download and SDK generated types. Simulation context records for PayPal/hosted-followup/Google retain earlier findings and append this audit's scoped evidence. No live provider behavior is inferred from local mocks.
+- Documentation: corrected root/backend/frontend README claims about implemented roles, extraction and architecture; added `docs/production-handoff.md`, `docs/testing/{application-inventory,testing-report,bug-fix-report}.md`, `docs/deployment/{deployment-guide,production-readiness-report}.md`, `docs/presentation/{video-script,recording-checklist}.md`, `docs/user-manual/user-manual.md`, PDF and captioned screenshot directory/manifest. `scripts/audit_inventory.py`, `scripts/screenshot_manifest.py` and `scripts/build_user_manual.py` make inventories/documentation reproducible without loading local secrets. ReportLab/pypdf/Pillow/jsonschema were run in temporary tooling environments, not added to app dependencies. The screenshot set is actual compiled local UI with synthetic records; PDF detail crops are explicitly captioned and originals retained. A documentation archive packages these deliverables.
+
+**Final validation actually performed:**
+
+- Baseline isolated SQLite backend: **470 passed, 62 opt-in skipped**, 734.66s. This completed before the new readiness tests; it is not misrepresented as a post-change full-suite rerun. Final readiness/contract/webhook regression: **4 passed**, 1.13s. Starlette's existing httpx TestClient deprecation warning remains.
+- Real routes/HTTPX/storage through repository-owned Postman TLS stand-ins: initial **46 passed/2 failed** exposed the webhook crash; fixed **48 passed**, 369 mocked requests, zero passed through. Tests cover provider failures, precision, duplicate/pending/failed/shared balances, gates, webhook replay/conflict and uncertain outcomes. No real refund, external provider modification or delivered email occurred.
+- The previously recorded loopback PostgreSQL cluster was stopped: initial attempt had **11 setup errors/1 independent pass**. Created a new disposable PostgreSQL 18 cluster under `.local/audit/postgres` on loopback 56441; **12 tests passed** including migration/import, concurrency, snapshots and pool behavior. The owner's hosted database was not accessed. The audit cluster is stopped after checks.
+- Final compiled main browser runs: PayPal/email scenario **28 passed/1 Google skip** (1.6m; 33 mocked provider requests, zero pass-through); separate Google **1 passed** (31.5s; four mocked requests, zero pass-through); platform **2 passed** (40.9s); backend-free docs **1 passed** (27.5s). These comprise **32 distinct passing checks**. The 22-route/three-width sweep records 66 captures, zero page exceptions and zero 5xx responses. Four expected console 401s are from invalid/unauthenticated checks. A proxy socket reset during teardown was non-fatal.
+- Separate example store: first attempt correctly failed its missing Node proxy-support prerequisite. With `NODE_USE_ENV_PROXY=1` and loopback bypass, final **2 passed** (9.53s), 19 mocked requests, zero pass-through. Tested mobile catalog/cart, quote rejection, capture replay, receipt ownership, outside-refund mismatch and embedded support. Actual catalog and receipt captures were saved; no real PayPal consent/capture or shipment happened.
+- SDK: **8 passed/3 opt-in skipped**; generated types/build passed. Frontend TypeScript and documentation freshness passed. npm audits (frontend including development dependencies, mailer production, SDK, sample shop) and pip-audit of 36 installed backend packages found no known vulnerabilities. These are advisory snapshots, not a security guarantee.
+- Render YAML validated against its official downloaded JSON schema. Build/start paths were checked against official Render/Next/FastAPI documentation. No account-side Blueprint validation or resource creation was possible. Hosted production build, TLS/DNS/auth/provider callbacks, delivery, backups, restore and load tests remain unperformed.
+- Generated and text-checked **36-page PDF**, with **32 embedded real screenshots** and **80 original PNGs** plus captions/hash manifest. Poppler rendered all pages; contact sheets and new workflow/store pages were visually inspected for clipping/overlap/legibility. Font fallback notices did not prevent reviewed page rendering. Video script totals 7m20s. No video file was recorded. `git diff --check` passed; final packaging/integrity checks are below.
+
+**Remaining limitations and next step:** Production deployment and hosted screenshots/URLs are pending Render access, reviewed-source publication and billing approval. AGENTS.md forbids commit/push without authorization; neither was performed. Broad public rollout also requires an account-recovery/support policy, abuse controls/monitoring, backup restore and hosted acceptance, as the readiness report states. There is no MFA/password reset, live PayPal refund execution, bank-credit verification, label purchase or direct dispute submission. No claim of exhaustive state-space, Safari/Firefox, real-device, accessibility certification or production load validation is made. Existing owner runtime/configuration and earlier uncommitted work remain intact; local preview needs an ordinary rebuild/restart to serve changed source.
+
+**Final packaging/integrity evidence:** `docs/production-handoff.zip` contains 92 entries (18,290,230 bytes) and passed `ZipFile.testzip()`. Integrity validation reopened the PDF (36 nonempty pages), resolved all 32 manual image references, recomputed all 80 screenshot SHA-256 values, and revalidated `render.yaml` against the official JSON schema. No dotenv or SQLite file is present in the archive. Final `git diff --check` passed (Git emitted line-ending normalization notices only). The newly created audit PostgreSQL cluster was stopped successfully; existing owner services were not restarted. The latest PDF's store/workflow pages were visually inspected after final rendering. No outstanding locally reproduced failure remains in the executed checks; the explicit hosted/security/QA limitations in the reports remain release work.
+
+### CHG-056 - Real-integration release scope and exhaustive evidence tracking
+
+**Recorded:** 2026-11-11. **Objective:** Supersede CHG-055's product demo modes with an API-only application, verify available official Sandbox connectivity, document each SDK/adapter as implemented, and expand repeatable endpoint/security/browser/load evidence without inventing account-backed success.
+
+**In-progress decisions:** Product demo store, customer sample state and simulated financial controls are removed; `/demo` becomes a legacy redirect to real sign-in. Landing content explains the workflow without a fabricated verified payment. Controlled stand-ins remain isolated test infrastructure as explicitly allowed by the owner's Phase 10 instructions. Changes are scoped to the existing architecture and design language. A scoped TypeScript codemod removes retired demo branches; subsequent compilation and workflows will validate it. `backend/scripts/integration_status.py` inspects credential presence only, never opens the configured database, and makes optional read-only calls to the fixed official PayPal Sandbox host. Real configured Sandbox OAuth returned HTTP 200 and a deliberate invalid-token GET returned 401. This establishes partial connectivity, not an order/refund workflow. Order/capture/refund actions await the owner's newly requested explicit confirmation. Production credentials, paid model calls, delivery and hosted storage are not used without authorization.
+
+**Next:** Complete runtime/test cleanup, real-service verification where authorized, per-endpoint and load checks on disposable databases, SDK/manual updates and refreshed real-application screenshots. Final changed-file list, measured outcomes and limitations will be appended. No commit/push is authorized by the request for a one-line commit message and none is performed.
+
+**Material implementation and observed decisions:**
+
+- Removed `frontend/lib/demo.ts`, the sample customer payload, demo-mode component props/branches, simulated refund/message/intake controls and fabricated landing receipt. `app/demo/page.tsx` retains a redirect for old links. Real sign-in, case work and private links use the existing Next/FastAPI architecture and visual design. Controlled test doubles remain only in isolated test infrastructure as the owner expressly allowed; they never establish real-service status.
+- `customer_portal.PublicRefund` adds `verification=current|unverified`; confirmed/pending/outstanding fields become nullable until provider history is current. This is an intentional response compatibility change for consumers that assumed strings. Frontend buyer/merchant views show unavailable totals instead of a false verified zero. OpenAPI was regenerated with the required backend exporter; SDK types/public download refreshed. No schema migration or existing numbered SQL was changed.
+- Browser testing exposed that a completed execution invalidates the prior full-history snapshot. The workspace now performs one read-only history refresh after completion; a failed refresh reports the completed refund separately and does not resubmit money. Stale fulfilled cases retain an evidence-refresh action. Missing due dates after fulfillment are labelled record completeness rather than another payment prerequisite. Busy state blocks repeated submissions while completing the check.
+- Load observations showed repeated per-row triage/intake reads. `case_operations.py` prefetches at most 100 cases' operations/message counts/intake per batch within the same transaction, preserving filtered totals/pagination and current financial projections. `platform_operations.py` groups complaint counts once. No cross-request cache, session cache, approval relaxation or dependency was introduced. A query-growth test spans the batch boundary and compares against the ordinary projection; initial targeted SQLite regression: 28 passed/1 opt-in skipped. Full/PG/load retests follow.
+- `tests/conftest.py` optionally records sanitized method/template/status/duration and test IDs with `--audit-output`. FastAPI's nested router representation initially caused route enumeration to miss actual calls; the recorder now compiles templates from the freshly exported contract once. An intermediate per-app OpenAPI strategy was abandoned because it added material harness overhead; its slow positive-only run was explicitly stopped and rerun. Contract parity has its own test. The first full negative matrix had incorrect expectations for intentionally disabled 503/idempotent logout, corrected without changing product behavior.
+- `test_protocol_matrix.py` executes 175 operations × three negative vectors; dedicated security tests cover parameterized SQL and secret-redacted validation. Browser checks add stored hostile-text escaping and exact-origin denial, with persistence/logout/mobile behavior in Chromium and Firefox. Negative coverage is not claimed as complete positive/error/concurrency coverage; the generated endpoint report explicitly lists gaps.
+- Broader forced PostgreSQL execution initially reported five failures caused by SQLite-specific `.path` restart/trigger fixtures, not demonstrated application defects. The approval tests now restart independent stores against the same disposable schema and install real engine-appropriate fault triggers. This preserves the intent to test rollback rather than skipping the PostgreSQL cases. The final cross-engine run is pending at this recording point.
+- `integration_status.py` checks only configuration presence and optionally fixed-host read-only Sandbox auth. `real_sandbox_api.py`, `real_sandbox_workflow.py`, `real_sandbox_refund.py`, `real_paypal_adapter.mjs` run the explicitly authorized one-dollar workflow on ignored disposable storage, stable saved request identities and ordinary API gates. The owner privately approved the actual order in PayPal. Capture returned 201, full refund independently read COMPLETED USD 1.00; reconciliation fulfilled, zero remaining and exactly one persisted refund. Read-only repeat checks did not submit another refund. The initial audit wrapper's `capture_id` was omitted by the SDK allowlist; corrected to `paypal_capture_id` in final revision 3, then actual browser read-back asserted it. Provider adapters/SDK contract were not relaxed. No live credentials, real-money operation, shipment, paid model call or email delivery was used.
+- `capture_real_sandbox.mjs` uses the actual compiled UI and real disposable API; it independently checks registered payment fields and private buyer verified amounts. Five captures show the actual Sandbox result. The other manual captures use provider-disabled API-persisted QA records, with unverified state labelled unavailable. Old product-demo/provider-mock screenshots are archived only under ignored `.local` and removed from the active manual set. Hosted screenshots remain blocked by deployment.
+- New SDK guide documents eight SDK/library profiles, all provider HTTP adapters and exact initialization/call-flow/code excerpts. Manual PDF, screenshots, testing/security/production integration reports, video script and Render handoff are being refreshed to these scopes. Render remains blocked on account access, reviewed source publication and billing; selecting Render did not authorize committing/pushing. No deployment or production URL is fabricated.
+
+**Final freshness correction (REAL-005):** The complete actual connected-order buyer journey exposed a second freshness boundary. Full history refresh independently re-reads each refund, but intentionally deduplicates unchanged observation records; `_refund_state` then reused those records' older timestamps. SDK aftercare required a recent timestamp and therefore stayed unverified despite current history. `backend/app/resolution_workspace.py` now takes the current independently verified history timestamp when `paypal_history_current` is true; stale/held/conflicting states keep their existing behavior. The controlled HTTP regression ages individual observations ten minutes, refreshes unchanged history and checks the buyer SDK projection. The actual SDK attaches the same order to its existing case through `syncCommerceOrder`; browser read-back asserts the case link, exact payment fields, USD 1.00 confirmed/zero outstanding, and journey `sent_to_original_method`. This is provider completion, not bank-credit proof. No additional order, capture or refund was created. The purpose-limited loopback audit launcher accepts an explicit unprivileged port to restart only its disposable API for this final verification.
+
+**Final files / compatibility:** Product changes span `frontend/app/{page,demo,workspace}`; workspace/case/customer/forms/shell components and domain/customer libraries; the exact read-only history POST gateway allowlist; `backend/app/{customer_portal,case_operations,platform_operations,resolution_workspace}.py`. Test additions/updates cover protocol/security/inbox query growth, HTTP read surfaces, customer/public/current history, cross-engine approval restart/fault injection and real browser sign-in/journeys. Audit launchers/probes/load/packaging/inventory/PDF/SDK guide scripts and the isolated runner's explicit loopback/simulation flags are repeatable without loading owner storage. Canonical OpenAPI, website download and SDK generation were refreshed. Root/backend/frontend READMEs, active manual/screenshots/reports, video/recording plan, Render handoff and provider simulation contexts now identify actual versus controlled versus blocked evidence. Public nullable refund fields are the only response-shape compatibility change here; consumers must handle null. Existing numbered migrations and application dependencies remain unchanged. Historical CHG-055 outcomes remain historical, not final current results.
+
+**Final validation actually observed:**
+
+- After REAL-005, full isolated SQLite suite: **1,005 passed, 63 opt-in skipped**, 130.96s. Actual expanded disposable PostgreSQL suite: **98 passed, one opt-in skipped**, 127.42s; dedicated PostgreSQL migration/import/concurrency/snapshot/pool run separately **12 passed**, 35.25s. Initial forced-PG five fixture failures were repaired and retested rather than silently skipped. Tests cover monetary precision, duplicates, pending/failed/shared balances, acceptance/condition gates and rollback. One upstream Starlette/httpx TestClient deprecation warning remains. A no-target pytest invocation could not discover the optional audit argument; final full command explicitly selected `tests` and passed.
+- Final controlled provider regression: **49 passed**, 19.04s, **380 mocked HTTP requests, zero pass-through**. This includes stale observation versus freshly renewed SDK evidence, failure/recovery and existing financial gates. Earlier scoped run had 375 requests before that regression extension. Context records reflect the new scope; real external downtime/rate limits are not claimed.
+- Compiled Chromium main evidence combines 27 broad-run passes and the subsequently repaired full affected workspace file (**9/9 passed**, 49.6s; 33 mocked calls, zero pass-through), plus separate Google (**1 pass**, four mocked calls, zero pass-through). Together these cover **29 distinct main checks**. Platform **2 passed** (1.4m including build), docs **1 passed** (28.6s, no API), for **32 distinct Chromium checks**. Targeted Firefox **6 passed** (1.6m). Broad failed attempts, gateway/history error, pagination assumption and Docs strict-locator failure are recorded in the testing/bug reports. No originally failing full run is relabelled all-green.
+- Final clean provider-disabled screenshot run: **3 passed**, 1.2m; **84 route/mode/viewport observations** at 1440/1180/768/390, zero page exceptions, zero 5xx. Handled 401s come from absent/invalid sessions; four 404s are `/api/platform-buyer/assurance` for a QA case with no connected app order. They are absent-resource responses, not fake provider successes. Five separately verified real Sandbox screenshots have an actually connected order and current SDK journey. **99 genuine PNGs**, captions and SHA-256 manifest; no provider-mock screenshot or generated UI image in the active manual set.
+- Packaged SDK **8 passed, three opt-in skipped**; generated types/build pass. Final frontend TypeScript, public docs freshness, canonical contract parity and whitespace checks pass. Fresh npm audits for frontend/SDK/shop and production mailer, plus installed-backend pip-audit, report no known vulnerabilities. An unsupported pip-audit flag was corrected before the successful scan. No application package was added. Three YAML simulation contexts parse successfully.
+- Local bounded load on actual loopback FastAPI/disposable SQLite: **3,220 requests**, 1/10/50/100 users, all 200 and expected object shape, zero final errors. P95 **9.086/97.620/820.103/1702.320ms**; P99 at 100 users **2382.775ms**. SQL statement count for 20 requests **428 → 220**. The first monitor selected a Windows venv launcher; its CPU/RSS are invalid and explicitly excluded. Corrected runner uses verified actual API PID. Host activity differed, so no controlled speedup percentage, production capacity, soak/memory-leak guarantee or hosted PostgreSQL load is claimed.
+- All **175** exported operations have three negative probes; **172** also have observed successful asserted pytest workflows. Three positive identity callback/unlink ledger gaps are explicit, with controlled browser consent evidence separate. Not every endpoint/input/error/concurrency combination is claimed. Reports distinguish blocked account-backed services, skipped controls and untested production/device/Safari/soak/recovery scopes.
+- Official Sandbox workflow is **VERIFIED for this authorized USD 1.00 scope**: actual OAuth/order/approval/capture/full refund, independent COMPLETED response, one persisted refund, fulfilled reconciliation/zero remaining; same SDK order attached to the actual case and merchant/buyer/SDK journey assertions pass. No production funds, paid inference, delivered mail or shipment was used. Raw identities/credentials remain ignored, not in this log.
+- Manual: **51 nonempty pages, 32 embedded actual UI images** and project-specific SDK/code guidance; fonts embedded, all pages rendered with Poppler and reviewed via contact sheets plus detailed code/workflow pages. Original complete screenshots remain supplied. Initial archive validation found **121 entries**, all 99 screenshot hashes and 32 image references valid, and `ZipFile.testzip()` passed. Exact configured-secret/private-key scan checked ten values across publishable source/docs/extracted PDF/archive text and found no matching file; final artifact refresh and shutdown are checked below.
+
+**Release status / intervention:** Production is **not accepted or deployed**. Render account/source/billing access, managed DB/TLS/backups/restore, hosted auth/callbacks/webhooks/delivery, optional real credentials/consent/budgets, monitoring/abuse/account recovery policies and realistic staging acceptance remain. No production URL, deployed screenshots, full state-space/cross-browser/device/accessibility proof or recorded video is fabricated. The 7m20s script/checklist are delivered. Existing owner services/configured hosted storage are not restarted/changed; local audit services are stopped after final capture, and the private resumable audit DB is retained. No commit/push was authorized or performed.
+
+**Final packaging / shutdown observed:** Refreshed all 99 screenshot hashes and the 51-page PDF after the actual order/case/SDK freshness check. All pages rendered without the earlier fallback-font notices; final actual buyer page shows provider-reported completed refund, and was visually inspected. Documentation archive has **121 entries** and passes ZIP integrity, all 32 manual image-reference checks and all 99 screenshot SHA-256 checks. A final exact-value scan checked ten configured/private secrets across **451 publishable source/document/archive/PDF-text items**, with no matching file; this is an exact-value check, not a claim of a complete secret-detection/PII audit. Final TypeScript/docs freshness and `git diff --check` pass; Git emits line-ending notices only. Stopped the four specifically identified disposable Sandbox Node/Python processes and confirmed none remain. The audit PostgreSQL 18 server on loopback 56441 stopped successfully using its verified `.local/audit/postgres` data directory. No owner service or hosted database was stopped or opened. Archive is regenerated/validated after this log entry; no self-referential archive hash/size is asserted.
+
+### CHG-057 - English narrated full-feature video
+
+**Recorded:** 2026-11-11. **Objective:** Deliver an actual narrated video explaining implemented user features, SDK/API boundaries and verified versus unavailable integrations, using real application visuals.
+
+**In-progress decisions:** The owner selected English. Higgsfield authentication is available but the account has zero generation credits; no paid generation, credit purchase or account change is attempted. Its generic/animated-generation workflow would not preserve an exact application interface, so the video is assembled locally from actual captured UI, installed Windows English speech synthesis, captions and FFmpeg. Native title/annotation graphics are editorial overlays, never fake application screenshots. Existing official Sandbox captures represent the already-authorized completed transaction; no additional payment is permitted by this video task. Additional feature states use a secret-isolated actual FastAPI/compiled Next.js workspace with plainly labelled QA records and providers disabled. Optional integrations will be explained as configured/blocked rather than presented as successful external requests. Documentary capture/renderer scripts and narrative sources will be added; application behavior/dependencies and migrations remain unchanged. Final files, commands, measured duration, verification and limitations will be appended before handoff.
+
+**Final files and implementation choices:** `scripts/capture_presentation.mjs` derives an isolated capture test from the existing platform workflow; `frontend/playwright.presentation.config.ts` starts only disposable FastAPI/compiled Next services on 8025/3125. Thirty-eight genuine PNGs plus capture provenance are delivered under `docs/presentation/video/screenshots`. Password, private invitation/customer/intake link, SDK key and key-bearing setup controls are explicitly redacted. Uploaded tutorial PDF is valid and labelled not postage; no label purchase or shipment is initiated. New visual evidence includes persisted offer acceptance, return review/instructions/download, messages/intake, QA dispute hold/package export, team role denial, SDK support, settings and audit history. It is not evidence of successful external calls when providers are disabled.
+
+`scripts/build_video_story.py` authors 3,149 words across 46 chapters, saved as editable `narration.json` and `transcript.md`. `synthesize_walkthrough.ps1` uses installed Windows PowerShell 5.1/System.Speech, Microsoft Zira Desktop en-US and native word progress events. This free synthetic voice avoids paid speech calls or credential uploads; it is not represented as a human recording. `render_walkthrough.py` uses temporary Pillow tooling, FFmpeg and the available NVIDIA encoder for actual screenshot pans, clearly editorial annotations, burned captions, audio normalization and embedded chapters. `build_video_highlights.py` selects 14 existing chapters with an explicit selected-chapter header; it does not imply complete feature coverage in eight minutes. No application dependency or schema change is made. The full renderer supports CPU encoding; the current overview assembler requires the installed NVIDIA encoder. Intermediates stay ignored and large MP4/MP3 outputs are Git-ignored but delivered locally. No stock music, fake UI or paid generation is included.
+
+`verify_walkthrough.py` validates stream/duration/chapter/source hash/caption integrity, full-file video/audio decoding, loudness and narration gaps. `build_video_player.py` creates a local `watch.html` with edition selection, seeking and download links; `verify_video_player.mjs` checks its actual media using the existing Chromium dependency. The new README documents scope, privacy, limitations, reproduction and free Clipchamp/OBS/OpenScreen alternatives checked against their official sites. Root README, release handoff and earlier script/checklist now distinguish these delivered editorial screenshot videos from the older continuous-live-recording plan. `package_handoff.py` includes HTML/SRT documentation; MP4/MP3 remain separate delivery files to avoid a redundant large archive.
+
+**Observed failures and corrections:** The first new capture attempt used an unsupported file-upload payload; the generator now passes the genuine PDF path and its rerun passed. Initial PowerShell 7 voice/compiler attempts did not support the desktop engine as used; the script now requires Windows PowerShell 5.1 and its installed desktop voice. A first 24 kHz draft failed ordered-caption validation because this voice's native progress clock ran beyond chapter audio. An isolated native-format probe identified the mismatch; regenerating at 16 kHz aligned events with actual WAV duration, then final AAC was resampled to 48 kHz. Both videos were replaced and fully revalidated. These unsuccessful drafts are not delivered as verified output. The latest two narration chapters additionally cover audit history and implemented HTTP/provider/identity/storage/email libraries without inventing external success.
+
+**Final validation actually performed:**
+
+- Actual provider-disabled UI capture: **one passed**, no skipped/flaky/unexpected tests, **50.81 seconds including startup/build**, 38 screenshots. Existing owner services/database and hosted storage were not used. The capture test is separate from CHG-056's earlier regression totals. Disposable capture listeners on 8025/3125 were absent after teardown.
+- `uv run python scripts/build_video_story.py`, Windows PowerShell narration and local full/overview render commands completed. Detailed MP4: **1,470.76 seconds**, 46 chapters, 389 ordered in-bounds caption cues, **62,731,443 bytes**. Overview MP4: **451.76 seconds**, 14 chapters, 121 cues, **20,205,996 bytes**. Both are H.264 **1920x1080/25 fps**, AAC narration at 48 kHz, with fast-start metadata and burned captions; standalone full narration MP3/SRT/chapter lists are supplied.
+- `uv run python scripts/verify_walkthrough.py`: both entire audio/video streams decoded successfully, matching final-video/source-image hashes, correct chapter counts, caption ordering and duration bounds; A/V durations agree within 0.2 seconds. Integrated loudness **-18.1/-18.0 LUFS**, true peaks **-1.6/-1.8 dBFS**, no detected narration silence over six seconds. Recorded in `verification.json` and `verification-report.md`.
+- Fourteen extracted samples from the final video files were visually reviewed as a contact sheet, with detailed financial frame and player inspection: actual screens, readable captions, source labels and selected-chapter header are present. Native word-event timing and programmatic decoding were checked; no claim of a person listening to every word is made.
+- `node scripts/verify_video_player.mjs`: actual local MP4 metadata and ready video frames loaded without media/page errors; 14/46 chapter lists, edition/download/subtitle switching and actual non-seeking ready frames after chapter jumps passed. Desktop 1440px and mobile 390px player layouts had no horizontal overflow. Browser screenshots remain private verification intermediates; `player-verification.json` records results.
+- `npm --prefix frontend run check` and `git diff --check` passed, with Git line-ending normalization notices only. No application logic changed for this media task, so CHG-056's complete backend suite was not unnecessarily repeated. Final archive integrity/configured-value scanning results are appended after packaging.
+
+**Limits / next step:** These are narrated actual screenshots with editorial detail pans, not continuous live screen recording or a claim to demonstrate every possible UI/error permutation. Optional integrations and production remain blocked as previously documented; earlier official Sandbox evidence is clearly recorded evidence. No new provider payment, refund, external delivery, paid inference, account purchase, source publication, commit or push occurred. The free installed voice has the quality of Windows desktop synthesis; an alternate voice can be substituted from the transcript in an account's free editor if desired. Full human audiovisual review before external publication remains recommended, and any future hosted recording requires the still-pending deployment acceptance.
+
+**Packaging / final integrity:** The refreshed documentation ZIP contains **174 entries** and passes `ZipFile.testzip()`; the unchanged 51-page manual, 32 manual image references and all 99 original screenshot hashes validate. New screenshot sources, storyboard, captions, offline HTML and verification metadata are included; MP4/MP3 files are supplied separately. The exact configured-value scan checked **ten private/configured values across 489 publishable/document/PDF/archive text items**, finding no matching file. This does not inspect video pixels or prove a general PII/entropy audit; explicit capture masks and visual sample checks provide the stated visual scope. No capture listeners remain on 8025/3125. Final packaging is rerun to include this appended log entry; no self-referential archive hash/size is asserted.
+
+### CHG-058 - Directed interaction-led hackathon film
+
+**Recorded:** 2026-11-11. **Objective:** Supersede the screenshot-film approach for the hackathon submission with a 3–5 minute, 1080p/30 fps actual-interaction film, visible SDK/source engineering and natural engineer-style narration.
+
+**Production decisions in progress:** User explicitly selected Video Shotcraft and autonomous custom creation while away; its free-creation pipeline applies without creative approval pauses. The requested skill is read from the specified SunCl8 GitHub source under ignored `.local/tools`; its code is Apache-2.0, while Remotion and individual media licenses are checked separately. Existing CHG-056 inventory/evidence is revalidated against actual checkout/SDK/backend/AI files. Resolve is aftercare with a separate six-product coffee-gear store; there is no shopping chat or PayPal JavaScript Buttons integration. Film will not fabricate either. The store uses an actual server-side PayPal Orders REST adapter and the first-party Resolve SDK; AI is advisory/extraction, currently disabled with empty keys. Hosted deployment and signed webhook delivery remain unverified. No product functionality will be added for a scene.
+
+**Initial files / authorization:** `video-production/scripts/start_capture_stack.py` starts the unchanged actual Node shop/FastAPI API on purpose-selected loopback ports with dedicated ignored SQLite files and three Sandbox application settings only; no owner hosted DB or mail/AI configuration is inherited. Startup submits no provider write. User now explicitly requests real Sandbox checkout, buyer approval/capture, failure and refund footage and supplies a buyer login for that purpose. Lowest actual catalog item is USD 8.00, with no tax/shipping implemented and no shipment. Only one completed catalog purchase/full refund will be attempted for this new filming scope; any additional checkout for a cancellation will remain unapproved/uncaptured. Saved identities prevent accidental replay. Secrets, authentication footage and raw diagnostic state stay private/ignored; no credentials enter source/log/narration. Verification challenges requiring a person will remain blocked, never bypassed. `.gitignore` separates generated footage/media/dependencies from reviewable production code. Final files, actual outcomes, failures/corrections, licensing and QA will be appended before delivery. No commit/push is authorized.
+
+**Final implementation, continued 12 November 2026:** `video-production/` contains the feature-to-implementation inventory, SDK explanation, storyboard, licensing, editable nine-scene/507-word script, actual sentence timing, subtitles, Playwright capture/recovery guards, independent scene rendering, audio synthesis, final assembly, media checks and browser playback verification. `scenes/root.tsx` uses restrained product ink/blue/Manrope graphics and eight exact, hash-checked repository excerpts: Resolve initialization, PayPal OAuth/order creation, approval gate/capture, SDK synchronization, webhook verification and advisory AI initialization. No JavaScript Buttons SDK, shopping chatbot, tax calculation, shipping or successful AI response is fabricated. Root README and release handoff link the new film; older CHG-057 screenshot tutorials remain separate references. No application logic, API contract, schema or migration changed, so no OpenAPI regeneration was needed.
+
+**Creative/tool decisions:** The explicitly requested Video Shotcraft revision `d4915443232e89527fdc9d7e79f132ba411fc440` is pinned; its user-installed SKILL.md and the researched clone have identical SHA-256. Apache-2.0 attribution is retained. The opening adapts shared 52-frame glyph construction to Resolve, and the engineering title uses the selected continuous title-demotion grammar; original template product branding/UI is not copied. Actual interaction video replaces PageCam screenshot pans for the main scenes. The skill requires a clean independent final reviewer, so one read-only subagent reviews the finished artifact. Remotion's initial 4.0.484 dependency tree produced five high advisory-chain entries; only the isolated media project was updated to 4.0.542, with a fresh zero-vulnerability npm audit. Remotion free eligibility assumes the owner's individual/up-to-three-person hackathon use; media/font/model licenses remain separate, documented in `research/licenses.md`.
+
+Local Kokoro-ONNX 0.6.1 uses the official hash-verified int8 model, stock `am_michael` voice and cached per-sentence WAVs. This is disclosed neural narration, not a cloned/recorded owner voice or paid generation. Quiet attributed Mixkit music/transition sound has a matching no-music edition. No untraceable keyboard/pop stock is used; omitting artificial typing/click foley is intentional for the restrained technical style. Captions use actual sentence-audio intervals, with proportional phrase splits within long sentences; this is not word-level forced alignment. Large media/dependencies/models/render copies are ignored but delivered locally; reviewable source and provenance remain in the working tree. No video upload, source commit or push occurred.
+
+**Actual Sandbox capture and data:** Playwright operated the unchanged compiled local frontend, actual FastAPI/Node store, dedicated SQLite databases and official PayPal Sandbox. The supplied buyer login was used through the official browser authentication flow, privately and outside the public edit. Character-by-character typing, dropdowns, actual event-locked pointer movement, PayPal Complete Purchase, processing, receipt, merchant approval and separate refund submission were recorded. The one completed USD 8.00 purchase had a COMPLETED capture and independently read COMPLETED full refund, fulfilled reconciliation, zero remaining, exactly one persisted refund and one persisted support request. Approved public resource IDs and the outcome are in `research/transaction-evidence.json`; no payer/login/secret data is copied here. An earlier recording-harness order was independently confirmed unapproved/uncaptured; it is not a second completed purchase. No live funds, shipment, AI inference, mail or hosted storage was used.
+
+**Observed production failures and corrections:** The first harness lost the redirected order-response body, so its saved order was inspected instead of blindly paying again. Subsequent guards persist identities/write-attempt flags and stop financial retakes. The support save correctly returned HTTP 201, while the initial harness expected 200: isolated SQL confirmed the single saved request, the harness assertion was corrected and no duplicate submission was made. Locator exactness/label selectors and an array response interpretation were corrected in production tooling, not hidden by product changes. A full model download stalled; bounded official-release range downloads plus exact size/hash verification succeeded. Bounding local inference threads avoided CPU oversubscription. Narration was revised to fit explicit scene budgets, rather than truncating spoken words.
+
+Early assembly checks caught inconsistent frame rates/durations caused by mixed Remotion/browser time bases and decoded colour properties. Each source is now normalized to limited-range BT.709/yuv420p, 30 fps, 90 kHz video time base before concatenation; each scene and the complete picture assert exact duration/frame count. This avoids FFmpeg filter reinitialization resetting frame counters. These failed intermediates are not accepted deliverables.
+
+The independent first review rejected four editorial defects: a post-refund merchant screen appearing before the refund, support success under the caption band, undersized auxiliary/code text and missing planned test evidence. Corrections use the actual pre-refund matched-order take; move the support crop up and retain its actual final success frame for two seconds; enlarge code/source/status graphics and split approval/capture cards; show the exact dated historical regression summary with its original source hash. AI sentence cues now align to the AI source shot. A fresh read-only receipt recording keeps the actual store-zero/PayPal-eight refund discrepancy visible throughout the final discrepancy shot; its network assertion recorded zero capture/refund requests. The edit manifest discloses source intervals, crops, speed changes and the support-frame hold. None changes the underlying responses or invents a successful action.
+
+**Final validation actually performed (before final independent disposition below):**
+
+- Playwright recording and `verify_transaction.py` independently checked actual provider evidence and isolated persisted counts. The final discrepancy retake explicitly checked the actual refunded-amount mismatch and zero financial HTTP requests. Financial capture/refund scripts were not rerun for media revisions.
+- `render_graphics.mjs`, `prepare_recordings.py`, `assemble.py` and `verify_film.py` completed. Both final editions are **270.00 seconds, 1,920×1,080 H.264/30 fps, 8,100 frames**, AAC stereo/48 kHz, nine chapters and 103 ordered in-bounds captions. Full audio/video decode passed, with zero detected black segments over 0.1 seconds. Both share the same encoded picture hash. Loudness is **-16.6 LUFS**; true peaks are **-3.8 dBFS** with music and **-4.8 dBFS** without music. Eight source excerpts match current file hashes/exact lines; the test summary matches its original recorded log/hash and is explicitly not a new or hosted run. Final hashes and measured metadata are in `research/verification.json`.
+- `verify_playback.mjs`: both actual MP4s loaded in Chromium with correct metadata, decoded ready frames after nine seeks (including approval/support/refund/source/closing), advanced actual muted playback, and produced no media/page errors. `review_frames.py` extracted **91 actual final-file checkpoints** into five contact sheets; root reviewed all sheets and full-size code, support-success, confirmed-refund and stable discrepancy frames. This is sampled visual review plus full programmatic decode, not a claim that a person listened to the entire film.
+- Media TypeScript `npx --prefix video-production tsc --project video-production/tsconfig.json --noEmit` passed; fresh media `npm audit` reports **zero** vulnerabilities. Configured-value scanning checked **10 private/configured values across 1,139 publishable/document/PDF/archive text items**, finding no matches. The separate film checker finds no matches for its two private SDK keys. These are exact-value text checks, not exhaustive pixel OCR or a general secret-detection guarantee. Actual auth footage is excluded and masks/source review cover the stated visual scope.
+- Stopped three verified task-owned roots and their descendants (**14 processes**), removed four task-owned saved browser-auth files and confirmed no remaining capture listeners on 4175/8045/3145/9228. Owner services/storage were not stopped. Private transaction state/database/idempotency guards are preserved to prevent accidental financial replay.
+
+**Compatibility / remaining limits:** This 4:30 film supersedes CHG-057's screenshot approach for the hackathon, not its detailed user tutorials. It demonstrates a focused actual payment/aftercare journey, not every feature/error combination in four minutes. The example store intentionally still reports zero refunded after the merchant refund; the film demonstrates the genuine discrepancy instead of falsely claiming synchronization. Optional AI credentials, actual webhook delivery and hosted Render deployment remain pending. Local SQLite/Sandbox and historical regression evidence do not constitute production acceptance. Final publication and any later financial recording require the applicable owner authorization; no new payment is needed to re-render the supplied footage. The independent revised-artifact disposition and final working-tree check follow below.
+
+**Independent revised-artifact disposition:** The clean skill-required reviewer approved the exact final music/no-music files, SHA-256 prefixes `31f07d21` / `4c52544a`, with no remaining blocking defects from its initial review. It extracted 66 fresh native frames across all nine scenes, a closing motion sequence and matching no-music support frame. It confirmed the corrected pre-refund chronology, visible support success, enlarged unclipped code graphics, dated test evidence, aligned honest AI explanation, actual PayPal approval and separate refund execution, stable discrepancy and closing hold. Its independently decoded support frames are pixel-identical across editions. Full disposition/coverage/limitations are retained in `video-production/research/independent-review.md`. This is independent sampled visual/source acceptance, not a claim of continuous human listening or production readiness.
+
+**Final handoff check:** `git diff --check` passed, with line-ending notices only. The final configured-value scan checked ten values across **1,141** publishable/document/PDF/archive text items with no matches. Final MP4 sizes are **24,909,703 bytes** (music) and **23,586,035 bytes** (no music); exact SHA-256 values remain those independently reviewed and recorded in the render/verification manifests. Removed only this task's two unused, insufficiently attributed audio candidates and incomplete unused full-model download; the two documented used audio assets and verified int8 model/voices remain. No app test totals were invented or reclassified: CHG-056's dated full-suite evidence is reused as recorded evidence because this task changes production tooling/documentation only. No commit, push or upload was made.
+
+### CHG-059 - Purpose-led submission cut under three minutes
+
+**Recorded:** 12 November 2026. **Objective:** Supersede CHG-058's 4:30 judging edition with a 2:50–2:58 film that states why PayPal Resolve was built, retains actual human-style operation and PayPal/SDK evidence, improves narration and remains local for the owner's eventual YouTube upload.
+
+**Scope and decisions in progress:** The owner corrected the conceptual PayPilot shopping-agent brief to PayPal Resolve and explicitly identified the earlier MP4 as a good visual reference with insufficient story/voice/timing. Re-read actual aftercare/AI/store files and the feature inventory: this is support commitment verification, not a shopping recommendation agent. Current `ExtractionSettings` reports disabled extraction and no configured Groq key; no secret value was printed. No nonexistent recommendation/bundle/budget/tracking tool loop, model response or hosted deployment will be staged. The opening now states the genuine problem—successful payments can still leave customers waiting for promised refunds—and the closing returns to verifiable commitments.
+
+The separate 177-second plan, scripts and `--judges` media paths preserve the original movies and default production pipeline. The same authorized completed USD 8.00 Sandbox purchase/refund footage is re-edited, with full customer support/merchant promise typing. The actual PayPal approval click, loading, return and receipt stay intact; only nine seconds of intervening waiting are removed by an explicit editorial cut. This is not an application speedup claim. No financial action or authentication is repeated. New compact graphics preserve the chosen Shotcraft glyph/title timing grammar while shortening later holds. No application API/model/schema/dependency change is needed.
+
+Three free local Kokoro voices (`af_heart`, `af_bella`, `am_fenrir`) were actually synthesized. New narration selects stock `af_heart`, native 1.0 speed, guided by the publisher's higher training-quality estimate, clearer technical spelling, per-scene timing and waveform/automated speech checks. It is not a human recording or voice clone; subjective naturalness is not proved by numeric tests. Music is reduced for speech intelligibility. Initial locked-cue/budget assertions rejected overlapping support/checkout phrases; wording/cues are revised, not forcibly truncated or time-stretched. Final results, failures, files, evidence and remaining review limits will be appended before handoff.
+
+**Resumption request:** The owner requested scheduling if account allowance approaches exhaustion. Tool discovery exposes neither account remaining-percentage/reset time nor a scheduler for this local conversation. Official OpenAI scheduled-task/pricing guidance was checked; no guessed reset, paid credits, unsupported scheduler or account change is claimed. A local resumable pipeline/checkpoint will preserve progress without replaying provider operations. This limitation does not stop available production work.
+
+**AI configuration correction / new owner steering:** The initial CHG-059 process-only settings check did not establish that the local dotenv lacked a key. Further inspection found a configured Groq credential; authenticated read-only model listing succeeded. The owner then explicitly confirmed enabling AI and clarified that the intended demonstration is autonomous aftercare investigation, not a chatbot explanation. Original filming services deliberately injected only PayPal settings, so their unavailable-AI state remains truthful to that historical run; generalized claims of missing local credentials are superseded. A new isolated copy of the same completed Sandbox case now runs actual bounded inference with message-free, minimized structured facts. A real advisory request returned source `ai`, zero fact-guard violations and `authorizes=nothing`. No new financial action was taken. The new film will prioritize the existing durable investigation worker and actual evidence collection/validated next step. Initial real-model investigation attempts blocked on a redundant recent read, leading to CHG-060 below; failures are retained rather than presented as successful autonomy.
+
+### CHG-060 - Reuse current owned evidence in automatic investigations
+
+**Recorded:** 12 November 2026. **Objective:** Fix a false investigation stop observed with actual Groq 20B and 120B triage when the model selected a linked capture that had just been independently verified.
+
+**Implementation / decisions:** `backend/app/investigations.py` now satisfies a selected read from the current verified snapshot only after validating the case-owned link and resource kind/reference, and only within the smaller of five minutes and the configured evidence freshness window. A recent failed refresh or a new check timestamp alone is insufficient. Invalid/cross-case references, stale facts, incomplete history, contradictory evidence, model failures, snapshot/revision/lease races and all separate financial approval/execution gates remain enforced. The model already receives these structured facts; unchanged verified facts do not require another model/provider round trip. Successful use records `investigation_read_cache_hit` in the existing runtime audit table after final revision/snapshot checks. No table/migration, response schema or execution authority is introduced. The existing external-read callback still handles noncurrent permitted resources; no validation is loosened to make a video succeed.
+
+Alternatives considered: always fail on a redundant read preserved the false stop; repeated provider calls wasted requests and could create refresh/requeue loops; prompting the model to choose a different answer would not fix the backend's handling of a valid cached read. The chosen path is bounded, resource-specific evidence reuse under existing freshness/ownership controls.
+
+**Validation in progress:** First targeted run: 40 passed/one failure because an older HTTP-read test expected the superseded recent-read stop. Its single-resource refresh still lacks complete refund history: the test now explicitly requires blocked state and missing history, with the unchanged one-GET boundary and a recorded cache hit; absent deeper inference remains blocked. Added fresh-owned-record/no-network/no-money checks with provider reads both enabled and disabled, and a shorter-configured-freshness rejection. Retest: **41 passed**, 14.81s, one existing Starlette/httpx deprecation warning. Canonical OpenAPI export ran. Full isolated regression, actual-provider retest, docs/context and media outcomes follow before handoff. No owner database or live-money service is used.
+
+**Final validation / scope:** `uv run python scripts/isolated.py -m pytest -q` completed with **1,008 passed, 63 opt-in skipped, one existing deprecation warning, 115.87 seconds**. Earlier targeted failure and actual blocked model runs are retained. Actual Groq GPT-OSS120B retest against a copied version of the same real completed Sandbox case finished with three verified provider findings, `confirmed_full_refund`, `no_action`, no validation failures and one audited current-owned-snapshot read. Its actual model call used 874 tokens; recorded latency was 2,250ms, not a production SLO. Read-only Sandbox preflight observed ten successful OAuth/evidence requests; no new order/capture/refund write was allowed. Isolated SQL still contains exactly one refund, one approval and one execution from the original filmed transaction. The customer follow-up was a real persisted message; no formal external dispute was created.
+
+Updated root/backend README, `docs/AI_INVESTIGATIONS.md`, integration status and the resolution-workspace simulation context distinguish current owned cached evidence, failed/stale reads and account-backed versus controlled evidence. No new Postman CLI simulation run, provider behavior guarantee, live payment, OpenRouter escalation or PostgreSQL acceptance is inferred. The actual SDK/HTTP adapter and controlled HTTP regression tests establish their stated scopes. OpenAPI was regenerated; no response schema, database schema or numbered migration changed. No app dependency changed. Source code/contract/DB documentation now describe the actual bounded worker instead of a chatbot or arbitrary autonomous money movement.
+
+### CHG-061 - Final purpose-led PayPal Resolve submission package
+
+**Recorded:** 12 November 2026. **Objective:** Complete CHG-059's local submission video after the owner's clarification that the project intention and real autonomous aftercare investigation must be visible within three minutes. Supersedes the 4:30 film as the submission edition; preserves all earlier videos.
+
+**Files / behavior:** `video-production/scripts/story-judges.json`, narration/timeline/scene files define ten scenes totaling **177 seconds**. The first eleven seconds explain why successful payments can still leave unfulfilled support promises. The same actual USD 8.00 order proceeds through SDK/REST engineering, official approval/capture, typed support, exact merchant promise/source, approval and separately submitted refund. The last main chapter shows an actual customer follow-up and the existing automatic investigation, rather than a chatbot answer. `scenes/root.tsx` adds compact purpose/engineering/architecture/observed-worker/closing graphics; source and financial metadata derive from exact source excerpts and recorded proof. The observed worker graphic explicitly scopes its zero financial writes to that investigation.
+
+`narrate.py`, `assemble.py`, `verify_film.py`, `verify_playback.mjs` and `review_frames.py` accept `--judges`, preserving original edition paths/defaults. New `prepare_judges.py`, `voice_auditions.py`, `check_voice.py`, `build_judges.ps1`, `package_judges.py`, `scan_delivery.py`, `start_advisory_capture.py`, `record_advisory.mjs`, `run_investigation_capture.py` and `record_investigation.mjs` provide reproducible media/actual isolated AI evidence with state guards. Private raw material, credentials and databases stay ignored. `prepare_recordings.py` adds a genuine source/save interval; it does not overwrite the earlier original cut. `PayPal_Resolve_Demo` delivers the MP4/no-music edition, plain script/timeline, SRT, actual-frame thumbnail, ten scene WAVs and production/provenance reports. Changed generated deliverables retain backups under `Previous_Versions`; previous 4:30/long tutorials remain intact. No publish/YouTube tool was used.
+
+**Production choices / corrections:** Retain approved product ink/blue/Manrope visuals and the selected Shotcraft shared glyph/title-demotion grammar. The cached title Gallery preview and exact bundled TSX are inconsistent branded examples; the movie follows the card/TSX timing, not a claimed pixel match to that preview. Compact `Freeze` contexts initially clamped out later SDK/webhook cards; explicit frame overrides now retain them. Overview footage is landing/docs-only to avoid showing the same case already fulfilled before the transaction. The populated source and actual Record promise click use native merchant seconds25–27, replacing a cut that began after the dialog closed. Nine seconds of intervening PayPal/store waiting are removed while retaining the real click/processing/return/receipt; agent follow-up/result use separate real takes with elapsed waiting removed. No real-time latency or application-speedup claim is made.
+
+Three actual local Kokoro voice auditions were generated. Submission uses stock `af_heart` at native 1.0 speed, separate scene WAVs, explicit pauses/technical spelling, quieter attributed music, gentle compression/EQ/loudness limiting and matching no-music output. It is disclosed stock neural speech, not a clone or human recording. Original narration is replaced, never sped up to fit. Cue/budget checks rejected several draft overlaps; shorter wording fixed them. Local faster-whisper checks cover every scene; a PyAV keyword incompatibility was resolved by passing actual FFmpeg-resampled 16kHz PCM directly to the recognizer. Fractional scene durations required integer-frame/range conversions in assembly/review tooling; rejected intermediate builds are not the delivered candidates. `CONTINUE.md`/build checkpoint preserve reproducibility after interruption; no quota-reset scheduler is invented.
+
+**Final measured validation:** Both final editions are **177.00 seconds, 1920×1080 H.264, 30fps / 5,310 frames, AAC stereo48kHz, ten chapters, 64 ordered in-bounds subtitle cues**. Complete audio/video decode passed with zero black segments over0.1s. Both have identical encoded picture hashes. Loudness **-16.1LUFS**; true peaks **-4.4dBFS** (music) / **-4.9dBFS** (no music). Actual Chromium loading, nine decoded seeks and playback advancement passed without media/page errors. Eight exact source excerpts/hashes and the historical dated test card match source evidence. The new automatic-investigation proof also matches the real isolated SQL `result_json`; positive token usage, current-snapshot audit, finished state and no financial authority are checked. All ten local voice WAVs have zero detected clipped samples; ASR output/error metrics are retained, including recognizable brand/formatting variations, not portrayed as human listening.
+
+Root reviewed **99 final-native checkpoints** on five contact sheets, plus native customer/source/refund/investigation footage and the genuine-frame thumbnail. The clean independent skill-required reviewer inspected **67 fresh native frames**, checked all eight source excerpts, independently matched the revision39 investigation result/audit against read-only SQLite, and approved the exact final hashes with no blocking film defects. Prior source/chronology omissions and broader documentation claims were corrected; the review explicitly limits subjective voice certification, continuous human listening and privacy OCR. See `research/independent-review-judges.md` and measured verification files. Media TypeScript and Python compilation passed; `git diff --check` passed with line-ending notices only.
+
+**Final files / security / limits:** Music SHA-256 `df4f1dd5d53aca64c79561a3c097062f7bb6a75219e93633c12175063f32a416`; no-music `7e7b93eb3790cde8cfbe4c23430281314afc38e126e932da61af0aa27e55e719`. The exact configured-value scan checked **14** provider/AI/scoped-SDK/private-link values across **889 publishable text files**, with no matches; it prints no values and does not claim pixel OCR/entropy scanning. This follows earlier PDF/archive checks, not an invented exhaustive privacy guarantee. Confirmed no remaining task listeners on3146/8046 and no matching advisory service roots; original owner services were not stopped. Raw identity/transaction guards remain private to prevent financial replay. Hosting, actual incoming webhook delivery, real OpenRouter escalation, universal dispute resolution and autonomous money authorization are not claimed. This is a genuine local/Sandbox product demonstration with scoped real Groq investigation, not production acceptance. Owner uploads to YouTube public/unlisted without password; no upload, commit, push, source publication, payment replay or account purchase occurred.
+
+**Final packaging continuation:** After adding the independent report and current delivery metadata, the exact configured-value scan was rerun: **14 values, 891 publishable text files, no matches**. The refreshed package includes the matching-hash independent approval and corrected provider-action/CHG-060 wording. Reusable packaging now validates both output hashes against the independent report instead of treating an old report's mere existence as approval. The build checkpoint records completed local delivery; it is not a claimed quota scheduler. No app behavior changed after the recorded full regression and real worker retest.
+
+### CHG-062 - Complete master and pitch-preserving accelerated delivery
+
+**Recorded:** 12 November 2026. **Objective:** Follow the owner's superseding two-stage request: first create a complete 270-second Resolve master, then its exact 1.5x derivative and a 177-second submission derived from the same master after removing only 4.5 seconds of silent holds. Preserve previous movies; no upload or app change.
+
+**Implementation in progress:** New isolated master story, source exporter, camera recuts, Remotion compositions and assembly pipeline reuse the verified USD8 Sandbox purchase/cancellation/refund and actual Groq investigation from CHG-058/060/061. The SDK is first-party Resolve; PayPal uses actual REST, with the refund POST now explicitly shown. No merchant nonfulfillment, live payment, delivered webhook, production hosting or model money authority is invented. `narrate.py --master` and `render_graphics.mjs --master` keep earlier editions isolated; `.gitignore` protects generated media. `research/master-brief.md` records tokens, actual feature-to-shot mapping, storyboard, two-stage timing and tradeoffs. Maximum2.5% smoothstep camera moves keep real cursor/typing synchronized with genuine footage. No fabricated UI spinner, approval or success state is added.
+
+**Validation so far:** Existing source and transaction/investigation proof re-read; eight current code excerpts exported with exact file hashes/lines. Master camera cuts generated from reviewed footage. Initial local narration cue rejection in engineering correctly stopped overlapping speech; wording shortened rather than truncating it. Final render/media, speech and independent review results will be appended before handoff. No financial/provider/model call, commit, push or publication occurs in this revision.
+
+**Final implementation / decisions:** The owner superseded the160-second narrative-only request with an explicit two-stage master-first workflow. `story-master.json` / `timeline-master.json` define ten scenes and456 words totaling270s. The completed master is the actual input to `Resolve_Final_1.5x.mp4`; video PTS/1.5 and pitch-preserving `atempo=1.5` produce180s. Submission first removes only opening1.5s and closing3s of narration-free graphic holds, then applies the same transform:265.5/1.5=177s. The earlier proposed overview trim was discarded so no product interaction is removed. Direct native-voice PCM checks confirm these tails are digital zero; opening music can continue, so the final wording deliberately says narration-free rather than claiming both full mixes were silent. Closing music fades264–267 before the removed tail;20ms fades at the sole internal edit prevent a cut click without shortening retained time. Every scene and spoken word is retained.
+
+**Files / resulting behavior:** `scripts/export_master_code.py`, `prepare_master.py`, `assemble_master.py`, `caption_timing.py`, `verify_master.py`, `verify_master_playback.mjs`, `check_accelerated_voice.py`, `review_master_frames.py`, `package_master.py` and `build_master.ps1` provide the reusable offline production/validation/package stages. `narrate.py`, `check_voice.py` and `render_graphics.mjs` add isolated master mode; `scenes/root.tsx` adds five independent master compositions. Source/story/timelines, `assets/master-code.json`, `research/master-brief.md`, measured/independent reports, licenses, README/root README, CONTINUE and `.gitignore` document this edition. `Resolve_Hackathon_Demo` delivers the six requested named files, three companion no-music movies, three SRTs, ten native scene WAVs and a production report. Thumbnail uses a genuine confirmed-refund frame with separate editorial branding and recorded source/image hashes. No frontend/backend application code, API contract, dependency, database schema or migration changes in this revision.
+
+Maximum2.5% smoothstep camera push/pull stays inside reviewed framing margins and moves the actual event-driven cursor with the footage. Actual character typing, approvals, processing and provider results remain native source material. Sequential source emphasis, a conceptual request path and progressively revealed actual investigation findings explain the system without fabricating UI. Eight exact snippets distinguish first-party Resolve SDK0.7.0 from PayPal OAuth/Orders/Payments REST; refund POST and webhook verifier are shown as actual source. No PayPal Buttons/server SDK, unfulfilled physical delivery, incoming webhook delivery, production hosting or autonomous financial authority is invented. All official Sandbox and real Groq/SQL evidence is reused from CHG-058/060/061; this edit makes zero new PayPal or model calls.
+
+**Corrections during production:** Local narration guards rejected an overlapping OAuth segment and a0.163-second refund cue overlap. Shorter wording and a26.8-second locked cue resolved these without cutting speech. ASR initially recognized the spoken backend acronym poorly; plain Python wording now has zero measured product-scene recognition error. Native stock Kokoro `af_heart` is retained, not a human recording or voice clone. Independent review identified an empty f52–73 source handoff; code growth now begins at f44 during the32–52 title demotion. Source body/file labels were enlarged to44/42px, exact SDK/refund spans shortened and the line-number gutter widened to avoid overlap. Webhook source uses the enlarged panel too. A reused cache-stamp variable was renamed to keep the picture cache separate from individual normalization stamps. Three dry clicks were corrected against fresh100ms actual click/disabled-state frames, rather than trusting wall-clock markers as video epochs. Untraceable keyboard Foley remains unused. Narrated typing and fine native UI retain explicitly documented S4/Q11 exceptions; essential claims also have large captions/focused evidence cards.
+
+Caption timing uses canonical script text and actual local ASR word anchors within each true sentence-audio interval, never ASR spelling as displayed copy. All89 phrases use word anchors with zero proportional fallback. Rebalancing short orphan lines raises the minimum phrase hold to0.880s native/0.587s accelerated. Complete audio/video, captions, chapters, camera motion and editorial SFX follow the same speed/time mapping. This is the explicitly requested accelerated edition, not a claim of real-time application performance.
+
+**Actual validation:** Both media stages completed successfully. All six files are1920×1080 H.264/30fps/AAC stereo48kHz, with ten chapters and89 ordered in-bounds captions. Durations/frame counts:270.000s/8100,180.000s/5400,177.000s/5310. Every file passed complete audio/video decode and black detection with no black segment over0.1s. Music/no-music encoded picture hashes match for each duration. Loudness is−16.1 to−16.5LUFS, true peaks−4.3 to−5.0dBFS; maximum reported audio/video duration difference0.012s. Actual Chromium loaded all six, decoded ten seeks each and advanced playback without media/page errors. Native ten-scene waveform/ASR checks found zero clipped samples; actual accelerated-file ASR covers every chapter, with recorded brand/currency/homophone differences rather than invented human listening. Eight current code excerpts/hash checks and actual investigation result_json match the read-only isolated SQL. Media Python compilation, TypeScript checking and PowerShell pipeline parsing passed. Backend regression was not rerun for these media-only changes; CHG-060 retains its separate actual1,008-pass/63-skip scope.
+
+Fresh final-frame extraction produced361 checkpoints across the three pictures. Root reviewed all125 submission checkpoints on seven contact sheets, plus47 master preflight checkpoints, native code frames and the real-frame thumbnail. The clean skill-required independent reviewer inspected110 fresh native checkpoints across all scenes/critical actions and14 mapped master/derivative comparisons; mean RGB differences0.018–0.242/255 are consistent with the expected mapping/recompression. It independently rehashed all six, checked all source excerpts and saved SQL, and approved the exact candidates with no blocking defect. Sampled essential captions/code/file/webhook-qualifier glyph heights were57/41/40/43px. See `video-production/research/independent-review-master.md` for numbered checks, deliberate exceptions and scope.
+
+**Delivery / integrity / limits:** Primary submission SHA256 `7696bf11ccaeb9e2e7e4a763d0d539377f4af777456149d9009c591722ee689d`; master `74e2c5a5e5373a6df15cfd6cbf3b7b06f18a9b97833c1f348eadafcc65453f15`; exact1.5x reference `e22cf0a277e792c1234d826dd8ea7ede183a6e3c96c3625642ef228f80a7b56f`. All six hashes and measured results are in render/verification manifests and the local production report. Four earlier release movies independently match their original recorded hashes. The configured-value scan checked14 private provider/AI/scoped-SDK/private-link values across928 publishable text files, with no matching file and no values printed. This is not exhaustive video-pixel OCR or an entropy audit. No continuous human audiovisual listening, universal privacy certification, production acceptance, new account-backed transaction, hosted deployment or incoming webhook verification is inferred. No upload, publication, commit or push occurred; the owner selects the177-second file for eventual submission.
+
+### CHG-063 - Locked-screen correction after motion feedback
+
+**Recorded:** 12 November 2026. **Objective:** Address the owner's report that the CHG-062 screen footage wobbles. Supersedes CHG-062's continuous UI camera choice; retain the original edition for comparison.
+
+**Implementation in progress:** `prepare_master.py --steady` removes continuous zoompan completely and preserves fixed native source geometry, crop, cursor, typing and timestamps. Small native-resolution zoom steps can disturb fine text; locked framing removes this added movement without optical-flow warping. `assemble_master.py --steady --picture-only` isolates source/normalization/scene caches. New `stabilize_film.py` builds the same270/180/177-second picture timelines and copies the corresponding original AAC packets and chapters exactly. Output is a separate `Resolve_Hackathon_Demo/Steady` folder; original movies and reports remain. Title/code emphasis and explanatory diagrams retain their intentional internal motion. `.gitignore` excludes the generated steady assets. No application, model/API, database, credential or financial change is authorized or needed. Final measured motion comparison, decode, playback and independent review will be appended before delivery.

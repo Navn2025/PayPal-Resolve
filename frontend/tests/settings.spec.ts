@@ -1,3 +1,4 @@
+import { privateFixture } from "./helpers";
 import { expect, test } from "@playwright/test";
 
 const fixtureKey = "rslv_ui_test_fixture_key_not_a_real_secret";
@@ -20,7 +21,8 @@ test("settings uses the workspace shell with separate cards, one sign out and a 
     await expect(page.locator(".settings-section").filter({ has: page.getByRole("heading", { name, exact: true }) })).toHaveCount(1);
   }
   await expect(page.locator(".settings-section").first().locator(".badge")).toHaveText("Signed in");
-  await expect(page.locator(".settings-section").nth(1).locator(".badge").last()).toHaveText("Not configured");
+  const capabilities = await (await page.request.get("/api/session")).json();
+  await expect(page.locator(".settings-section").nth(1).locator(".badge").last()).toHaveText(capabilities.paypal_enabled ? (capabilities.paypal_linked ? "Linked" : "Ready to link") : "Not configured");
 
   await page.getByRole("button", { name: "Copy example code" }).click();
   await expect(page.getByText("Example code copied.")).toBeVisible();
@@ -34,12 +36,14 @@ test("settings uses the workspace shell with separate cards, one sign out and a 
   await expect(page).toHaveURL(/\/login$/);
 });
 
-test("conversation times are shown in the viewer's local time zone", async ({ browser }) => {
+test("conversation times are shown in the viewer's local time zone", async ({ browser, request }) => {
+  const fixture = await privateFixture(request);
+  await request.post(`http://127.0.0.1:8011/resolution-cases/${fixture.caseId}/customer-messages`, { headers: fixture.headers, data: { body: "Time zone check", request_id: crypto.randomUUID() } });
   for (const timezoneId of ["Asia/Kolkata", "America/New_York"]) {
     const context = await browser.newContext({ timezoneId, locale: "en-US" });
     try {
       const page = await context.newPage();
-      await page.goto("/customer?demo=1");
+      await page.goto("/customer#" + fixture.token);
       const time = page.locator(".conversation-list time").first();
       await expect(time).toBeVisible();
       const stamp = await time.getAttribute("datetime");

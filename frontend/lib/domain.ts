@@ -173,7 +173,7 @@ export const reconcileLabels: Record<string, string> = {
 export const money = (value: string | number | null | undefined, currency = "USD") =>
   value == null ? "—" : new Intl.NumberFormat("en-US", { style: "currency", currency }).format(Number(value));
 export const pretty = (value: string) => value.replace(/[_-]/g, " ").toLowerCase().replace(/^./, (c) => c.toUpperCase());
-export const shortId = (value: string) => value.startsWith("demo-") ? value.split("-").at(-1)! : value.slice(0, 7).toUpperCase();
+export const shortId = (value: string) => value.slice(0, 7).toUpperCase();
 export const dateText = (value?: string | null) => value ? new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" }).format(new Date(value)) : "—";
 export const timeText = (value?: string | null) => value ? new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "UTC" }).format(new Date(value)) + " UTC" : "Not checked yet";
 /** Message times in the viewer's own time zone and locale, e.g. "Nov 7, 9:24 AM". */

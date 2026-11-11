@@ -473,6 +473,11 @@ class ResolutionWorkspace:
         state, source, reason, checked, proofs = observed_state(connection, row, terms)
         if observations:
             checked = max(item.checked_at for item in observations)
+        if basis.paypal_history_current:
+            # History independently re-reads every refund. Unchanged observations
+            # are retained for audit deduplication, so their older timestamps must
+            # not make a freshly verified SDK/customer projection appear stale.
+            checked = basis.paypal_refund_history.checked_at
         if (
             completed > goal
             or basis.completed_refund_amount > completed

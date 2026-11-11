@@ -1,3 +1,4 @@
+import { signInFixture } from "./helpers";
 import { expect, test, type Page } from "@playwright/test";
 
 const FIXTURE_TOKEN = "rslv_ui_test_fixture_key_not_a_real_secret";
@@ -14,14 +15,7 @@ async function approve(page: Page) {
   await expect(page.getByRole("button", { name: "Review submission" })).toBeVisible();
 }
 
-async function connect(page: Page) {
-  await page.getByRole("button", { name: "Connect account" }).click();
-  const dialog = page.getByRole("dialog");
-  await dialog.getByLabel("Merchant key").fill(FIXTURE_TOKEN);
-  await dialog.getByRole("button", { name: "Connect account" }).click();
-  await expect(page.getByText("Connected · Sandbox")).toBeVisible();
-  await expect(page.getByRole("button", { name: /Connected refund fixture/ })).toBeVisible();
-}
+async function connect(page: Page) { await signInFixture(page); }
 
 async function confirmWarehouse(page: Page, note: string) {
   await page.locator(".promise-row summary").filter({ hasText: "Return milestone" }).click();
@@ -34,7 +28,7 @@ async function confirmWarehouse(page: Page, note: string) {
 }
 
 test("order invite opens a buyer issue and evidence appears in the merchant inbox", async ({ page, browser }, info) => {
-  await page.goto("/demo");
+  await page.goto("/login");
   await connect(page);
   await page.getByRole("button", { name: "Invite customer" }).click();
   const invite = page.getByRole("dialog");
@@ -101,71 +95,35 @@ test("order invite opens a buyer issue and evidence appears in the merchant inbo
   } finally { await visitor.close(); }
 });
 
-test("desktop demo shows the exact amount, then approves and submits separately", async ({ page }, info) => {
-  await page.goto("/demo");
-  await expect(page.getByRole("heading", { name: "Resolution workspace" })).toBeVisible();
-  await expect(page.locator(".money-outstanding")).toContainText("$20.00");
-  await expect(page.getByRole("button", { name: "Review refund", exact: true })).toBeEnabled();
-  await page.screenshot({ path: info.outputPath("desktop-inbox.png"), fullPage: true });
-  await approve(page);
-  await expect(page.locator(".money-outstanding")).toContainText("$20.00");
-  await page.getByRole("button", { name: "Review submission" }).click();
-  await page.getByRole("dialog").getByRole("button", { name: "Submit demo refund" }).click();
-  await expect(page.getByRole("heading", { name: "Refund promise fulfilled" })).toBeVisible();
-  await expect(page.locator(".money-outstanding")).toContainText("$0.00");
-  await page.getByRole("button", { name: "Buyer receipt" }).click();
-  await expect(page.getByRole("article", { name: "Buyer receipt" })).toContainText("$30.00");
-  await expect(page.getByRole("article", { name: "Buyer receipt" })).toContainText("No money moved");
-  await expect(page.getByRole("article", { name: "Buyer receipt" })).not.toContainText("Support ticket");
-  await page.emulateMedia({ media: "print" });
-  await expect(page.getByRole("article", { name: "Buyer receipt" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "New case" })).not.toBeVisible();
-});
-
-test("outside demo refund invalidates the earlier approval and can be reset", async ({ page }) => {
-  await page.goto("/demo");
-  await approve(page);
-  await page.getByRole("button", { name: "Simulate outside refund" }).click();
-  await expect(page.getByText("Duplicate refund blocked.", { exact: false })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Review submission" })).toHaveCount(0);
-  await page.getByRole("button", { name: "Evidence timeline" }).click();
-  await expect(page.getByText("An external refund covered the remaining $20.00.", { exact: false })).toBeVisible();
-  await page.getByRole("button", { name: "Reset demo" }).click();
-  await expect(page.locator(".money-outstanding")).toContainText("$20.00");
-});
-
-test("a smaller partial refund leaves the rest of the promise open", async ({ page }) => {
-  await page.goto("/demo");
-  await page.getByRole("button", { name: "Review refund", exact: true }).click();
+test("authenticated case creation validates fields and persists after reload", async ({ page }) => {
+  await connect(page);
+  await page.getByRole("button", { name: "New case", exact: true }).click();
   const dialog = page.getByRole("dialog");
-  await dialog.getByLabel("Decision note").fill("Refund five dollars now.");
-  await dialog.getByLabel("Refund amount (USD)").fill("20.01");
-  await dialog.getByRole("button", { name: "Approve refund", exact: true }).click();
-  await expect(dialog.getByRole("alert")).toContainText("between $0.01 and $20.00");
-  await dialog.getByLabel("Refund amount (USD)").fill("5");
-  await dialog.getByRole("button", { name: "Approve $5.00", exact: true }).click();
-  await page.getByRole("button", { name: "Review submission" }).click();
-  await dialog.getByRole("button", { name: "Submit demo refund" }).click();
-  await expect(page.locator(".money-outstanding")).toContainText("$15.00");
-  await expect(page.getByRole("heading", { name: "Review $15.00 refund" })).toBeVisible();
+  await dialog.getByRole("button", { name: "Create case", exact: true }).click();
+  expect(await dialog.locator("form").evaluate((form: HTMLFormElement) => form.checkValidity())).toBe(false);
+  await dialog.getByLabel("Case title").fill("API-backed created case");
+  await dialog.getByLabel("Order reference (optional)").fill("API-CREATED-ORDER");
+  await dialog.getByRole("button", { name: "Create case", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "API-backed created case", exact: true })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole("button", { name: /API-backed created case/ })).toBeVisible();
 });
 
-test("mobile inbox filters, opens a case and has no horizontal overflow", async ({ page }, info) => {
+test("mobile inbox searches stored cases without horizontal overflow", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/demo");
+  await connect(page);
   const search = page.getByRole("textbox", { name: "Search cases" });
-  await search.fill("lamp");
+  await search.fill("Connected refund fixture");
   await expect(page.locator(".case-row")).toHaveCount(1);
-  await page.getByRole("button", { name: /Replacement for damaged lamp/ }).click();
-  await expect(page.getByRole("heading", { name: "Replacement for damaged lamp" })).toBeVisible();
+  await page.getByRole("button", { name: /Connected refund fixture/ }).click();
+  await expect(page.getByRole("heading", { name: "Connected refund fixture", exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
-  await page.screenshot({ path: info.outputPath("mobile-case.png"), fullPage: true });
   await page.getByRole("button", { name: "Back to inbox" }).click();
   await expect(search).toBeVisible();
 });
 
 test("connected UI uses FastAPI and stores evidence without exposing the merchant key", async ({ page }) => {
-  await page.goto("/demo");
+  await page.goto("/login");
   expect((await page.request.get("/api/resolve/resolution-cases")).status()).toBe(401);
   await connect(page);
   const cookies = await page.context().cookies();
@@ -192,14 +150,14 @@ test("connected UI uses FastAPI and stores evidence without exposing the merchan
   await page.getByRole("button", { name: "Evidence timeline" }).click();
   await expect(page.getByText("Warehouse recorded receipt under UI-RMA-2.")).toBeVisible();
   await page.reload();
-  await expect(page.getByText("Connected · Sandbox")).toBeVisible();
+  await expect(page.getByText("Signed in", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Sign out" }).click();
   await expect(page.getByRole("heading", { name: "Merchant sign in" })).toBeVisible();
 });
 
 test("connected refund uses real API routes and the isolated PayPal simulation", async ({ page, browser }) => {
   test.skip(process.env.RESOLVE_UI_PAYPAL_SIMULATION !== "1", "Requires local Postman PayPal TLS simulation");
-  await page.goto("/demo");
+  await page.goto("/login");
   await connect(page);
   await page.getByRole("button", { name: /Connected refund fixture/ }).click();
   await page.getByRole("button", { name: "Customer portal", exact: true }).click();
@@ -218,6 +176,8 @@ test("connected refund uses real API routes and the isolated PayPal simulation",
   await page.getByRole("button", { name: "Review submission" }).click();
   await page.getByRole("dialog").getByRole("button", { name: "Submit Sandbox refund" }).click();
   await expect(page.getByRole("heading", { name: "Refund promise fulfilled" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Record completeness", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Missing before refund", exact: true })).toHaveCount(0);
   await expect(page.locator(".money-confirmed")).toContainText("$30.00");
   await expect(page.locator(".money-outstanding")).toContainText("$0.00");
   const visitor = await browser.newContext();
@@ -233,7 +193,7 @@ test("connected refund uses real API routes and the isolated PayPal simulation",
 
 test("connected stale submission is rejected without a provider refund POST", async ({ page }) => {
   test.skip(process.env.RESOLVE_UI_PAYPAL_SIMULATION !== "1", "Requires local Postman PayPal TLS simulation");
-  await page.goto("/demo");
+  await page.goto("/login");
   await connect(page);
   await page.getByRole("button", { name: /Outside refund fixture/ }).click();
   await confirmWarehouse(page, "Warehouse confirmed the return.");
@@ -251,22 +211,19 @@ test("connected stale submission is rejected without a provider refund POST", as
   expect(stats.refund_posts).toBe(0);
 });
 
-test("customer demo is separate and usable on mobile", async ({ page }, info) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/customer?demo=1");
-  await expect(page.getByRole("heading", { name: "Your headphone return" })).toBeVisible();
-  await expect(page.locator(".money-outstanding")).toContainText("$20.00");
-  await expect(page.getByRole("button", { name: "Connect account" })).toHaveCount(0);
-  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
-  await page.screenshot({ path: info.outputPath("customer-mobile.png"), fullPage: true });
-  await page.getByLabel("Write a message").fill("Can you confirm the remaining amount?");
-  await page.getByRole("button", { name: "Send message" }).click();
-  await expect(page.getByText("Can you confirm the remaining amount?")).toBeVisible();
+test("retired sample query parameters cannot create buyer data", async ({ page }) => {
+  for (const suffix of ["?demo=1", "?intake=1"]) {
+    await page.goto("/customer" + suffix);
+    await expect(page.getByRole("heading", { name: "Track your resolution" })).toBeVisible();
+    await expect(page.getByText("Your headphone return", { exact: true })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Send message", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: /sample|demo/i })).toHaveCount(0);
+  }
 });
 
 test("email sign-in opens only the invited case and uses a customer cookie", async ({ page, browser }) => {
   test.skip(process.env.RESOLVE_UI_EMAIL_FIXTURE !== "1", "Requires the local email fixture");
-  await page.goto("/demo");
+  await page.goto("/login");
   await connect(page);
   await page.getByRole("button", { name: "Invite customer" }).click();
   const dialog = page.getByRole("dialog");
@@ -308,8 +265,10 @@ test("email sign-in opens only the invited case and uses a customer cookie", asy
 });
 
 test("an unauthenticated customer follows a private link, messages the merchant and loses access on revocation", async ({ page, browser }) => {
-  await page.goto("/demo");
+  await page.goto("/login");
   await connect(page);
+  // Earlier journeys add enough real records to move this case off page one.
+  await page.getByRole("textbox", { name: "Search cases" }).fill("Connected refund fixture");
   await page.getByRole("button", { name: /Connected refund fixture/ }).click();
   await page.getByRole("button", { name: "Customer portal", exact: true }).click();
   await page.getByLabel("Customer heading").fill("Your return update");

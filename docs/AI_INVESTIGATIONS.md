@@ -1,5 +1,35 @@
 # Automatic investigations
 
+## Verified-snapshot reads and real filming evidence (12 November 2026)
+
+CHG-060 fixes an observed false stop with actual Groq triage. If the model selects
+a linked capture/refund that is already independently verified, the server can
+satisfy the read from the same case's matching resource within the smaller of
+five minutes and `RESOLVE_AI_FRESHNESS_SECONDS`. Ownership/type/reference checks
+run first. A recent failed refresh, stale observation, future timestamp, foreign
+link or missing complete refund history cannot be promoted to verified evidence.
+The existing revision/lease/snapshot checks still run before publication; a
+successful reuse adds `investigation_read_cache_hit` to the private runtime audit.
+It never creates a refund approval or execution.
+
+The local filming run now verified the actual existing worker with official
+Sandbox evidence and Groq `openai/gpt-oss-120b`: three provider findings, state
+`finished`, confirmed full refund, next step `no_action`, zero validation failures
+and zero financial writes. Earlier 20B/120B runs that stopped on redundant fresh
+reads are preserved as failed-run evidence. Targeted regression: 41 passed;
+full isolated backend: 1,008 passed, 63 opt-in skipped. These are local/Sandbox
+observations, not hosted acceptance or validation of every model/route.
+
+The owner's local key exists; process-only settings and an intentionally
+secret-isolated filming service previously did not inject it. AI settings require
+explicit process-environment injection; merely editing the ordinary dotenv file
+does not override this boundary. The isolated capture opts into minimized standard
+retention for structured test-case facts, with contacts/messages/payment IDs
+excluded. Owner production policy is unchanged. Actual OpenRouter escalation,
+formal external dispute submission and autonomous payment authorization are not
+claimed. The investigator proposes typed reads/recommendations, not arbitrary
+network or financial tools.
+
 ## Audit and implementation plan (2026-11-08)
 
 Usable: FastAPI `/resolution-cases`, `/resolution-cases/upsert`, evidence

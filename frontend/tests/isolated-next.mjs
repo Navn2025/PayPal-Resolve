@@ -39,6 +39,11 @@ if (process.argv.includes("--in-process")) {
 const production=process.argv.includes("--production");
 if(production){
   env.NODE_ENV="production";
+  // The Windows host reports more CPUs than this test process can use. Bound
+  // static-generation workers to avoid spending the readiness window spawning them.
+  const configPath = join(project, "next.config.ts");
+  const config = await readFile(configPath, "utf8");
+  await writeFile(configPath, config.replace("export default config;", "config.experimental = { ...config.experimental, cpus: 2 };\nexport default config;"));
   const build=spawn(process.execPath,[join(frontend,"node_modules/next/dist/bin/next"),"build",project,"--webpack"],{env,stdio:"inherit",windowsHide:true});
   const code=await new Promise((resolve,reject)=>{build.on("exit",resolve);build.on("error",reject);});
   if(code!==0)process.exit(Number(code)||1);

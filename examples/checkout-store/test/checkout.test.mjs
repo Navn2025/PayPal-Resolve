@@ -230,4 +230,8 @@ test("browser checkout captures once, connects the SDK and shows an external ref
   assert.equal(customer.status, 200);
   assert.equal((await customer.json()).messages.filter(m => m.body === "The cup handle arrived broken.").length, 1);
 
+  if (process.env.SHOP_TEST_RECEIPT_SCREENSHOT) {
+    await page.screenshot({ path: process.env.SHOP_TEST_RECEIPT_SCREENSHOT, fullPage: true });
+  }
+
 });

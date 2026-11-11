@@ -247,7 +247,8 @@ def test_attach_existing_payment_to_intake_case_without_public_ids(client):
         "Request received",
         "Return confirmed",
     ]
-    assert public.json()["refund"]["outstanding_amount"] == "30.00"
+    assert public.json()["refund"]["outstanding_amount"] is None
+    assert public.json()["refund"]["verification"] == "unverified"
     assert not any(
         value in public.text
         for value in (payment, "PRIVATE-RMA", "TESTRESOLUTION", "Warehouse operator")

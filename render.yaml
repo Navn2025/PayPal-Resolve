@@ -1,0 +1,144 @@
+# Paid resources. Review plans and connect the repository in Render before Apply.
+# No credentials or existing customer database are included.
+envVarGroups:
+  - name: resolve-production
+    envVars:
+      - key: RESOLVE_PLATFORM_ENCRYPTION_KEY
+        generateValue: true
+      - key: RESOLVE_PAYPAL_SANDBOX_ENABLED
+        value: "false"
+      - key: RESOLVE_PAYPAL_SANDBOX_REFUNDS_ENABLED
+        value: "false"
+      - key: RESOLVE_PAYPAL_SANDBOX_PARTIAL_REFUNDS_ENABLED
+        value: "false"
+      - key: RESOLVE_CUSTOMER_EMAIL_ENABLED
+        value: "false"
+      - key: RESOLVE_CUSTOMER_GOOGLE_ENABLED
+        value: "false"
+      - key: RESOLVE_PAYPAL_LOGIN_ENABLED
+        value: "false"
+      - key: RESOLVE_AUTO_PROVIDER_REFRESH_ENABLED
+        value: "false"
+      - key: RESOLVE_AI_ENABLED
+        value: "false"
+      - key: RESOLVE_EXTRACTION_ENABLED
+        value: "false"
+services:
+  - type: web
+    name: resolve-web
+    runtime: node
+    region: oregon
+    plan: starter
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    startCommand: npm run start:hosted -- --port $PORT
+    healthCheckPath: /
+    autoDeployTrigger: "off"
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NEXT_TELEMETRY_DISABLED
+        value: "1"
+      - key: RESOLVE_BACKEND_URL
+        sync: false
+      - key: RESOLVE_MERCHANT_WEB_ORIGIN
+        sync: false
+      - key: RESOLVE_CUSTOMER_PUBLIC_ORIGIN
+        sync: false
+  - type: web
+    name: resolve-api
+    runtime: python
+    region: oregon
+    plan: starter
+    rootDir: backend
+    buildCommand: pip install uv==0.10.8 && uv sync --locked --no-dev
+    startCommand: uv run --no-sync uvicorn app.main:app --host 0.0.0.0 --port $PORT --no-access-log
+    healthCheckPath: /ready
+    autoDeployTrigger: "off"
+    envVars:
+      - fromGroup: resolve-production
+      - key: RESOLVE_MERCHANT_WEB_ORIGIN
+        sync: false
+      - key: RESOLVE_CUSTOMER_PUBLIC_ORIGIN
+        sync: false
+      - key: PYTHON_VERSION
+        value: "3.12.12"
+      - key: RESOLVE_DATABASE_URL
+        fromDatabase:
+          name: resolve-db
+          property: connectionString
+  - type: worker
+    name: resolve-operations
+    runtime: python
+    region: oregon
+    plan: starter
+    rootDir: backend
+    buildCommand: pip install uv==0.10.8 && uv sync --locked --no-dev
+    startCommand: uv run --no-sync python -m app.operations_worker --loop
+    autoDeployTrigger: "off"
+    envVars:
+      - fromGroup: resolve-production
+      - key: PYTHON_VERSION
+        value: "3.12.12"
+      - key: RESOLVE_DATABASE_URL
+        fromDatabase:
+          name: resolve-db
+          property: connectionString
+  - type: worker
+    name: resolve-investigations
+    runtime: python
+    region: oregon
+    plan: starter
+    rootDir: backend
+    buildCommand: pip install uv==0.10.8 && uv sync --locked --no-dev
+    startCommand: uv run --no-sync python -m app.investigation_worker --loop
+    autoDeployTrigger: "off"
+    envVars:
+      - fromGroup: resolve-production
+      - key: PYTHON_VERSION
+        value: "3.12.12"
+      - key: RESOLVE_DATABASE_URL
+        fromDatabase:
+          name: resolve-db
+          property: connectionString
+  - type: worker
+    name: resolve-followup
+    runtime: python
+    region: oregon
+    plan: starter
+    rootDir: backend
+    buildCommand: pip install uv==0.10.8 && uv sync --locked --no-dev
+    startCommand: uv run --no-sync python -m app.followup_worker --loop
+    autoDeployTrigger: "off"
+    envVars:
+      - fromGroup: resolve-production
+      - key: PYTHON_VERSION
+        value: "3.12.12"
+      - key: RESOLVE_DATABASE_URL
+        fromDatabase:
+          name: resolve-db
+          property: connectionString
+  - type: worker
+    name: resolve-recovery
+    runtime: python
+    region: oregon
+    plan: starter
+    rootDir: backend
+    buildCommand: pip install uv==0.10.8 && uv sync --locked --no-dev
+    startCommand: uv run --no-sync python -m app.worker --loop
+    autoDeployTrigger: "off"
+    envVars:
+      - fromGroup: resolve-production
+      - key: PYTHON_VERSION
+        value: "3.12.12"
+      - key: RESOLVE_DATABASE_URL
+        fromDatabase:
+          name: resolve-db
+          property: connectionString
+databases:
+  - name: resolve-db
+    region: oregon
+    plan: basic-256mb
+    databaseName: resolve
+    user: resolve_app
+    ipAllowList: []

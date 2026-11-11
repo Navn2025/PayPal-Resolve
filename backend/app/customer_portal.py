@@ -87,9 +87,10 @@ class PublicPromise(BaseModel):
 
 class PublicRefund(BaseModel):
     promised_amount: NonNegativeMoney
-    confirmed_amount: NonNegativeMoney
-    pending_amount: NonNegativeMoney
-    outstanding_amount: NonNegativeMoney
+    confirmed_amount: NonNegativeMoney | None
+    pending_amount: NonNegativeMoney | None
+    outstanding_amount: NonNegativeMoney | None
+    verification: Literal["current", "unverified"]
     currency: Literal["USD"] = "USD"
     environment: Literal["sandbox"] = "sandbox"
 
@@ -265,9 +266,10 @@ class CustomerPortal:
                 ],
                 refund=PublicRefund(
                     promised_amount=refund.promised_amount,
-                    confirmed_amount=refund.provider_completed_amount,
-                    pending_amount=refund.provider_pending_amount,
-                    outstanding_amount=refund.outstanding_amount,
+                    confirmed_amount=refund.provider_completed_amount if refund.history_current else None,
+                    pending_amount=refund.provider_pending_amount if refund.history_current else None,
+                    outstanding_amount=refund.outstanding_amount if refund.history_current else None,
+                    verification="current" if refund.history_current else "unverified",
                 )
                 if refund
                 else None,

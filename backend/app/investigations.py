@@ -579,6 +579,7 @@ class Investigations:
                 },
             )
         state = "finished"
+        cached_reads = []
         try:
             if result.validation_failures:
                 raise InferenceUnavailable("source_validation_failed")
@@ -642,11 +643,25 @@ class Investigations:
                     summary.last_checked_at
                     and summary.last_checked_at > now() - timedelta(minutes=5)
                 )
-                if not self.settings.allow_sandbox_refresh or refresh is None or recent:
-                    raise InferenceUnavailable("evidence_refresh_unavailable_or_recent")
-                # The callback is server-owned, validates ownership again, and has no write operation.
-                refresh(case["id"], case["merchant_id"], selected)
-                raise InferenceUnavailable("evidence_refresh_completed_reinvestigate")
+                # The model already received these validated facts. A read of
+                # the same linked resource can use that current snapshot rather
+                # than falsely blocking or calling the provider again. A recent
+                # failed check alone is insufficient: the matching fact itself
+                # must be verified within both the cache and configured windows.
+                cutoff = now() - timedelta(seconds=min(300, self.settings.freshness_seconds))
+                cached = next((fact for fact in summary.verified
+                               if fact.kind == expected
+                               and fact.reference == linked["reference"]
+                               and cutoff < fact.checked_at <= now()), None)
+                if cached:
+                    cached_reads.append({**selected.model_dump(mode="json"),
+                                         "verified_at": cached.checked_at.isoformat()})
+                else:
+                    if not self.settings.allow_sandbox_refresh or refresh is None or recent:
+                        raise InferenceUnavailable("evidence_refresh_unavailable_or_recent")
+                    # The callback validates ownership again and has no write operation.
+                    refresh(case["id"], case["merchant_id"], selected)
+                    raise InferenceUnavailable("evidence_refresh_completed_reinvestigate")
             if triage.escalate or result.status in (
                 "contradictory",
                 "stale",
@@ -718,6 +733,9 @@ class Investigations:
                     db, case, "investigation_superseded", {"revision": job["revision"]}
                 )
                 return True
+            for read in cached_reads:
+                audit(db, case, "investigation_read_cache_hit",
+                      {"revision": job["revision"], "source": "verified_snapshot", **read})
             identifier = str(uuid4())
             db.execute(
                 "INSERT INTO investigations VALUES (?,?,?,?,?,?,?,?)",

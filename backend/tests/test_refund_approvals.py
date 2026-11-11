@@ -10,7 +10,33 @@ from fastapi.testclient import TestClient
 from app import approvals
 from app.main import create_app
 from app.models import CaseCreate
+from app.postgres import PostgresStore
 from app.settings import BACKEND_DIR
+
+
+def restarted_app(client):
+    store = client.app.state.store
+    if isinstance(store, PostgresStore):
+        return create_app(settings=client.app.state.settings, store=PostgresStore(store._database_url, schema=store.schema))
+    return create_app(store.path)
+
+
+def reject_audit_event(client, *, invalidation=False):
+    """Cause a real DB write failure in this test's disposable database."""
+    store = client.app.state.store
+    message = "forced invalidation failure" if invalidation else "forced event failure"
+    with store.transaction(write=True) as connection:
+        if isinstance(store, PostgresStore):
+            from psycopg.errors import RaiseException
+            condition = "NEW.event_type='invalidated'" if invalidation else "TRUE"
+            connection.execute(f"""CREATE FUNCTION reject_test_audit() RETURNS trigger LANGUAGE plpgsql AS $$
+                BEGIN IF {condition} THEN RAISE EXCEPTION '{message}'; END IF; RETURN NEW; END; $$""")
+            connection.execute("CREATE TRIGGER reject_test_audit BEFORE INSERT ON refund_approval_events FOR EACH ROW EXECUTE FUNCTION reject_test_audit()")
+            return RaiseException
+        condition = " WHEN NEW.event_type = 'invalidated'" if invalidation else ""
+        connection.execute(f"""CREATE TRIGGER reject_test_audit BEFORE INSERT ON refund_approval_events{condition}
+            BEGIN SELECT RAISE(ABORT, '{message}'); END""")
+    return sqlite3.IntegrityError
 
 
 def case_body(condition=None):
@@ -281,7 +307,7 @@ def test_concurrent_app_instances_cannot_create_duplicate_active_approvals(
     second_body = dict(first_body)
     if not identical_request:
         second_body["request_id"] = str(uuid4())
-    with merchant_client(create_app(client.app.state.store.path), api_key) as second:
+    with merchant_client(restarted_app(client), api_key) as second:
 
         def submit(item):
             caller, body = item
@@ -359,7 +385,7 @@ def test_approval_events_and_replay_survive_new_application(
     approval, body = create_approval(client, ready_case)
     token = client.headers["Authorization"].split(" ", 1)[1]
     prefix = f"/cases/{ready_case}/refund-approvals"
-    with merchant_client(create_app(client.app.state.store.path), token) as restarted:
+    with merchant_client(restarted_app(client), token) as restarted:
         assert restarted.get(f"{prefix}/{approval['id']}").json() == approval
         assert restarted.post(prefix, json=body).status_code == 200
         assert len(restarted.get(f"{prefix}/{approval['id']}/events").json()) == 1
@@ -368,16 +394,13 @@ def test_approval_events_and_replay_survive_new_application(
 def test_approval_insert_rolls_back_if_event_record_cannot_be_written(
     client, ready_case
 ):
-    with sqlite3.connect(client.app.state.store.path) as connection:
-        connection.execute("""CREATE TRIGGER reject_approval_event
-            BEFORE INSERT ON refund_approval_events
-            BEGIN SELECT RAISE(ABORT, 'forced event failure'); END""")
-    with pytest.raises(sqlite3.IntegrityError, match="forced event failure"):
+    failure_type = reject_audit_event(client)
+    with pytest.raises(failure_type, match="forced event failure"):
         client.post(
             f"/cases/{ready_case}/refund-approvals",
             json=approval_body(client, ready_case),
         )
-    with sqlite3.connect(client.app.state.store.path) as connection:
+    with client.app.state.store.transaction() as connection:
         assert (
             connection.execute("SELECT count(*) FROM refund_approvals").fetchone()[0]
             == 0
@@ -388,11 +411,8 @@ def test_refund_and_approval_invalidation_roll_back_together_on_audit_failure(
     client, ready_case
 ):
     approval, _ = create_approval(client, ready_case)
-    with sqlite3.connect(client.app.state.store.path) as connection:
-        connection.execute("""CREATE TRIGGER reject_invalidation_event
-            BEFORE INSERT ON refund_approval_events WHEN NEW.event_type = 'invalidated'
-            BEGIN SELECT RAISE(ABORT, 'forced invalidation failure'); END""")
-    with pytest.raises(sqlite3.IntegrityError, match="forced invalidation failure"):
+    failure_type = reject_audit_event(client, invalidation=True)
+    with pytest.raises(failure_type, match="forced invalidation failure"):
         client.post(
             f"/cases/{ready_case}/refunds",
             json=refund_body("SHOULD-ROLL-BACK", "10.00"),

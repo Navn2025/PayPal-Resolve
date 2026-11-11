@@ -48,6 +48,17 @@ import { workflowLabels, type Operations } from "@/lib/customer";
 import { DeferredDetails } from "./deferred-details";
 import { HelpdeskPanel } from "./helpdesk-panel";
 import {
+  cents,
+  days,
+  dueLabel,
+  fallbackText,
+  statusBadge,
+  statusLabels,
+  useCaseChecks,
+  worst,
+  type CaseChecks,
+} from "./case-checks";
+import {
   brief,
   cents,
   days,
@@ -60,7 +71,6 @@ import {
   type CaseChecks,
 } from "./case-checks";
 import { PromiseCheckList } from "./promise-health";
-
 export type DeskTab = "overview" | "timeline" | "receipt" | "customer";
 export interface PaymentActions {
   basis: Reconciliation | null;
@@ -78,16 +88,13 @@ export interface PaymentActions {
   onSubmit: () => void;
   onRefresh: () => void;
   onCheckExecution: () => void;
-  onSimulateOutside?: () => void;
   /** Opens the agreed-amount form for the linked payment case; absent until its reconciliation is loaded. */
   onSetAgreement?: () => void;
 }
-
 interface DeskProps {
   item: CaseView;
   tab: DeskTab;
   setTab: (tab: DeskTab) => void;
-  demo: boolean;
   request: Requester;
   timeline: Timeline | null;
   timelineError?: string;
@@ -113,7 +120,6 @@ interface DeskProps {
   /** Case operations (offers, returns, dispute evidence); kept mounted so drafts survive tab changes. */
   operations?: ReactNode;
 }
-
 function Metric({
   label,
   value,
@@ -138,18 +144,19 @@ function Metric({
     </div>
   );
 }
-
 /** The one place amounts are shown on the overview. Values come from the backend's refund progress as returned. */
 function MoneySummary({
   item,
   payment,
-  demo,
   checks,
-}: Pick<DeskProps, "item" | "payment" | "demo"> & { checks: CaseChecks }) {
+}: Pick<DeskProps, "item" | "payment"> & {
+  checks: CaseChecks;
+}) {
   if (!item.refund_case_id) return null;
   const refund = item.promises.find((p) => p.terms.target.kind === "refund");
   const progress = refund?.refund_progress;
   const total = Number(progress?.promised_amount ?? 0);
+  const currentProvider = !!progress?.history_current;
   const paid = Number(progress?.provider_completed_amount ?? 0);
   const percent =
     progress && total > 0 ? Math.min(100, Math.round((paid / total) * 100)) : 0;
@@ -185,7 +192,7 @@ function MoneySummary({
             <span className="paypal-mark" aria-hidden="true">
               P
             </span>{" "}
-            PayPal {demo ? "· Demo" : "Sandbox"}
+            PayPal {"Sandbox"}
           </span>
         </span>
       </div>
@@ -195,7 +202,7 @@ function MoneySummary({
           value={money(progress?.captured_amount ?? payment.captured)}
           style="payment"
           Icon={CreditCard}
-          note="Captured"
+          note="Recorded amount"
         />
         <Metric
           label="Promised"
@@ -206,20 +213,28 @@ function MoneySummary({
         />
         <Metric
           label="Refunded"
-          value={money(progress?.provider_completed_amount)}
+          value={money(
+            currentProvider ? progress?.provider_completed_amount : null,
+          )}
           style="confirmed"
           Icon={ShieldCheck}
-          note={demo ? "Confirmed in demo" : "PayPal confirmed"}
+          note={currentProvider ? "PayPal confirmed" : "Provider check needed"}
         />
         <Metric
           label="Remaining"
-          value={money(progress?.outstanding_amount)}
+          value={money(currentProvider ? progress?.outstanding_amount : null)}
           style="outstanding"
           Icon={Wallet}
-          note={risk && risk.status !== "kept" ? "At risk" : "Still owed"}
+          note={
+            currentProvider
+              ? risk && risk.status !== "kept"
+                ? "At risk"
+                : "Still owed"
+              : "Current total unavailable"
+          }
         />
       </div>
-      {progress ? (
+      {progress && currentProvider ? (
         <>
           <div className="progress-row">
             <div className="progress-label">
@@ -240,11 +255,13 @@ function MoneySummary({
           <div className="proof-foot">
             <span>
               <Clock3 size={14} />{" "}
-              {demo
-                ? "Simulated evidence"
-                : refund.checked_at
-                  ? <span title={timeText(refund.checked_at)}>Checked {localTimeText(refund.checked_at)}</span>
-                  : "No PayPal check yet"}
+              {refund.checked_at ? (
+                <span title={timeText(refund.checked_at)}>
+                  Checked {localTimeText(refund.checked_at)}
+                </span>
+              ) : (
+                "No PayPal check yet"
+              )}
             </span>
             <span>
               {Number(progress.provider_pending_amount) > 0
@@ -257,14 +274,14 @@ function MoneySummary({
         </>
       ) : (
         <p className="card-note">
-          No refund promise is recorded, so promised, refunded and remaining
-          amounts are not tracked yet.
+          {progress
+            ? "A promise is recorded. Refresh provider evidence before confirming refund totals."
+            : "No refund promise is recorded, so promised, refunded and remaining amounts are not tracked yet."}
         </p>
       )}
     </section>
   );
 }
-
 // Missing items as ordered, imperative steps. Codes the backend explains specifically keep its wording.
 const stepOrder = [
   "no_linked_payment",
@@ -283,17 +300,23 @@ const stepText: Record<string, string> = {
   no_refund_promise: "Record the refund promise.",
   no_deadline: "Add a due date to the refund promise.",
 };
-const orderedSteps = (missing: { code: string; text: string }[]) =>
+const orderedSteps = (
+  missing: {
+    code: string;
+    text: string;
+  }[],
+) =>
   [...missing]
     .sort((a, b) => stepOrder.indexOf(a.code) - stepOrder.indexOf(b.code))
     .map((entry) => ({ ...entry, text: stepText[entry.code] ?? entry.text }));
-
 /** Opens and scrolls to a promise in the list below, matched by its position (the list renders item.promises in order). */
 function openPromise(from: HTMLElement, promises: PromiseView[], id: string) {
   const index = promises.findIndex((entry) => entry.id === id);
   const row = from
     .closest(".case-desk")
-    ?.querySelectorAll<HTMLDetailsElement>(".promise-section .promise-row")[index];
+    ?.querySelectorAll<HTMLDetailsElement>(".promise-section .promise-row")[
+    index
+  ];
   if (!row) return;
   row.open = true;
   row.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -363,7 +386,11 @@ function NextStep({
     buttons = (
       <>
         {payment.onSetAgreement && (
-          <Button variant="primary" onClick={payment.onSetAgreement} disabled={payment.busy}>
+          <Button
+            variant="primary"
+            onClick={payment.onSetAgreement}
+            disabled={payment.busy}
+          >
             Set agreed amount
           </Button>
         )}
@@ -462,7 +489,11 @@ function NextStep({
   const hasFacts = !!next?.facts.refunds.length;
   const shortText =
     explanation &&
-    (brief(explanation.text, [title, reason, ...steps.map((step) => step.text)]) ||
+    (brief(explanation.text, [
+      title,
+      reason,
+      ...steps.map((step) => step.text),
+    ]) ||
       "Nothing to add beyond the next step above.");
   const capped =
     owed &&
@@ -499,18 +530,30 @@ function NextStep({
       )}
       {next && (
         <div className="checklist">
-          <h4>Missing before refund</h4>
+          <h4>{done ? "Record completeness" : "Missing before refund"}</h4>
+          {done && steps.length > 0 && (
+            <p className="card-note">
+              The refund is fulfilled. These record details do not require
+              another payment.
+            </p>
+          )}
           {steps.length ? (
             <ol>
               {steps.map((entry, index) => (
                 <li key={entry.code + index} data-code={entry.code}>
                   {entry.text}
                   {/* Where the checklist asks for the agreement and the head has no button for it. */}
-                  {(entry.code === "no_amount" || entry.code === "agreement_not_accepted") &&
-                    !needsAgreementHead && payment.onSetAgreement && (
+                  {(entry.code === "no_amount" ||
+                    entry.code === "agreement_not_accepted") &&
+                    !needsAgreementHead &&
+                    payment.onSetAgreement && (
                       <>
                         {" "}
-                        <button type="button" className="text-button" onClick={payment.onSetAgreement}>
+                        <button
+                          type="button"
+                          className="text-button"
+                          onClick={payment.onSetAgreement}
+                        >
                           Set agreed amount
                         </button>
                       </>
@@ -558,7 +601,6 @@ function NextStep({
     </section>
   );
 }
-
 function PromiseCards({
   item,
   onAdd,
@@ -703,7 +745,6 @@ function PromiseCards({
     </section>
   );
 }
-
 const eventNames: Record<string, string> = {
   case_created: "Case opened",
   promise_recorded: "Promise recorded",
@@ -718,7 +759,6 @@ const eventNames: Record<string, string> = {
   invalidated: "Approval invalidated",
   "case.created": "Payment case opened",
 };
-
 function caseEvents(timeline: Timeline | null) {
   return [
     ...(timeline?.items ?? []).map((event) => ({
@@ -740,11 +780,14 @@ function caseEvents(timeline: Timeline | null) {
     })),
   ].sort((a, b) => Date.parse(b.time) - Date.parse(a.time));
 }
-
 const RECENT_EVENTS = 6;
 // The source is shown once, then again only when it changes from the event above.
-const actorChanged = (list: { actor: string }[], index: number) =>
-  index === 0 || list[index - 1].actor !== list[index].actor;
+const actorChanged = (
+  list: {
+    actor: string;
+  }[],
+  index: number,
+) => index === 0 || list[index - 1].actor !== list[index].actor;
 // Overview preview of the already-loaded events: title, source and time only. Details stay in the timeline tab.
 function RecentActivity({
   timeline,
@@ -764,7 +807,7 @@ function RecentActivity({
       )}
       {!timeline && !timelineError && loadingTimeline && (
         <p className="panel-state" role="status">
-          Loading events…
+          Open the evidence timeline to view recent activity.
         </p>
       )}
       {!timeline && !timelineError && !loadingTimeline && (
@@ -794,7 +837,9 @@ function RecentActivity({
                 </strong>
                 <small>
                   {actorChanged(shown, index) && <>{event.actor} · </>}
-                  <time dateTime={event.time} title={timeText(event.time)}>{localTimeText(event.time)}</time>
+                  <time dateTime={event.time} title={timeText(event.time)}>
+                    {localTimeText(event.time)}
+                  </time>
                 </small>
               </div>
             </li>
@@ -809,7 +854,6 @@ function RecentActivity({
     </div>
   );
 }
-
 function EventTimeline({
   timeline,
   timelineError,
@@ -888,8 +932,7 @@ function EventTimeline({
     </section>
   );
 }
-
-function Receipt({ item, demo }: { item: CaseView; demo: boolean }) {
+function Receipt({ item }: { item: CaseView }) {
   const progress = item.promises.find(
     (p) => p.refund_progress,
   )?.refund_progress;
@@ -907,9 +950,7 @@ function Receipt({ item, demo }: { item: CaseView; demo: boolean }) {
       <article className="receipt-sheet" aria-label="Buyer receipt">
         <div className="receipt-top">
           <Brand small />
-          <span className="provider-chip">
-            {demo ? "Sample receipt" : "Resolution update"}
-          </span>
+          <span className="provider-chip">{"Resolution update"}</span>
         </div>
         <h3>Resolution summary</h3>
         <p>Here is the current status of the agreement for your order.</p>
@@ -926,11 +967,7 @@ function Receipt({ item, demo }: { item: CaseView; demo: boolean }) {
               <dd>{money(progress.promised_amount)}</dd>
             </div>
             <div>
-              <dt>
-                {demo
-                  ? "Refund confirmed in demo"
-                  : "Refund confirmed by PayPal"}
-              </dt>
+              <dt>{"Refund confirmed by PayPal"}</dt>
               <dd>{money(progress.provider_completed_amount)}</dd>
             </div>
             <div>
@@ -947,23 +984,18 @@ function Receipt({ item, demo }: { item: CaseView; demo: boolean }) {
             </li>
           ))}
         </ul>
-        {demo ? (
-          <p className="receipt-note">This is a sample. No money moved.</p>
-        ) : (
-          progress && (
-            <p className="receipt-note">
-              After PayPal confirms a refund, it may take additional time to
-              appear on your original payment method.
-            </p>
-          )
+        {progress && (
+          <p className="receipt-note">
+            After PayPal confirms a refund, it may take additional time to
+            appear on your original payment method.
+          </p>
         )}
       </article>
     </section>
   );
 }
-
 export function CaseDesk(props: DeskProps) {
-  const { item, tab, setTab, demo, onBack, error, verifiedMessage } = props;
+  const { item, tab, setTab, onBack, error, verifiedMessage } = props;
   const [customerVisited, setCustomerVisited] = useState(false);
   useEffect(() => {
     if (tab === "customer") setCustomerVisited(true);
@@ -974,7 +1006,7 @@ export function CaseDesk(props: DeskProps) {
     item.id,
     props.request,
     props.payment.basis?.state_fingerprint,
-    !demo,
+    true,
   );
   return (
     <section className="case-desk" aria-label="Selected case">

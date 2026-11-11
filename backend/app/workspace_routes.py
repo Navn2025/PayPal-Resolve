@@ -80,7 +80,10 @@ async def receive_paypal_webhook(request: Request, store: Store):
     ):
         raise StoreError(415, "Use application/json for PayPal events")
     raw = await bounded_body(request, WEBHOOK_MAX_BYTES)
-    service = PayPalHistoryService(store, paypal_for(request, merchant.id))
+    # This public webhook has no merchant session. Its configured PayPal app,
+    # webhook ID and Resolve merchant binding establish the verification scope;
+    # never choose a workspace from unverified event fields.
+    service = PayPalHistoryService(store, request.app.state.paypal_client)
     await run_in_threadpool(service.receive, request.headers, raw)
     return Response(status_code=204)
 

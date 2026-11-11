@@ -1,3 +1,4 @@
+import { signInFixture } from "./helpers";
 import { expect, test, type Page } from "@playwright/test";
 
 const FIXTURE_TOKEN = "rslv_ui_test_fixture_key_not_a_real_secret";
@@ -27,18 +28,10 @@ const blocked = {
   cache_hit: false, skipped_reason: "extraction_disabled", model: null,
 };
 
-async function connect(page: Page) {
-  await page.getByRole("button", { name: "Connect account" }).click();
-  const dialog = page.getByRole("dialog");
-  await dialog.getByLabel("Merchant key").fill(FIXTURE_TOKEN);
-  await dialog.getByRole("button", { name: "Connect account" }).click();
-  await expect(page.getByText("Connected · Sandbox")).toBeVisible();
-}
+async function connect(page: Page) { await signInFixture(page); }
 
 test("promise suggestions pre-fill the existing promise form and save only through the promise route", async ({ page }) => {
-  await page.goto("/demo");
-  await expect(page.getByRole("heading", { name: "Resolution workspace" })).toBeVisible();
-  await expect(page.getByRole("region", { name: "Promise suggestions" })).toHaveCount(0);  // never in demo mode
+  await page.goto("/login");
 
   const responses = [suggestions, blocked];
   await page.route("**/api/resolve/resolution-cases/*/ai/extract-promises", (route) =>
@@ -119,7 +112,7 @@ test("promise suggestions pre-fill the existing promise form and save only throu
 
 test("extraction and usage requests go through the workspace proxy to the backend", async ({ page }) => {
   // No page.route here: the request must pass the real /api/resolve proxy.
-  await page.goto("/demo");
+  await page.goto("/login");
   await connect(page);
   await page.getByRole("button", { name: "New case", exact: true }).first().click();
   const dialog = page.getByRole("dialog");

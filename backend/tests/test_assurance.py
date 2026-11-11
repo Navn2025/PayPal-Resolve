@@ -105,6 +105,7 @@ def test_policy_inspection_and_saved_label_flow(api):
         "shipping_paid_by": "merchant",
     }
     assert api.put(root + "/guide", json=instructions).status_code == 200
+    assert api.get(root + "/guide").json()["instructions"] == instructions["instructions"]
     raw = b"%PDF-1.4\nSynthetic saved label\n%%EOF"
     uploaded = api.post(
         root + "/labels",
@@ -139,6 +140,9 @@ def test_policy_inspection_and_saved_label_flow(api):
     )
     assert base64.b64decode(label.json()["content_base64"]) == raw
     token = buyer_link(api, case)
+    public_guide = api.post("/platform/buyer/returns/guide", json={"token": token, "return_id": identifier})
+    assert public_guide.status_code == 200
+    assert public_guide.json()["instructions"] == instructions["instructions"]
     assert (
         api.post(
             "/platform/buyer/returns/label",

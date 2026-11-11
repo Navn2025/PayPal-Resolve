@@ -359,6 +359,52 @@ def test_model_cannot_select_another_cases_read(client):
     ]
 
 
+@pytest.mark.parametrize("provider_refresh_enabled", [False, True])
+def test_current_owned_fact_satisfies_model_read_without_provider_or_money(client, provider_refresh_enabled):
+    store, merchant = client.app.state.store, identity(client)
+    case = seed(store, merchant, {"name": "current-owned-read", "refunds": [["25.00", "COMPLETED"]], "capture_status": "REFUNDED"})
+    with store.transaction() as db:
+        link = db.execute("SELECT id FROM resolution_evidence_links WHERE resolution_id=? AND kind='paypal_capture'", (str(case.id),)).fetchone()[0]
+
+    class ReadCurrent:
+        def complete(self, *args):
+            return Triage(issue_type="refund", escalate=False, reads=[ReadSelection(operation="refresh_linked_capture", evidence_id=link)]), {}
+
+    def forbidden(*args):
+        pytest.fail("An already verified current fact must not repeat a provider request")
+
+    run_once(store, settings=InvestigationSettings(enabled=True, allow_sandbox_refresh=provider_refresh_enabled), groq=ReadCurrent(), refresh=forbidden)
+    item = latest(client, case)
+    assert item["state"] == "finished"
+    assert item["result"]["status"] == "confirmed_full_refund"
+    assert item["result"]["next_step"] == "no_action"
+    assert item["result"]["validation_failures"] == []
+    with store.transaction() as db:
+        event = db.execute("SELECT data_json FROM investigation_audit WHERE resolution_id=? AND event_type='investigation_read_cache_hit'", (str(case.id),)).fetchone()
+        assert json.loads(event[0])["evidence_id"] == link
+        assert db.execute("SELECT count(*) FROM refund_approvals").fetchone()[0] == 0
+        assert db.execute("SELECT count(*) FROM refund_executions").fetchone()[0] == 0
+
+
+def test_cached_read_respects_shorter_configured_freshness(client, monkeypatch):
+    store, merchant = client.app.state.store, identity(client)
+    case = seed(store, merchant, {"name": "expired-owned-read", "refunds": [["25.00", "COMPLETED"]], "capture_status": "REFUNDED"})
+    later = datetime.now(timezone.utc) + timedelta(minutes=2)
+    monkeypatch.setattr("app.investigations.now", lambda: later)
+    with store.transaction() as db:
+        link = db.execute("SELECT id FROM resolution_evidence_links WHERE resolution_id=? AND kind='paypal_capture'", (str(case.id),)).fetchone()[0]
+
+    class ReadExpired:
+        def complete(self, *args):
+            return Triage(issue_type="refund", escalate=False, reads=[ReadSelection(operation="refresh_linked_capture", evidence_id=link)]), {}
+
+    run_once(store, settings=InvestigationSettings(enabled=True, freshness_seconds=60), groq=ReadExpired())
+    assert latest(client, case)["state"] == "blocked"
+    assert latest(client, case)["result"]["validation_failures"] == ["evidence_refresh_unavailable_or_recent"]
+    with store.transaction() as db:
+        assert db.execute("SELECT count(*) FROM investigation_audit WHERE event_type='investigation_read_cache_hit'").fetchone()[0] == 0
+
+
 def test_stale_freshness_blocks_approval_but_allows_request_evidence(client):
     store, merchant = client.app.state.store, identity(client)
     case = seed(store, merchant, {"name": "stale-review", "old": True, "refunds": []})
@@ -461,8 +507,14 @@ def test_authorized_capture_refresh_uses_real_http_and_stops_after_one_read(
         ]
         item = latest(client, case)
         assert item["result"]["validation_failures"] == [
-            "evidence_refresh_unavailable_or_recent"
+            "model_or_credentials_unavailable"
         ]
+        # The verified capture is reused, but a single capture read still does
+        # not prove complete refund history. Missing deeper inference stays blocked.
+        assert item["state"] == "blocked"
+        assert "complete_provider_refund_history" in item["result"]["missing_evidence"]
+        with store.transaction() as db:
+            assert db.execute("SELECT count(*) FROM investigation_audit WHERE resolution_id=? AND event_type='investigation_read_cache_hit'", (str(case.id),)).fetchone()[0] == 1
         assert not item["stale"]
         assert run_once(store)["processed"] == 0
     finally:

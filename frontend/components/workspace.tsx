@@ -1,5 +1,4 @@
 "use client";
-
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Activity,
@@ -9,7 +8,6 @@ import {
   ChevronRight,
   CircleAlert,
   ClipboardList,
-  FlaskConical,
   Inbox,
   Layers3,
   Link2,
@@ -25,7 +23,6 @@ import {
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { DeferredDetails } from "./deferred-details";
-import { DemoStore, demoPrimary } from "@/lib/demo";
 import {
   activeApproval,
   amountCents,
@@ -74,7 +71,6 @@ import {
 } from "./case-checks";
 import {
   CaseForm,
-  ConnectForm,
   EvidenceForm,
   LocalGuide,
   PromiseForm,
@@ -83,25 +79,60 @@ import {
   type PromiseDraft,
 } from "./forms";
 import { InviteForm, OperationsForm, PaymentLinkForm } from "./merchant-triage";
-
 const CASE_PAGE = 12,
   EVENT_PAGE = 30;
 type Filter = "all" | Outcome | Workflow | "unread" | "at_risk";
 type Risk = Map<
   string,
-  { amount: number; currency: string; status: HealthStatus; overdue: boolean }
+  {
+    amount: number;
+    currency: string;
+    status: HealthStatus;
+    overdue: boolean;
+  }
 >;
 type Nav = "inbox" | "review";
 type Dialog =
-  | { kind: "connect" | "case" | "guide" | "invite" }
-  | { kind: "payment-link"; item: CaseView }
-  | { kind: "operations"; id: string; fields: Operations }
-  | { kind: "promise"; edit?: PromiseView; draft?: PromiseDraft }
-  | { kind: "evidence"; promise: PromiseView }
-  | { kind: "approve"; basis: Reconciliation; prefill?: string }
-  | { kind: "execute"; approval: Approval }
-  | { kind: "review"; item: Review }
-  | { kind: "agreement"; payment: LegacyCase; fingerprint: string; caseId: string };
+  | {
+      kind: "case" | "guide" | "invite";
+    }
+  | {
+      kind: "payment-link";
+      item: CaseView;
+    }
+  | {
+      kind: "operations";
+      id: string;
+      fields: Operations;
+    }
+  | {
+      kind: "promise";
+      edit?: PromiseView;
+      draft?: PromiseDraft;
+    }
+  | {
+      kind: "evidence";
+      promise: PromiseView;
+    }
+  | {
+      kind: "approve";
+      basis: Reconciliation;
+      prefill?: string;
+    }
+  | {
+      kind: "execute";
+      approval: Approval;
+    }
+  | {
+      kind: "review";
+      item: Review;
+    }
+  | {
+      kind: "agreement";
+      payment: LegacyCase;
+      fingerprint: string;
+      caseId: string;
+    };
 type Detail = {
   item: CaseView;
   timeline: Timeline | null;
@@ -120,7 +151,6 @@ const initialPage = (items: CaseView[]): Page<CaseView> => ({
 });
 const errorText = (error: unknown) =>
   error instanceof Error ? error.message : "Something went wrong. Try again.";
-
 function StatusMetrics({ cases, total }: { cases: CaseView[]; total: number }) {
   const stats = [
     {
@@ -179,7 +209,6 @@ function StatusMetrics({ cases, total }: { cases: CaseView[]; total: number }) {
 
 // Shared empty default: rows stay plain when promise-health is missing or failed.
 const NO_RISK: Risk = new Map();
-
 function InboxPane({
   cases,
   selected,
@@ -192,7 +221,6 @@ function InboxPane({
   onMore,
   loading,
   onNew,
-  demo,
   risk = NO_RISK,
 }: {
   cases: CaseView[];
@@ -206,7 +234,6 @@ function InboxPane({
   onMore: () => void;
   loading: boolean;
   onNew: () => void;
-  demo: boolean;
   /** Promise-health flags by case id; optional so the inbox renders plain rows if they never load. */
   risk?: Risk;
 }) {
@@ -218,14 +245,7 @@ function InboxPane({
         item.outcome === filter ||
         item.operations?.workflow === filter ||
         (filter === "unread" && !!item.operations?.unread_count)) &&
-      (!demo ||
-        !needle ||
-        [
-          item.title,
-          item.order_reference ?? "",
-          item.id,
-          item.operations?.assignee ?? "",
-        ].some((value) => value.toLowerCase().includes(needle))),
+      true,
   );
   return (
     <aside className="inbox-pane" aria-label="Case inbox">
@@ -287,7 +307,7 @@ function InboxPane({
             ["needs_approval", "Needs approval"],
             ["pending_with_paypal", "Pending with PayPal"],
             ["unread", "Unread"],
-            ...(demo ? [] : ([["at_risk", "At risk"]] as const)),
+            ...([["at_risk", "At risk"]] as const),
           ] as const
         ).map(([id, label]) => (
           <button
@@ -408,7 +428,6 @@ function InboxPane({
     </aside>
   );
 }
-
 function ReviewPane({
   items,
   total,
@@ -516,7 +535,6 @@ function ReviewPane({
     </section>
   );
 }
-
 async function fetchSummary(request: Requester, id: string): Promise<CaseView> {
   const url = "/resolution-cases/" + id;
   const [item, operations] = await Promise.all([
@@ -525,7 +543,6 @@ async function fetchSummary(request: Requester, id: string): Promise<CaseView> {
   ]);
   return { ...item, operations };
 }
-
 async function fetchCase(
   request: Requester,
   id: string,
@@ -565,25 +582,16 @@ async function fetchCase(
     };
   }
 }
-
 export function Workspace({
-  mode,
   initialCaseId = null,
 }: {
-  mode: "demo" | "merchant";
   initialCaseId?: string | null;
 }) {
-  const demo = mode === "demo";
-  const [demoStore, setDemoStore] = useState(() => new DemoStore());
   const [merchant, setMerchant] = useState<Merchant | null>(null);
   const [staffRole, setStaffRole] = useState("viewer");
   const [sessionError, setSessionError] = useState("");
-  const [inbox, setInbox] = useState(() =>
-    initialPage(demo ? demoStore.initial() : []),
-  );
-  const [selected, setSelected] = useState<string | null>(
-    demo ? demoPrimary : initialCaseId,
-  );
+  const [inbox, setInbox] = useState(() => initialPage([]));
+  const [selected, setSelected] = useState<string | null>(initialCaseId);
   const [detail, setDetail] = useState<Detail | null>(null);
   const [tab, setTab] = useState<DeskTab>("overview");
   const [nav, setNav] = useState<Nav>("inbox");
@@ -614,20 +622,18 @@ export function Workspace({
     inboxSeq = useRef(0),
     reviewSeq = useRef(0);
   const requestIds = useRef(new Map<string, string>());
-  const request = demo ? demoStore.request : backendRequest;
+  const request = backendRequest;
   const closeDialog = () => setDialog(null);
   const current = detail?.item.id === selected ? detail : null;
   const item =
     current?.item ?? inbox.items.find((entry) => entry.id === selected);
   const refund = item?.promises.find((p) => p.terms.target.kind === "refund");
-
   // Merchant-wide at-risk and broken promises, for row pills and the At risk filter. Read-only; failures leave rows plain.
   const loadRisk = useCallback(async () => {
-    if (demo) return null;
     try {
-      const page = await request<{ items: PromiseHealth[] }>(
-        "/resolution-cases/promise-health?limit=200",
-      );
+      const page = await request<{
+        items: PromiseHealth[];
+      }>("/resolution-cases/promise-health?limit=200");
       const next: Risk = new Map();
       for (const entry of page.items) {
         const prior = next.get(entry.case_id);
@@ -647,15 +653,14 @@ export function Workspace({
     } catch {
       return null;
     }
-  }, [demo, request]);
-
+  }, [request]);
   const loadInbox = useCallback(
     async (offset = 0) => {
       const seq = ++inboxSeq.current;
       setLoadingList(true);
       setListError("");
       try {
-        if (!demo && filter === "at_risk") {
+        if (filter === "at_risk") {
           const flagged = (await loadRisk()) ?? [];
           const needle = search.trim().toLowerCase();
           const ids = [...new Set(flagged.map((entry) => entry.case_id))];
@@ -678,20 +683,16 @@ export function Workspace({
           setSelected((previous) => previous ?? rows[0]?.id ?? null);
           return;
         }
-        if (!demo) void loadRisk();
-        const result = demo
-          ? await request<Page<CaseView>>(
-              `/resolution-cases?limit=${CASE_PAGE}&offset=${offset}`,
-            )
-          : await request<Page<CaseView>>(
-              "/resolution-cases/inbox?" +
-                new URLSearchParams({
-                  limit: String(CASE_PAGE),
-                  offset: String(offset),
-                  filter_by: filter,
-                  q: search.trim(),
-                }),
-            );
+        void loadRisk();
+        const result = await request<Page<CaseView>>(
+          "/resolution-cases/inbox?" +
+            new URLSearchParams({
+              limit: String(CASE_PAGE),
+              offset: String(offset),
+              filter_by: filter,
+              q: search.trim(),
+            }),
+        );
         const rows = demo
           ? await Promise.all(
               result.items.map((summary) => fetchSummary(request, summary.id)),
@@ -1322,7 +1323,6 @@ export function Workspace({
         </section>
       </main>
     );
-
   return (
     <div className="app-shell">
       <a className="skip-link" href="#workspace-content">
@@ -1350,24 +1350,24 @@ export function Workspace({
             <Inbox size={18} /> <span>Case inbox</span>
             <ChevronRight className="rail-chevron" size={15} />
           </button>
-          {!demo && (
+          {
             <Link href="/workspace/orders" className="rail-link">
               <Package size={18} /> <span>Orders</span>
               <ChevronRight className="rail-chevron" size={15} />
             </Link>
-          )}
+          }
           {!demo && (
             <Link href="/workspace/operations" className="rail-link">
               <Activity size={18} /> <span>Operations</span>
               <ChevronRight className="rail-chevron" size={15} />
             </Link>
           )}
-          {!demo && (
+          {
             <Link href="/workspace/settings" className="rail-link">
               <Settings2 size={18} /> <span>Settings</span>
               <ChevronRight className="rail-chevron" size={15} />
             </Link>
-          )}
+          }
           <button
             type="button"
             aria-label="Review queue"
@@ -1383,17 +1383,17 @@ export function Workspace({
           </button>
         </div>
         <div className="sidebar-bottom">
+          <Link href="/docs" className="rail-link">
+            <BookOpen size={17} />
+            <span>Documentation</span>
+          </Link>
           <div className="sidebar-mode">
             <span className="sidebar-mode-icon">
               <ShieldCheck size={19} />
             </span>
             <div>
-              <strong>{demo ? "Demo workspace" : "Sandbox connection"}</strong>
-              <p>
-                {demo
-                  ? "Sample records. No money moves."
-                  : "Local merchant account connected."}
-              </p>
+              <strong>{"Merchant session"}</strong>
+              <p>{"Signed in to your workspace."}</p>
             </div>
           </div>
           <button
@@ -1421,17 +1421,9 @@ export function Workspace({
           <div className="topbar-actions">
             <span className="mode-chip">
               <span />
-              {demo ? "Demo mode" : "Connected · Sandbox"}
+              {"Signed in"}
             </span>
-            {demo ? (
-              <Button
-                onClick={() => setDialog({ kind: "connect" })}
-                className="connect-button"
-              >
-                <Link2 size={16} />
-                <span>Connect account</span>
-              </Button>
-            ) : (
+            {
               <>
                 <Link
                   href="/workspace/operations"
@@ -1459,12 +1451,9 @@ export function Workspace({
                   <span>Sign out</span>
                 </Button>
               </>
-            )}
-            <span
-              className="avatar"
-              aria-label={merchant?.name ?? "Demo merchant"}
-            >
-              {(merchant?.name ?? "Demo Merchant")
+            }
+            <span className="avatar" aria-label={merchant?.name ?? "Merchant"}>
+              {(merchant?.name ?? "Merchant")
                 .split(/\s+/)
                 .slice(0, 2)
                 .map((part) => part.charAt(0).toUpperCase())
@@ -1482,11 +1471,11 @@ export function Workspace({
           >
             <Inbox size={16} /> Inbox
           </Button>
-          {!demo && (
+          {
             <Link href="/workspace/orders" className="button button-ghost">
               <Package size={16} /> Orders
             </Link>
-          )}
+          }
           {!demo && (
             <Link href="/workspace/operations" className="button button-ghost">
               <Activity size={16} /> Operations
@@ -1592,32 +1581,6 @@ export function Workspace({
                   )}
                 </div>
               </div>
-              {demo && (
-                <div className="demo-tools">
-                  <span>
-                    <FlaskConical size={17} /> Demo controls
-                  </span>
-                  <p>
-                    Try the normal refund, or approve first and simulate a
-                    refund made outside Resolve.
-                  </p>
-                  <a
-                    className="button button-secondary small-button"
-                    href="/customer?demo=1"
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Customer demo
-                  </a>
-                  <Button
-                    className="small-button"
-                    variant="ghost"
-                    onClick={resetDemo}
-                  >
-                    Reset demo
-                  </Button>
-                </div>
-              )}
             </>
           ) : (
             <ReviewPane
@@ -1663,15 +1626,12 @@ export function Workspace({
           </Button>
         </div>
       )}
-      {dialog?.kind === "connect" && (
-        <ConnectForm onClose={closeDialog} onConnect={connect} />
-      )}
       {dialog?.kind === "guide" && <LocalGuide onClose={closeDialog} />}
       {dialog?.kind === "case" && (
         <CaseForm onClose={closeDialog} request={request} onSaved={onCreated} />
       )}
       {dialog?.kind === "invite" && (
-        <InviteForm onClose={closeDialog} request={request} demo={demo} />
+        <InviteForm onClose={closeDialog} request={request} />
       )}
       {dialog?.kind === "agreement" && (
         <AgreementForm
@@ -1745,7 +1705,6 @@ export function Workspace({
         <RefundForm
           amount={dialog.basis.recommended_refund_amount}
           initial={dialog.prefill}
-          demo={demo}
           onClose={closeDialog}
           onApprove={(note, requested) =>
             approveRefund(dialog.basis, note, requested)
@@ -1757,7 +1716,6 @@ export function Workspace({
         <RefundForm
           amount={dialog.approval.amount}
           approval={dialog.approval}
-          demo={demo}
           onClose={closeDialog}
           onApprove={async () => {
             throw new ApiError(409, "This approval is already recorded.");

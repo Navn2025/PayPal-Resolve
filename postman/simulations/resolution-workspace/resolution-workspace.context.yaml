@@ -27,4 +27,18 @@ assumptions:
     verification: CHG-016; 45 tests passed, 336 mocked requests and zero passed through. Covers external refunds, prerequisites, evidence errors and billing/dispute checks. The only simulated provider money movement is the established approved refund path.
     source: backend/tests/test_resolution_simulation.py ; backend/.pytest_cache/resolution-simulation-final.log
     updated_at: '2026-11-07'
+  - id: repeated-current-owned-investigation-read
+    status: supported
+    claim: Actual Groq triage may select a linked capture even when the caller has just verified that resource.
+    reason: Both approved model sizes selected that bounded read in the same completed Sandbox case. Such a selection is not itself evidence that the provider observation is stale.
+    verification: CHG-059/060 account-backed runs preserved the selected operation, existing evidence ID and model metadata; the original handler stopped with evidence_refresh_unavailable_or_recent. No financial write occurred.
+    source: video-production/research/investigation-evidence-initial-blocked.json; video-production/research/investigation-evidence.json; backend/app/investigations.py
+    updated_at: '2026-11-12'
+  - id: current-snapshot-does-not-repeat-provider-read
+    status: supported
+    claim: The caller can satisfy that read from the same owned resource's verified observation within both five minutes and configured freshness, without granting payment authority.
+    reason: The revised caller checks ownership, type, reference and the fact timestamp, not merely a recent check attempt. Incomplete history and other validation gates remain independent.
+    verification: CHG-060 targeted tests41 passed and full isolated tests1008 passed63 skipped. Controlled HTTP fixtures still observed one authorized provider GET; failed-refresh and shorter-freshness cases remained blocked. Actual Groq120B retest finished with three official Sandbox findings, one audited verified-snapshot read and zero financial writes. No new Postman CLI simulation run or broader upstream guarantee is claimed.
+    source: backend/tests/test_investigations.py; backend/app/investigations.py; docs/ENGINEERING_LOG.md; video-production/research/investigation-evidence.json
+    updated_at: '2026-11-12'
 fingerprints: []

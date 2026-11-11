@@ -1,2 +1,36 @@
-# Disposable local validation services and synthetic evidence only.
+# Private disposable validation services, audit evidence and media intermediates.
 .local/
+
+# Regenerable video deliverables remain local; source, captions and provenance are reviewable.
+docs/presentation/video/*.mp4
+docs/presentation/video/*.mp3
+
+# Hackathon film: public production source retained; generated footage/media kept local.
+video-production
+video-production/node_modules/
+video-production/public/
+video-production/recordings/*
+video-production/renders/*
+video-production/scenes/*.mp4
+video-production/assets/models/
+video-production/assets/*.wav
+video-production/assets/*.mp3
+video-production/assets/judges/
+video-production/assets/voice-auditions/
+video-production/scenes/judges/
+video-production/final-demo*.mp4
+PayPal_Resolve_Demo/*.mp4
+PayPal_Resolve_Demo/Voiceover/
+PayPal_Resolve_Demo/Assets/*.png
+PayPal_Resolve_Demo/Previous_Versions/
+video-production/assets/master/
+video-production/scenes/master/
+Resolve_Hackathon_Demo/*.mp4
+Resolve_Hackathon_Demo/Voiceover/
+Resolve_Hackathon_Demo/Assets/
+Resolve_Hackathon_Demo/Previous_Versions/
+Resolve_Hackathon_Demo/Steady/
+video-production/scenes/master-steady/
+scripts
+PayPal_Resolve_Demo
+Resolve_Hackathon_Demo

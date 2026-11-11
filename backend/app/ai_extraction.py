@@ -577,34 +577,35 @@ def _extract(case_id, messages, client, settings, source, data_policy, usage, me
         logger.warning("AI promise extraction blocked for case %s by data policy", case_id)
         return skip("data_policy_blocked")
     key = cache_key(settings.model, messages)
-    if usage is not None:
-        stored = usage.cached(merchant_id, key)
-        if stored is not None:
-            hit = {**stored, "case_id": case_id, "source": source}
-            hit.update(cache_hit=True, tokens=0, skipped_reason=None)
-            return ExtractionResult.model_validate(hit), False
-        if usage.tokens_today(merchant_id) >= settings.daily_token_limit:
+    # The cache holds only the model's raw output. A hit costs no tokens but goes
+    # through the same parsing and validators below, against the current messages.
+    content = usage.cached(merchant_id, key) if usage is not None else None
+    called = not isinstance(content, str)
+    if called:
+        if usage is not None and usage.tokens_today(merchant_id) >= settings.daily_token_limit:
             return skip("budget_exceeded")
-    try:
-        content, result.tokens = _complete(
-            client,
-            settings.model,
-            settings.timeout_seconds,
-            case_id,
-            messages,
-        )
-    except Exception as error:  # noqa: BLE001 - the client always gets a reviewable result
-        reason = _failure_reason(error)
-        _log_failure(case_id, error, reason, settings)
-        return review(reason), True
+        try:
+            content, result.tokens = _complete(
+                client,
+                settings.model,
+                settings.timeout_seconds,
+                case_id,
+                messages,
+            )
+        except Exception as error:  # noqa: BLE001 - the client always gets a reviewable result
+            reason = _failure_reason(error)
+            _log_failure(case_id, error, reason, settings)
+            return review(reason), True
+    else:
+        result.cache_hit, result.tokens = True, 0
 
     try:
         payload = json.loads(content or "")
     except (TypeError, ValueError):
-        return review("invalid_json"), True
+        return review("invalid_json"), called
     items = payload.get("proposals") if isinstance(payload, dict) else None
     if not isinstance(items, list):
-        return review("schema_invalid"), True
+        return review("schema_invalid"), called
 
     by_id = {message.id: message for message in messages}
     validated = []
@@ -633,7 +634,7 @@ def _extract(case_id, messages, client, settings, source, data_policy, usage, me
     result.dropped += duplicates
     if any(proposal.needs_review for proposal in result.proposals):
         review("low_confidence")
-    # Only clean model output is reused; failures stay retryable.
-    if usage is not None and set(result.review_reasons) <= {"low_confidence"}:
-        usage.store(merchant_id, key, result.model_dump(mode="json"))
-    return result, True
+    # Only raw output that validated cleanly is reused; failures stay retryable.
+    if called and usage is not None and set(result.review_reasons) <= {"low_confidence"}:
+        usage.store(merchant_id, key, content)
+    return result, called

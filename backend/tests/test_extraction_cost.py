@@ -179,3 +179,17 @@ def test_cache_key_covers_model_prompt_and_every_message_field():
         assert cache_key("model-a", messages) != base
     finally:
         ai_extraction.PROMPT_VERSION = original
+
+
+def test_cache_holds_raw_output_and_reruns_validators_on_every_hit(client, ai):
+    import json
+
+    ai()
+    usage = client.app.state.extraction_usage
+    [(key, raw)] = usage._cache.items()
+    assert isinstance(raw, str) and json.loads(raw) == {"proposals": [proposal()]}
+    # A cached answer that does not validate against the current conversation is not trusted.
+    usage._cache[key] = json.dumps({"proposals": [proposal(exact_quote="we will refund $90.00 today")]})
+    hit = ai()
+    assert (hit["cache_hit"], hit["tokens"], hit["proposals"]) == (True, 0, [])
+    assert hit["dropped"] and len(ai.completions.calls) == 1

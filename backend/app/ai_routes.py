@@ -21,6 +21,7 @@ from .ai_usage import ExtractionUsage
 from .auth import CurrentMerchant, Store
 from .customer_portal import CustomerPortal
 from .next_action import Explanation, collect, explain
+from .remedies import RemedyRanking, rank, suggest
 from .resolution_workspace import ResolutionWorkspace
 
 router = APIRouter(tags=["AI promise extraction"])
@@ -153,3 +154,32 @@ def explain_next_action(
     Advisory only: it never approves, submits or records anything."""
     action = collect(case_id, merchant.id, store)
     return explain(action, client, settings, data_policy=data_policy, usage=usage, merchant_id=merchant.id)
+
+
+@router.post(
+    "/resolution-cases/{case_id}/ai/rank-remedies",
+    response_model=RemedyRanking,
+    responses={404: {"description": "Resolution case not found"}},
+)
+def rank_remedies(
+    case_id: UUID,
+    request: Request,
+    store: Store,
+    merchant: CurrentMerchant,
+    settings: Annotated[ExtractionSettings, Depends(get_ai_settings)],
+    client: Annotated[groq.Groq | None, Depends(get_ai_client)],
+    data_policy: Annotated[str, Depends(get_data_policy)],
+    usage: Annotated[ExtractionUsage, Depends(get_usage)],
+):
+    """Classify the issue and buyer preference, rank the code-built remedy options with a
+    one-line reason each, and draft a buyer message, from the masked conversation.
+
+    Uses the extraction switch, data policy, cache, token cap and daily budget. Any option,
+    amount or number outside the listed options falls back to code order and a template.
+    Advisory only: it never records promises, publishes offers or refunds."""
+    suggestions = suggest(case_id, merchant.id, store, request.app.state.settings.remedy_partial_refund_percent)
+    stored = CustomerPortal(store).merchant_messages(case_id, merchant.id)
+    from .platform_imports import imported_transcript
+    messages = (conversation_transcript(stored) + imported_transcript(store, case_id, merchant.id))[-200:]
+    return rank(case_id, suggestions, messages, client, settings, data_policy=data_policy,
+                usage=usage, merchant_id=merchant.id)

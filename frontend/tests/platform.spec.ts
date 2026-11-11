@@ -12,6 +12,17 @@ test("owner, buyer and staff complete the merchant operations workflow", async (
   await page.getByLabel("Password", { exact: true }).fill("synthetic-ui-password-123");
   await page.getByRole("button", { name: "Create workspace", exact: true }).last().click();
   await expect(page.getByRole("heading", { name: "Keep every commitment moving." })).toBeVisible();
+  // Operations renders in the shared workspace shell: sidebar link, breadcrumb, workspace header and metric cards.
+  await expect(page.getByRole("complementary", { name: "Workspace navigation" }).getByRole("link", { name: "Operations" })).toHaveAttribute("aria-current", "page");
+  await expect(page.getByRole("navigation", { name: "Breadcrumb" })).toHaveText(/Workspace\s*Operations/);
+  await expect(page.locator(".workspace-intro h1")).toHaveText("Keep every commitment moving.");
+  await expect(page.getByRole("button", { name: "Overview", exact: true })).toHaveAttribute("aria-current", "page");
+  const average = page.locator(".status-metric").filter({ hasText: "Average resolution" });
+  await expect(average.locator("strong")).toHaveText("—");
+  await expect(average.locator(".metric-note")).toHaveText("No closed-case sample");
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
+  await page.setViewportSize({ width: 1440, height: 1000 });
   const cookie = (await context.cookies()).find(c => c.name === "resolve_merchant_session")!;
   expect(cookie.httpOnly).toBeTruthy();
   const headers = { Authorization: "Bearer " + cookie.value };

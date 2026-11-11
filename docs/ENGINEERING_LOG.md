@@ -3523,6 +3523,709 @@ playwright test`): 21 passed, 5 skipped, 0 failed.
   `PUT /cases/{id}/commitment` exists; adding it needs a proxy entry and a
   form.
 
+### CHG-053 - Inbox crash after the main merge: promise-health map passed again
+
+**Date:** 10 November 2026 (Asia/Calcutta). Branch `feat/ai-part`, after merging
+`main` (`13ac7ed`, which includes Navneet's `1158673` refactor). Frontend only.
+
+**Objective:** after the merge, `/workspace` crashed in `InboxPane` at
+`risk.get(item.id)`. The cause: the refactored `Workspace` render no longer
+passed the promise-health map (from CHG-050) to `InboxPane`, so `risk` was
+`undefined`. `tsc` also flagged it, together with a second merge gap.
+
+**Files and resulting behavior:**
+
+- **`frontend/components/workspace.tsx`:**
+  - **Map passed again:** `Workspace` passes its existing `risk` state to
+    `InboxPane` again. The state is filled by the existing `loadRisk()`, which
+    makes one `GET /resolution-cases/promise-health?limit=200` request per
+    inbox load and leaves the map unchanged if the call fails.
+  - **Safe default:** `InboxPane`'s `risk` prop is now optional. It defaults to
+    a shared empty `Map` (`NO_RISK`), so the rows render plainly if the map is
+    ever missing.
+  - **Refactor kept:** Navneet's refactor is otherwise unchanged.
+- **`frontend/components/case-desk.tsx`:** restored the `useEffect`/`useState`
+  import that the merge dropped. Without it, the merged `CaseDesk`
+  (`customerVisited`) fails to type-check. No behavior change.
+- **`frontend/tests/promise-health.spec.ts`:** a new test, "the inbox renders
+  with and without promise-health data". It uses mocked promise-health list
+  responses with synthetic values:
+  - **With data:** a broken, overdue entry for the fixture case. The row shows
+    "$40.00 at risk" and "Overdue".
+  - **Without data:** an HTTP 500 response, then an empty list. The row still
+    renders, with no risk line.
+  - **Throughout:** no page errors.
+
+**Reason and decision IDs:** DEC-089.
+
+**Validation actually performed:**
+
+- `npm run check`: failed before the fix (`TS2741` missing `risk`, `TS2304`
+  `useState`/`useEffect`). It passed after the fix.
+- `npx playwright test tests/promise-health.spec.ts`: 5 passed.
+- **The new test catches the bug:** with `risk={risk}` removed temporarily, it
+  failed (`.case-row-risk` not found). The fix was then restored.
+- **Full Playwright suite** (`PLAYWRIGHT_CHROMIUM_EXECUTABLE=<system Chrome> npx
+  playwright test`): 20 passed, 5 skipped, 4 failed. Rerunning the four
+  failing specs gave the same results. None of the four depend on the inbox
+  risk map, and none could be checked before the merge, because `/workspace`
+  did not compile or render there:
+  - **`platform.spec.ts` and `platform.performance.spec.ts`** (new in
+    `1158673`): `ECONNREFUSED 127.0.0.1:8025`. They belong to
+    `playwright.platform.config.ts`, which starts that backend, but the default
+    config also picks them up.
+    - **Own config not runnable here:** that config doesn't read
+      `PLAYWRIGHT_CHROMIUM_EXECUTABLE`, and the bundled Chromium isn't
+      installed, so the browser didn't launch.
+  - **`investigations.spec.ts`:** times out waiting for the "Automatic
+    investigation details" `<summary>`. After the merge, `Workspace` renders
+    `InvestigationReviewPanel` directly in the desk pane, without the CHG-050
+    collapsed `<details>` wrapper.
+  - **`settings.spec.ts`** (shell test): at 390px `scrollWidth` is 410, so the
+    page overflows horizontally after the merge.
+  - **Not fixed here:** these are outside this inbox fix, and the refactor was
+    to stay as it is.
+- **Backend:** not changed, so not re-run.
+
+**Known limitations and follow-up:**
+
+- **Test data is mocked:** the promise-health values in the new test are
+  mocked and synthetic, and not from a real provider. The inbox list and the
+  case are from the isolated fixture backend.
+- **Load frequency:** promise health still loads once per inbox load (including
+  filter and search changes), as before the merge; it isn't cached across
+  loads.
+
+### CHG-054 - Structured case layout restored on the merged markup
+
+**Date:** 10 November 2026 (Asia/Calcutta). Branch `feat/ai-part`, after merge
+`13ac7ed` and CHG-053. Frontend only.
+
+**Objective:** after the merge, the case overview lost its structure. The
+merge resolved `frontend/app/globals.css` to the merge-base styles plus the
+CHG-044 rules only. That dropped both our CHG-047 to CHG-052 rules (223 lines:
+spacing and type tokens, case areas, Next step card, money summary, checks,
+details cards, settings cards, phone top bar) and Navneet's narrow-screen block
+from `1158673` (11 lines). It also dropped some markup:
+
+- **Our side:** the overview's AI slot. The investigation and promise
+  suggestions rendered bare under the case, touching the pane edge.
+- **Navneet's side:** the deferred Zendesk section, the deferred investigation
+  and the `CaseOperationsPanel` (offers, returns, dispute safety and evidence).
+
+The overview timeline card also showed "Loading events…" forever, because
+`1158673` loads events only on the Evidence timeline tab.
+
+**Files and resulting behavior:**
+
+- **`frontend/app/globals.css`:**
+  - **Both lost blocks re-appended:** Navneet's 11-line block and our 223
+    lines, formatted with Prettier to match the file. The four hex colours in
+    the block (`#8a2433`, `#b4384a`, `#c98a1b`, `#fde7ea`) are the CHG-047
+    broken-promise colours that existed before the merge; nothing else adds a
+    colour value.
+  - **New rules (spacing and border tokens only):**
+    - **Collapsed sections:** `details-card` children get padding, and nested
+      cards inside them have no second border.
+    - **Case operations:** `.desk-operations` holds the operations panel, with
+      `[hidden]` honoured.
+    - **Operations panel:** its titles and summaries use the case type scale.
+- **`frontend/components/workspace.tsx`:**
+  - **AI slot restored:** the `assistant` slot holds Promise suggestions, then
+    "Automatic investigation details" as Navneet's `DeferredDetails`
+    (`details-card`, `unmountOnClose`). It mounts and requests
+    `/investigations` only when opened.
+  - **Case operations restored:** `CaseOperationsPanel` (with `staffRole`) is
+    passed back to the case desk.
+  - **Bare panels removed:** the two panels no longer render separately in the
+    desk pane.
+- **`frontend/components/case-desk.tsx`:**
+  - **Zendesk:** the ticket section is in `DeferredDetails` ("Zendesk ticket",
+    `details-card`) again, so there is no `/helpdesk` request until it's
+    opened.
+  - **Case operations:** a new `operations` slot renders inside the desk
+    content, below the three areas. It stays mounted and hidden off the
+    overview, as in `1158673`, so drafts survive tab changes.
+  - **Timeline card:** when events haven't been loaded, it says "Events load
+    when you open the evidence timeline." and offers "Show events", which opens the Evidence timeline tab.
+    "Loading events…" shows only while a load is running.
+- **`frontend/playwright.config.ts`:** `testIgnore` skips `platform.spec.ts` and
+  `platform.performance.spec.ts`. They run with `playwright.platform.config.ts`.
+- **`frontend/playwright.platform.config.ts`:** accepts
+  `PLAYWRIGHT_CHROMIUM_EXECUTABLE`, like the default config, so it can run with
+  the system Chrome.
+- **Tests:**
+  - **`tests/investigations.spec.ts`:** one click on the "Automatic
+    investigation details" summary. The merged test clicked two summaries; with
+    one collapsed section, the second click closed it again.
+  - **`tests/promise-health.spec.ts`, proxy test:** the reconciliation gate is
+    now installed before sign-in. The inbox selects the first case during
+    sign-in, so the gated request could slip through first. It failed when run
+    after `investigations.spec.ts` and passed on its own.
+  - **`tests/promise-health.spec.ts`, new test:**
+    - **Structure:** the three areas are present, with the Next step inside
+      Case summary.
+    - **Deferred loading:** no `/investigations`, `/helpdesk` or `/timeline`
+      request is made on load. Both collapsed sections open with their
+      content.
+    - **Timeline card:** shows the "Events load…" state, and its "Show events" button opens
+      the Evidence timeline tab.
+    - **Overflow:** none at 390px.
+
+**Reason and decision IDs:** DEC-090.
+
+**Validation actually performed:**
+
+- `npm run check`: passed.
+- **Screenshots:**
+  - **Pages and widths:** case overview and settings at 1280px and 390px.
+  - **Three states:**
+    - **Before:** `4652c68`, with the frontend folders checked out temporarily
+      and restored afterwards.
+    - **Merged:** `648ad8a`.
+    - **Restored:** this change. It also has the investigation and Zendesk
+      sections opened.
+  - **Method:** a scratch Playwright script on the isolated fixture backend.
+    The screenshots aren't committed.
+  - **Width at 390px:**
+
+    | Page | Merged | Restored |
+    | --- | --- | --- |
+    | Case overview | 501px | 390px |
+    | Settings | 410px | 390px |
+- **Specs on their own:** `investigations`, `promise-health` and `settings`:
+  8 passed and 1 failed (the order-dependent proxy test). After the gate fix,
+  the investigations and proxy pair passed.
+- **Full default suite, first run:** 20 passed, 5 skipped, 3 failed, all in
+  `workspace.spec.ts`:
+  - **Two were caused by this change:** the new timeline button, then named
+    "Open evidence timeline", also matched the tab locator
+    `getByRole('button', { name: 'Evidence timeline' })`. It was renamed
+    "Show events".
+  - **One was the customer-message test**, which waits for a merchant reply on
+    the customer page. It passed when `workspace.spec.ts` was rerun alone (8
+    passed, 3 skipped) and in the final full run. Treated as order- or
+    timing-dependent and not changed.
+- **Full default suite, final run** (`PLAYWRIGHT_CHROMIUM_EXECUTABLE=<system
+  Chrome> npx playwright test`, platform specs now excluded): 23 passed,
+  5 skipped, 0 failed.
+- **Platform suite** (`npx playwright test -c playwright.platform.config.ts`,
+  system Chrome): 2 passed. This includes Navneet's performance test, which
+  confirms that `/timeline`, `/investigations` and `/helpdesk` are not
+  requested on the initial overview and that there's no 390px overflow.
+- **Backend:** not changed, so not re-run.
+
+**Known limitations and follow-up:**
+
+- **Before screenshots:** the `4652c68` frontend ran against the current
+  backend, so they show the old layout but not old backend behaviour.
+- **Overview timeline:** the overview no longer shows recent events until the
+  Evidence timeline tab has loaded them. This is the cost of Navneet's deferred
+  loading, kept as it is.
+- **Operations panel text:** its upper-case eyebrow ("RESOLUTION WORKFLOW") and
+  its texts are Navneet's and were left unchanged.
+
+### CHG-055 - Case overview cleanup in our components
+
+**Date:** 11 November 2026 (Asia/Calcutta). Branch `feat/ai-part`. Frontend only;
+existing colour tokens only.
+
+**Scope:** only our components changed: the Next step card, Missing before
+refund, the AI explanation, the money summary, Promise check, Promise
+suggestions and the compact Recent activity card. Navneet's components were not
+changed: Promises & evidence, Zendesk, the automatic investigation, the
+resolution workflow, timeline loading and the Evidence timeline tab.
+
+**Files and resulting behavior:**
+
+- **`frontend/components/case-desk.tsx`, `NextStep`:**
+  - **"Review promise" (primary):** replaces "Refresh evidence" while a
+    promise needs work. That means an unfinished prerequisite of the refund
+    promise (for example the return milestone), or a refund promise that needs
+    review.
+  - **What the button does:** it opens that promise's row in the Promises &
+    evidence list, scrolls it into view and focuses its summary. The row is
+    found by its position, because the list renders `item.promises` in order;
+    Navneet's component is unchanged.
+  - **Other buttons kept:** "Refresh evidence" stays where refreshing really is
+    the action, such as after the return is confirmed and the payment evidence
+    is stale. "Check status" stays for a submitted refund.
+  - **Explanation on request only:** there is no summary text until the
+    merchant clicks "Explain with AI".
+  - **Short explanation:** the AI or template text is cut to at most two
+    sentences. Any clause that repeats the card's title, reason or steps is
+    dropped, using a word comparison in `brief()`. A clause with an amount stays
+    unless the card already shows that amount. If nothing is left, it says
+    "Nothing to add beyond the next step above."
+- **`case-desk.tsx`, `MoneySummary`:** "Checked …" now uses the viewer's local
+  time, with UTC in the tooltip.
+  - **Refund progress kept:** the "Refund progress %" bar came from Navneet's
+    original `PaymentPanel` (`2aa9327`) and was only moved into the money
+    summary in CHG-050. Under the instruction, it's his and stays.
+- **`case-desk.tsx`, `RecentActivity`:** event times use the viewer's local
+  time, with UTC in the tooltip. Navneet's Evidence timeline tab is unchanged.
+- **`frontend/components/case-checks.tsx`:** due labels ("Due Nov 14") use the
+  viewer's local date. This adds `brief()`.
+- **`frontend/lib/domain.ts`:** adds `localDateText`. Existing helpers are
+  unchanged.
+- **`frontend/components/promise-health.tsx`:** when there is no accepted refund
+  promise to check and the refund promise needs review, the card says "Paused –
+  promise needs review". Otherwise it keeps the earlier text.
+- **`frontend/components/promise-extraction.tsx`:** before any result, the
+  panel is one line: "Promise suggestions", the "Suggestions only…" note and the
+  "Extract promises from conversation" button. The full panel appears once
+  there is a result or an error.
+- **`frontend/app/globals.css`:** one-line suggestions row and the paused text.
+  Spacing, type and colour tokens only.
+
+**Tests:** `frontend/tests/promise-health.spec.ts`:
+
+- **Updated:**
+  - **Next step button:** shows "Review promise", not "Refresh evidence".
+  - **Explanation:** no text until requested. The template explanation is now
+    "Promised $30.00 after return; $0.00 refunded; $30.00 remaining.", without
+    the "return not confirmed → confirm the return" clauses the first step
+    already says.
+  - **Mocked AI text (synthetic):** shortened to "Promised $30.00 after the
+    return; nothing refunded yet."
+- **New, with viewer time zone Pacific/Kiritimati (UTC+14):**
+  - **Review promise:** opens and focuses the Return milestone row and scrolls
+    it into view.
+  - **Suggestions:** start as one line with the button.
+  - **Local dates:** due labels in Promise check and the money summary match
+    the local date of the API deadline.
+- **New, with mocked responses:** the summary sets the refund promise to
+  `needs_review` and promise health returns no items. Promise check then says
+  "Paused – promise needs review".
+
+**Reason and decision IDs:** DEC-091.
+
+**Validation actually performed:**
+
+- `npm run check`: passed.
+- **Affected specs:** `promise-health` and `promise-extraction` passed after
+  three test-only fixes:
+  - **Row locator:** the refund row's "Requires Return milestone" text matched
+    a hasText filter, so the test now matches on the row's summary.
+  - **Route regex:** the mock regex also matched the inbox URL; it's now
+    limited to case ids.
+  - **Mocked case id:** the mock needed the real case id.
+- **Screenshots:** before (`f42c73b`) and after, at 1280 and 390px, of the case
+  overview, the Next step after "Explain with AI", and the page after "Review
+  promise". The fixture backend was used and the screenshots aren't committed.
+  There is no overflow at 390px.
+- **Full default suite** (`PLAYWRIGHT_CHROMIUM_EXECUTABLE=<system Chrome> npx
+  playwright test`): 24 passed, 5 skipped, 1 failed.
+  - **The failure:** `workspace.spec.ts`, "an unauthenticated customer follows
+    a private link…", waiting for the merchant reply on the customer page. It
+    is the same failure recorded under CHG-054, in Navneet's customer-portal
+    flow.
+  - **Rerun alone:** `workspace.spec.ts` gave 8 passed, 3 skipped.
+  - **Repeated three times on its own:** the first run passed. The next two
+    failed on duplicate messages left in the shared fixture backend
+    (strict-mode violations), so a repeated run isn't a valid check for this
+    test.
+  - **Not fixed here:** it is outside this change.
+- **Platform suite:** not re-run; no platform-only code changed.
+- **Backend:** not changed, so not re-run.
+
+**Known limitations and follow-up:**
+
+- **Word-based trimming:** `brief()` compares words, so a reworded AI sentence
+  that restates a step can survive, and a new point that shares most of its
+  words with a step can be dropped. The backend fact guard is unchanged.
+- **Scroll target:** "Review promise" relies on the promise list keeping
+  `item.promises` order. A stable anchor on Navneet's rows would be sturdier,
+  but that needs his agreement.
+- **Paused message scope:** "Paused" is only shown for a refund promise that
+  needs review, because the check covers accepted refund promises only.
+
+### CHG-056 - Operations page inside the workspace shell
+
+**Date:** 11 November 2026 (Asia/Calcutta). Branch `feat/ai-part`. Frontend only;
+existing colour tokens only.
+
+**Objective:** `/workspace/operations` used its own separate layout: a brand
+header with text links, pill tabs and large tiles. It now uses the shared
+workspace shell, like Settings. All of Navneet's features, requests, data,
+actions and text are unchanged.
+
+**Files and resulting behavior:**
+
+- **`frontend/components/workspace-shell.tsx` (ours):**
+  - **New "operations" page:** a sidebar "Operations" link, a top-bar
+    Operations button (marked current on that page), the breadcrumb "Workspace
+    > Operations" and a mobile-nav link.
+  - **`merchant` prop:** now takes any `{ name }`, so the operations identity
+    can give the avatar initials.
+- **`frontend/components/operations-console.tsx` (Navneet's page), frame and
+  styling only:**
+  - **Shell:** renders inside `WorkspaceShell`. The separate brand header and
+    `OperationsNavigation` links are no longer shown; the function is still
+    exported.
+  - **Header:** the workspace header style ("Merchant operations" eyebrow,
+    title, subtitle), with the same text as before. The workspace name and role
+    move to a small line under the subtitle. Refresh gets an icon.
+  - **Metric tiles:** the workspace metric-card style (icon, label, value).
+    "Average resolution" shows "—" with a small "No closed-case sample" note
+    when there is no sample.
+  - **Tabs:** the case-tab style (`case-tabs`, `active`, `aria-current`).
+    Labels and enabled rules are unchanged.
+  - **Sections:** unchanged `section-card`s, now spaced and sized by the
+    workspace tokens through the new `.ops-page` wrapper.
+  - **Loading line:** uses the shared `panel-state` style.
+  - **Unchanged:** every request, form, action and text.
+- **`frontend/components/workspace.tsx`:** the case inbox sidebar and mobile
+  nav get the same Operations link (not in demo mode). Navneet's top-bar
+  Operations button there is unchanged.
+- **`frontend/app/globals.css`:** `.ops-page` layout and type, the metric note,
+  the identity line and the case-style tab bar. The mobile nav now scrolls
+  inside its bar, because a fourth link made it 406px wide at 390px.
+  `operations.css` is unchanged.
+- **`/account` left as it is:** it's the sign-in, sign-up and invitation page,
+  shown before there is a workspace session, and it uses the same access layout
+  as `/login`.
+
+**Tests:** `frontend/tests/platform.spec.ts` (run with
+`playwright.platform.config.ts`). After sign-up it checks:
+
+- the sidebar Operations link is the current page;
+- the breadcrumb reads "Workspace › Operations";
+- the workspace-style header shows "Keep every commitment moving.";
+- the Overview tab is current;
+- "Average resolution" shows "—" with the "No closed-case sample" note;
+- there is no overflow at 390px.
+
+The existing workflow steps are unchanged.
+
+**Reason and decision IDs:** DEC-092.
+
+**Validation actually performed:**
+
+- `npm run check`: passed.
+- **Screenshots:** before (`93323f5`) and after, at 1280 and 390px, of the
+  Overview and Connections tabs. They used a synthetic workspace on Navneet's
+  isolated platform fixture, run with a scratch config. Case inbox and settings
+  were also captured with the new link. The screenshots aren't committed.
+- **Width at 390px:**
+
+  | State | Width |
+  | --- | --- |
+  | Before | 390px |
+  | After, first try | 406px (mobile nav) |
+  | After, fixed | 390px |
+
+  The case inbox and settings were also 390px wide at 390px.
+- **Platform suite** (`npx playwright test -c playwright.platform.config.ts`,
+  system Chrome): 2 passed. This includes Navneet's performance test.
+- **Full default suite** (`PLAYWRIGHT_CHROMIUM_EXECUTABLE=<system Chrome> npx
+  playwright test`): 25 passed, 5 skipped, 0 failed.
+- **Backend:** not changed, so not re-run.
+
+**Known limitations and follow-up:**
+
+- **Hard-coded shell chips:** the shell's "Connected · Sandbox" chip and
+  "Sandbox connection" card are fixed text, as on Settings. They don't reflect
+  a platform workspace's connection state.
+- **Tabs on phones:** the operations tabs scroll sideways at narrow widths
+  instead of wrapping.
+- **Form colours:** `operations.css` still sets Navneet's own form and record
+  colours inside sections; they were left unchanged.
+
+### CHG-057 - AI caches store raw model output and re-validate every hit
+
+**Date:** 11 November 2026 (Asia/Calcutta). Branch `feat/ai-part`. Backend only.
+
+**Objective:** a cache hit must never skip validation. Before this change:
+
+- **Promise extraction:** the cache stored the validated `ExtractionResult`
+  and returned it as is.
+- **Next-action explanation:** the cache stored already-guarded text.
+
+A change to the validators or the case facts after an answer was cached would
+not apply on a hit.
+
+**Files and resulting behavior:**
+
+- **`backend/app/ai_extraction.py`:**
+  - **What is cached:** only the provider's raw JSON string, and only after a
+    clean validation (the same "only `low_confidence`" rule as before).
+  - **On a hit:** the stored string goes through the same JSON parsing, schema
+    check, quote and amount checks and consolidation against the current
+    messages. The result is `cache_hit=true` with zero tokens.
+- **`backend/app/next_action.py`:**
+  - **What is cached:** the raw JSON string, stored only after the text passed
+    the fact guard.
+  - **On a hit:** it is parsed and fact-guarded again against the current
+    `CaseFacts`, and falls back to the template if it no longer passes.
+- **`backend/app/remedies.py`** (CHG-058): its ranking cache follows the same
+  rule from the start.
+- **Unchanged:** the cache keys, the per-merchant scope, the budget
+  accounting, and the rule that failures are never cached.
+
+**Tests:**
+
+- **`tests/test_extraction_cost.py`:** the cached value is the raw provider
+  JSON. A cached answer whose quote is not in the conversation is dropped on
+  the hit, with no second model call.
+- **`tests/test_next_action.py`:** the cached value is the raw reply. A cached
+  reply with an invented amount falls back to the template on the hit.
+
+**Reason and decision IDs:** DEC-093.
+
+**Validation actually performed:** see CHG-058 (same change set). The existing
+cache tests in `test_extraction_cost.py` and `test_next_action.py` still pass
+unchanged.
+
+**Known limitations:** the cache is still in-process memory (as before), so it
+resets on restart and isn't shared between processes.
+
+### CHG-058 - Suggested remedies (code options, fact-guarded AI ranking, merchant-confirmed promises)
+
+**Date:** 11 November 2026 (Asia/Calcutta). Branch `feat/ai-part`. Backend,
+frontend, OpenAPI and README.
+
+**Audit (before building):**
+
+- **Refundable balance:** `ResolveStore._reconcile(...)` on the linked payment
+  case gives `captured_amount`, `completed_refund_amount` and
+  `pending_refund_amount`. The balance is captured minus completed minus
+  pending, the same base `promise_health.suggested_refund` uses.
+  `provider_hold` (dispute guard, blocking review exceptions, queued webhooks)
+  blocks refunds.
+- **Promise kinds that can be recorded before anything happens:**
+  - **`refund`:** an amount up to the capture.
+  - **`return`:** a milestone plus a return reference.
+- **Kinds that can't be:**
+  - **`store_credit_or_exchange` with `store_credit`:** needs an issued Shopify
+    credit transaction and account.
+  - **`replacement`:** needs a replacement reference and a tracker.
+- **One refund promise per capture:** `ResolutionWorkspace` allows one
+  cumulative refund promise per capture ("Use the existing cumulative refund
+  promise for this capture").
+- **Offers:**
+  - **Create:** `POST /platform/cases/{id}/offers` takes up to four distinct
+    promise choices (`promise_id`, `expected_revision`) and an expiry within 30
+    days. It supersedes earlier offers and invalidates approvals.
+  - **Buyer view:** buyers see only safe fields and accept or decline.
+  - **Before this change:** it didn't check amounts.
+- **ReturnPolicy:** set per merchant in `assurance_policies`. Fields: enabled,
+  window days, restocking fee, who pays shipping, inspection and photo
+  requirements, excluded products and instructions. The window is evaluated on
+  buyer return requests that carry a delivery date.
+
+**Resulting decisions:**
+
+- **No second offer system:** promises are created by the existing
+  `add_promise`, and publishing uses the existing offer endpoint.
+- **Unsupported kinds skipped:** store credit and replacement are listed as
+  unavailable, with the reason.
+- **Partial-refund policy:** none existed, so a small env setting was added.
+
+**Files and resulting behavior:**
+
+- **`backend/app/remedies.py` (new):**
+  - **`suggest()` (code only):**
+    - **Refund after return:** the balance minus the enabled policy's
+      restocking fee. Its milestone is `inspection_passed` when inspection is
+      required, otherwise `warehouse_received`. The return window is stated in
+      the description, because cases have no delivery date to check it
+      against.
+    - **Partial refund:** the configured percentage of the balance, rounded
+      down to the cent; the buyer keeps the item.
+    - **No refund options when:** no payment is linked, a hold applies, a
+      refund promise is already open, or nothing is left to refund.
+  - **`create()`:** recomputes the options and requires `expected_amount` to
+    match, otherwise returns 409. It records either a return promise plus a
+    refund that requires it, or one refund, through `add_promise`, which keeps
+    the captured-amount and one-refund-per-capture rules. It returns
+    `offer_choice` and publishes nothing.
+  - **`rank()` (Groq, masked with `mask_text`):**
+    - **What it returns:** an issue category, the buyer's preference, a
+      ranking with one-line reasons, and a buyer message.
+    - **Reuses:** the extraction switch, data policy, budget, token cap and
+      usage recording. The cache holds raw output only (CHG-057).
+    - **Fact guard:** every option must be ranked exactly once. Any amount or
+      number must be an option amount, categories must be known, and the text
+      can't mention an unoffered remedy (replacement, exchange, store credit,
+      voucher, gift card, coupon).
+    - **Fallback:** otherwise, code order and a template message.
+- **`backend/app/remedies_routes.py` (new):**
+  - `GET /resolution-cases/{id}/remedies`
+  - `POST /resolution-cases/{id}/remedies/promises`
+- **`backend/app/ai_routes.py`:** adds
+  `POST /resolution-cases/{id}/ai/rank-remedies`. Its transcript is the stored
+  conversation plus imported tickets, as for extraction.
+- **`backend/app/platform_operations.py`:** `publish()` now calls
+  `_check_refund_balance`. Each refund choice on a linked payment must be at
+  most the current refundable balance, with no hold, otherwise 409. Non-refund
+  choices and unlinked cases behave as before.
+- **`backend/app/settings.py`:** `RESOLVE_REMEDY_PARTIAL_REFUND_PERCENT`
+  (default 20, range 1–90).
+- **`backend/app/main.py`:** registers the remedies router.
+- **`postman/contracts/resolve.openapi.json`:** regenerated.
+- **`backend/README.md`:** new "Suggested remedies" section.
+- **Frontend:**
+  - **`components/suggested-remedies.tsx` (new):** the first card in
+    Promises & AI.
+    - **Shows:** the balance formula, the options as radio choices, an optional
+      "Rank with AI" step (with the AI label or the fallback reason, the
+      ranked order with reasons, and a copyable buyer message), and the
+      unavailable kinds.
+    - **Create promises:** records the chosen option.
+    - **Publish offer:** a separate button, with an expiry field (default one
+      week), posts the created choice to the existing platform endpoint. It's
+      never automatic.
+  - **Wiring:**
+    - **`case-desk.tsx`:** a new `remedies` slot.
+    - **`workspace.tsx`:** passes the card in and reloads the case after
+      creation.
+    - **Proxy allow-list:** GET `remedies`, POST `remedies/promises` and
+      `ai/rank-remedies`.
+    - **`globals.css`:** card styles with existing tokens, and a `sr-only`
+      helper.
+
+**Reason and decision IDs:** DEC-094.
+
+**Alternatives and tradeoffs:**
+
+- **Rejected: recording several refund options side by side for one offer.**
+  It was tried first and rejected because it contradicts the
+  cumulative-refund-promise rule. One option is recorded per case. The offer
+  endpoint still accepts several choices, for example the existing return
+  promises.
+- **Rejected: a database table for the partial-refund policy.** An env
+  setting avoids a migration for one number.
+
+**Tests:**
+
+- **`backend/tests/test_remedies.py` (new, 28 tests):**
+  - **Options:** captured − completed − pending with simulated PayPal
+    refunds; the policy fee, inspection and window; the env percentage; and no
+    options when unlinked, an open refund, fully refunded or held.
+  - **Creating promises:**
+    - **Shape:** the return and its dependent refund, or the single partial
+      refund.
+    - **Stale or unavailable:** a stale amount returns 409, and nothing is
+      recorded.
+    - **Limits:** an unknown option returns 422, and only one refund option
+      per case is recorded.
+    - **No publishing:** no offer is published by creation.
+  - **Ranking (fake client):**
+    - **Normal path:** masking (no card digits reach the provider), the order
+      and the label.
+    - **Fact guard:** six guard violations fall back to code order and the
+      template.
+    - **Fallbacks without a call:** the disabled, unconfigured, policy, budget
+      and bad-JSON paths.
+    - **Cache:** it stores raw output, and a stale cached answer is re-guarded
+      on the hit.
+    - **Route:** it uses the AI dependencies and records nothing.
+  - **Publishing (platform session):** a refund choice above the balance after
+    a later refund returns 409, and a choice within the balance publishes.
+- **`frontend/tests/remedies.spec.ts` (new):**
+  - **Fresh linked case:**
+    - **Card and options:** the card is first in Promises & AI, with the
+      balance formula, two options and the unavailable list.
+    - **Mocked AI ranking (synthetic):** reorders the options and shows the
+      label and the message.
+    - **Create promises:** records one refund promise and makes no offer
+      request.
+    - **Width:** no overflow at 390px.
+    - **Publish offer (mocked response):** sends exactly the created choice
+      with a future expiry, only after the click.
+  - **Fixture case:** with an open refund promise, it gets no suggestion.
+
+**Validation actually performed:**
+
+- **Backend:** `uv run pytest`: 498 passed, 63 skipped; the skips are the
+  existing PostgreSQL and optional-provider tests. `uvx ruff check` on the new
+  files: passed. `tests/test_remedies.py`: 28 passed.
+- **OpenAPI:** `uv run python scripts/export_openapi.py` regenerated the
+  contract with the three new paths.
+- **Frontend:**
+  - `npm run check`: passed.
+  - **Full default Playwright suite** (system Chrome): 27 passed, 5 skipped,
+    0 failed.
+  - **Platform suite** (`playwright.platform.config.ts`): 2 passed. Navneet's
+    offer workflow still publishes return-promise offers after the
+    balance-check change.
+- **Screenshots:** the card with options, after the mocked ranking, and after
+  creation, at 1280 and 390px, with a scratch script on the fixture backend.
+  Not committed.
+
+**Known limitations and follow-up:**
+
+- **Evidence level:** the AI ranking was validated with fake clients and
+  mocked browser responses only. No live Groq call was made in this change.
+- **Return window:** stated in the option, not checked, because cases have no
+  delivery date.
+- **Partial-refund policy:** a server-wide percentage, not per merchant.
+- **One option per case:** only one refund option can become a promise per
+  case. Offering the buyer both a partial refund and a refund-after-return
+  would need a change to the cumulative-refund rule, which is Navneet's
+  decision.
+- **Store credit and replacement:** still manual (record them once the credit
+  or shipment exists).
+
+### CHG-059 - Buyer portal offer card: one bordered row per choice
+
+**Date:** 11 November 2026 (Asia/Calcutta). Branch `feat/ai-part`. Frontend only;
+existing colour tokens only. The behaviour, requests and decision calls are
+unchanged.
+
+**Objective:** the buyer's "Resolution offer" card had several problems:
+
+- raw labels such as "refund · USD 120.00";
+- inline buttons;
+- "completed." running into "Accepted option" with no space;
+- no structure between choices.
+
+**Files and resulting behavior:**
+
+- **`frontend/components/buyer-resolution.tsx` (offer card markup only):**
+  - **One bordered row per choice:**
+    - **Plain-words title:**
+      - **Refunds:** "Refund after return" when the refund has conditions
+        and the merchant's wording mentions a return. "Partial refund" when
+        the wording says partial. Otherwise "Refund".
+      - **Other kinds:** "Return your item", "Replacement" and so on.
+    - **Amount:** right-aligned with the shared money formatter ("$120.00").
+    - **One muted line:**
+      - **Return condition:** "You'll get this once your return arrives."
+      - **Other conditions:** "You'll get this once the required steps are
+        completed."
+      - **No conditions:** the merchant's own description.
+  - **Accept this option:** the primary button at the bottom of each row.
+  - **Decline offer (secondary):** declines the whole offer, as before. It
+    sits in the row when there is one choice, and in a footer row ("None of
+    these work for you?") when there are several.
+  - **After a decision:** the existing status sentence becomes a notice at the
+    top (success when accepted, info when declined or stale). The chosen row
+    gets an "Accepted" pill and the green tint, and the buttons are hidden.
+  - **Unchanged:** the texts tests use ("Resolution offer", "Accept this
+    option", "Your acceptance has been recorded…").
+- **`frontend/app/globals.css`:** offer-card row, amount, note, pill and action
+  styles. At 520px or less the buttons are full width.
+
+**Validation actually performed:**
+
+- `npm run check`: passed.
+- **Screenshots:** before (`5f50bc9`) and after, at 1280 and 390px, of an open
+  offer and an accepted offer. A synthetic refund-after-return choice plus a
+  return choice on the isolated platform fixture, captured with a scratch
+  script. There is no overflow at 390px. Not committed.
+- **Platform suite** (`playwright.platform.config.ts`, system Chrome):
+  2 passed. This covers the buyer accepting an offer in this card.
+- **Full default suite:** not re-run, because the buyer offer card isn't
+  shown there (fixture key sessions have no platform offers).
+- **Backend:** not changed.
+
+**Known limitations:** the titles are inferred from the kind, the conditions
+flag and the merchant's wording. The buyer API doesn't say which prerequisite a
+refund waits for, so "Refund after return" relies on the wording mentioning a
+return.
+
 ## Decision register
 
 ### DEC-001 - Keep FastAPI/Pydantic and the existing uv project
@@ -4336,6 +5039,55 @@ only when they add amounts or progress the steps don't. When the first step
 cannot be done on this page, the card says where it happens instead of
 offering a primary button that skips it.
 
+### DEC-089 - Optional enrichment never blocks the inbox
+
+Promise-health flags only enrich the inbox rows. The inbox gets them as an optional
+prop with an empty default, so a missing prop, a failed call or an empty list
+leaves plain rows instead of a crash. The page loads the data once and passes
+it down; rows never fetch it themselves.
+
+### DEC-090 - Deferred sections use the same card shape and stay deferred
+
+Secondary case sections (automatic investigation, Zendesk, case operations)
+keep Navneet's deferred loading: they request nothing until opened, and
+operations drafts survive tab changes. They take the same card shape and
+spacing as the overview cards. When a card's data hasn't been loaded, it says
+how to load it instead of showing a loading state that never ends.
+
+### DEC-091 - The next-step button does the action the card names
+
+The Next step's main button takes the merchant to the thing to act on, such as
+the promise to review, instead of a generic refresh. Explanations are opt-in
+and short, and never restate the card. Our dates and times use the viewer's
+zone, with UTC kept in tooltips. Shared components owned by Navneet are changed
+only with his agreement; ours work around them instead.
+
+### DEC-092 - Signed-in merchant pages share one workspace shell
+
+Every page a signed-in merchant uses (cases, orders, operations, settings) uses
+the same sidebar, top bar, breadcrumb, header, metric cards, tabs and card
+style. Pages owned by Navneet change only in their frame and styling: their
+requests, actions and text stay his. Pages shown before sign-in keep the access
+layout.
+
+### DEC-093 - Cache raw model output; validate on every use
+
+An AI cache stores only what the provider returned, never a checked result. Every
+hit goes through the same parsing, validators and fact guard against the current
+case, so a validator change or new case facts always apply, and a hit costs no
+tokens. Answers that fail validation are not cached.
+
+### DEC-094 - Remedies are suggested by code, ranked by AI, confirmed by the merchant
+
+Remedy options and amounts come only from code: the reconciliation balance
+(captured minus completed and pending), the return policy and a small
+partial-refund setting. Only kinds that can be recorded as promises up front
+are offered. The AI may only reorder the listed options, explain them in one
+line and draft a message; anything outside the list falls back to code. Creating
+promises and publishing the offer are two separate merchant actions. Both
+re-check the balance on the server, and both reuse the existing promise and
+offer endpoints and the one-refund-promise-per-capture rule.
+
 ## Open work and boundaries
 
 1. Verify import (if needed), SSL connection, migration startup, and worker
@@ -4361,7 +5113,7 @@ offering a primary button that skips it.
 ## Template for the next entry
 
 ```text
-### CHG-044 - Concrete change title
+### CHG-060 - Concrete change title
 Date:
 Objective:
 Files and resulting behavior:

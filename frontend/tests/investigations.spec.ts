@@ -10,12 +10,11 @@ test("merchant reviews an automatic blocked investigation without approving a re
     .fill("rslv_ui_test_fixture_key_not_a_real_secret");
   await page.getByRole("button", { name: "Sign in with access key" }).click();
   await page.getByRole("button", { name: /Connected refund fixture/ }).click();
+  // Diagnostic detail is collapsed by default and loads when opened.
   await page
     .locator("summary")
-    .filter({ hasText: "Automatic investigation" })
+    .filter({ hasText: "Automatic investigation details" })
     .click();
-  // Diagnostic detail is collapsed by default.
-  await page.getByText("Automatic investigation details").click();
   const panel = page.getByRole("region", { name: "Automatic investigation" });
   await expect(
     panel.getByRole("heading", {

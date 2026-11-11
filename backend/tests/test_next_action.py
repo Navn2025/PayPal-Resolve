@@ -321,3 +321,15 @@ def test_synthetic_eval_matches_its_own_seeded_plan():
         expected = {"partial_only": None, "no_refund": None}.get(plan["scenario"], plan["refunds"][-1][2]) \
             if plan["refunds"] else None
         assert row["hours"] == (round(expected, 2) if expected is not None else None), row
+
+
+def test_cache_holds_raw_output_and_guards_every_hit_again(client):
+    action, merchant = action_for(client)
+    text = "Promised $100.00 after the return; PayPal confirmed $20.00, so review a refund of the remaining $80.00."
+    fake, usage = FakeClient(reply(text)), ExtractionUsage()
+    explain(action, fake, settings(), data_policy=POLICY, usage=usage, merchant_id=merchant)
+    [(key, raw)] = usage._cache.items()
+    assert raw == reply(text)  # the provider's raw JSON, not the checked text
+    usage._cache[key] = reply("Refund $500.00 now.")
+    hit = explain(action, fake, settings(), data_policy=POLICY, usage=usage, merchant_id=merchant)
+    assert (hit.cache_hit, hit.source, hit.fallback_reason, len(fake.calls)) == (True, "template", "fact_guard", 1)

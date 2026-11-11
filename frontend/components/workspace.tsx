@@ -58,6 +58,7 @@ import { workflowLabels, type Operations, type Workflow } from "@/lib/customer";
 import { Badge, Brand, Button, Empty, Notice, remedyIcons } from "./ui";
 import { CaseDesk, type DeskTab } from "./case-desk";
 import { CaseOperationsPanel } from "./case-operations";
+import { SuggestedRemedies } from "./suggested-remedies";
 const InvestigationReviewPanel = dynamic(() =>
   import("./investigation-review").then((m) => m.InvestigationReviewPanel),
 );
@@ -174,6 +175,9 @@ function StatusMetrics({ cases, total }: { cases: CaseView[]; total: number }) {
   );
 }
 
+// Shared empty default: rows stay plain when promise-health is missing or failed.
+const NO_RISK: Risk = new Map();
+
 function InboxPane({
   cases,
   selected,
@@ -187,7 +191,7 @@ function InboxPane({
   loading,
   onNew,
   demo,
-  risk,
+  risk = NO_RISK,
 }: {
   cases: CaseView[];
   selected: string | null;
@@ -201,7 +205,8 @@ function InboxPane({
   loading: boolean;
   onNew: () => void;
   demo: boolean;
-  risk: Risk;
+  /** Promise-health flags by case id; optional so the inbox renders plain rows if they never load. */
+  risk?: Risk;
 }) {
   const needle = search.trim().toLowerCase();
   const items = cases.filter(
@@ -1198,6 +1203,47 @@ export function Workspace({
 
   const desk = item && (
     <CaseDesk
+      remedies={
+        demo ? undefined : (
+          <SuggestedRemedies
+            key={"remedies-" + item.id}
+            caseId={item.id}
+            request={request}
+            onCreated={() => void loadDetail(item.id)}
+          />
+        )
+      }
+      assistant={
+        demo ? undefined : (
+          <div className="ai-stack" aria-label="AI and promise checks">
+            <PromiseExtractionPanel
+              key={"extract-" + item.id}
+              caseId={item.id}
+              request={request}
+              onUse={(draft) => setDialog({ kind: "promise", draft })}
+            />
+            {/* Collapsed and loaded on open (Navneet's 1158673): no /investigations request until then. */}
+            <DeferredDetails
+              key={"investigation-" + item.id}
+              title="Automatic investigation details"
+              className="details-card"
+              unmountOnClose
+            >
+              <InvestigationReviewPanel caseId={item.id} request={request} />
+            </DeferredDetails>
+          </div>
+        )
+      }
+      operations={
+        demo ? undefined : (
+          <CaseOperationsPanel
+            key={"operations-" + item.id}
+            caseId={item.id}
+            promises={item.promises}
+            role={staffRole}
+          />
+        )
+      }
       item={item}
       tab={tab}
       setTab={setTab}
@@ -1295,6 +1341,12 @@ export function Workspace({
           {!demo && (
             <Link href="/workspace/orders" className="rail-link">
               <Package size={18} /> <span>Orders</span>
+              <ChevronRight className="rail-chevron" size={15} />
+            </Link>
+          )}
+          {!demo && (
+            <Link href="/workspace/operations" className="rail-link">
+              <Activity size={18} /> <span>Operations</span>
               <ChevronRight className="rail-chevron" size={15} />
             </Link>
           )}
@@ -1423,6 +1475,11 @@ export function Workspace({
               <Package size={16} /> Orders
             </Link>
           )}
+          {!demo && (
+            <Link href="/workspace/operations" className="button button-ghost">
+              <Activity size={16} /> Operations
+            </Link>
+          )}
           <Button
             variant={nav === "review" ? "primary" : "ghost"}
             onClick={() => setNav("review")}
@@ -1504,6 +1561,7 @@ export function Workspace({
                   loading={loadingList}
                   onNew={() => setDialog({ kind: "case" })}
                   demo={demo}
+                  risk={risk}
                 />
                 <div className="desk-pane">
                   {desk || (
@@ -1518,21 +1576,6 @@ export function Workspace({
                           ? "Reading your cases from the local backend."
                           : "Open a case from the inbox to see its promises and evidence."
                       }
-                    />
-                  )}
-                  {!demo && item && (
-                    <InvestigationReviewPanel
-                      key={item.id}
-                      caseId={item.id}
-                      request={request}
-                    />
-                  )}
-                  {!demo && item && (
-                    <PromiseExtractionPanel
-                      key={"extract-" + item.id}
-                      caseId={item.id}
-                      request={request}
-                      onUse={(draft) => setDialog({ kind: "promise", draft })}
                     />
                   )}
                 </div>

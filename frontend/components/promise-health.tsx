@@ -4,13 +4,15 @@ import { Notice } from "./ui";
 import { dueLabel, days, statusBadge, statusLabels, type CaseChecks } from "./case-checks";
 
 /** One line per accepted refund promise. Amounts live in the money summary; this shows status and timing only. */
-export function PromiseCheckList({ checks }: { checks: CaseChecks }) {
+export function PromiseCheckList({ checks, paused = false }: { checks: CaseChecks; paused?: boolean }) {
   const { health, next, error, loading } = checks;
   return <section className="section-card promise-health" aria-label="Promise check" aria-busy={loading}>
     <div className="section-head"><div><div className="eyebrow">Broken-promise check</div><h3>Promise check</h3></div></div>
     {error && <Notice>{error}</Notice>}
     {loading && <p className="panel-state" role="status">Checking promises…</p>}
-    {health && !health.items.length && <p className="panel-state">No accepted refund promise on a linked payment to check.</p>}
+    {health && !health.items.length && (paused
+      ? <p className="panel-state check-paused">Paused – promise needs review</p>
+      : <p className="panel-state">No accepted refund promise on a linked payment to check.</p>)}
     {!!health?.items.length && <ul className="check-list">{health.items.map((item) => {
       const due = dueLabel(item, health, next);
       return <li key={item.promise_id} className={`check-row health-${item.status}`} aria-label={`Promise ${statusLabels[item.status]}`}>

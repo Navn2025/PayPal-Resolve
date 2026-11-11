@@ -5,7 +5,9 @@ import { ReturnPolicyEditor } from "./assurance";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { platform, failureText } from "@/lib/platform";
 import { backendRequest } from "@/lib/http";
-import { Brand, Button, Notice } from "./ui";
+import { Activity, CircleAlert, Clock3, Layers3, RefreshCw, Timer } from "lucide-react";
+import { Button, Notice } from "./ui";
+import { WorkspaceShell } from "./workspace-shell";
 
 type Tab = "overview" | "alerts" | "imports" | "team" | "connections" | "audit";
 interface Me { merchant: { id: string; name: string }; actor_id: string; role: string }
@@ -92,14 +94,26 @@ export function OperationsConsole() {
   async function act(action: () => Promise<void>) { setBusy(true); setError(""); try { await action(); } catch (f) { setError(failureText(f)); } finally { setBusy(false); } }
   const owner = me?.role === "owner";
   const write = !!me && me.role !== "viewer";
-  return <main className="ops-shell"><header className="ops-header"><Link href="/" className="site-brand"><Brand /></Link><OperationsNavigation />
-    <div><strong>{me?.merchant.name ?? "Workspace operations"}</strong><small>{me?.role ? ` · ${me.role}` : ""}</small></div></header>
-    <div className="ops-title"><div><p className="eyebrow">MERCHANT OPERATIONS</p><h1>Keep every commitment moving.</h1><p>Review the work, resolve the gaps, and give buyers a clear next step.</p></div><Button disabled={busy||loading} onClick={() => void act(load)}>Refresh</Button></div>
-    <nav className="ops-tabs" aria-label="Operations sections">{(["overview", "alerts", "imports", "team", "connections", "audit"] as Tab[]).map(t => <button key={t} disabled={!ready || !me} onClick={() => { setTab(t); setSelected(null); }} aria-current={tab === t ? "page" : undefined}>{t === "alerts" ? "Missed promises" : t === "imports" ? "Support imports" : t[0].toUpperCase() + t.slice(1)}</button>)}</nav>
+  // The shared workspace frame and the workspace header, metric cards and case tabs; sections keep the existing card style.
+  const metrics = dashboard ? [
+    { label: "Cases", value: String(dashboard.case_count), Icon: Layers3, tone: "blue" },
+    { label: "Overdue promises", value: String(dashboard.overdue_promises), Icon: CircleAlert, tone: "amber" },
+    { label: "Awaiting evidence", value: String(dashboard.awaiting_evidence), Icon: Clock3, tone: "purple" },
+    { label: "Average resolution", value: dashboard.resolution_time.average_hours === null ? "—" : `${dashboard.resolution_time.average_hours} hours`,
+      note: dashboard.resolution_time.average_hours === null ? "No closed-case sample" : undefined, Icon: Timer, tone: "green" },
+  ] : [];
+  return <WorkspaceShell active="operations" merchant={me ? { name: me.merchant.name } : null} contentId="operations-content"><div className="ops-page">
+    <div className="workspace-intro"><div><div className="eyebrow intro-eyebrow"><span /> Merchant operations</div><h1>Keep every commitment moving.</h1>
+      <p>Review the work, resolve the gaps, and give buyers a clear next step.</p>
+      {me && <p className="intro-identity"><Activity size={13} /> {me.merchant.name} · {me.role}</p>}</div>
+      <div className="intro-actions"><Button disabled={busy||loading} onClick={() => void act(load)}><RefreshCw size={15} /> Refresh</Button></div></div>
+    <nav className="case-tabs ops-tabs-bar" aria-label="Operations sections">{(["overview", "alerts", "imports", "team", "connections", "audit"] as Tab[]).map(t => <button type="button" key={t} className={tab === t ? "active" : ""} disabled={!ready || !me} onClick={() => { setTab(t); setSelected(null); }} aria-current={tab === t ? "page" : undefined}>{t === "alerts" ? "Missed promises" : t === "imports" ? "Support imports" : t[0].toUpperCase() + t.slice(1)}</button>)}</nav>
     {error && <Notice>{error}</Notice>}
-    {loading && <p className="muted" role="status">Loading {tab === "alerts" ? "missed promises" : tab}…</p>}
+    {loading && <p className="panel-state" role="status">Loading {tab === "alerts" ? "missed promises" : tab}…</p>}
     {tab === "overview" && dashboard && <>
-      <div className="ops-metrics">{[["Cases", dashboard.case_count], ["Overdue promises", dashboard.overdue_promises], ["Awaiting evidence", dashboard.awaiting_evidence], ["Average resolution", dashboard.resolution_time.average_hours === null ? "No closed-case sample" : `${dashboard.resolution_time.average_hours} hours`]].map(([label, value]) => <article className="section-card" key={String(label)}><span>{label}</span><strong>{value}</strong></article>)}</div>
+      <div className="metrics-wrap" aria-label="Operations metrics"><div className="metrics-grid">{metrics.map(({ label, value, note, Icon, tone }) => <div className="status-metric" key={label}>
+        <span className={`metric-icon metric-${tone}`}><Icon size={18} /></span>
+        <div><span>{label}</span><strong>{value}</strong>{note && <small className="metric-note">{note}</small>}</div></div>)}</div></div>
       <section className="section-card"><h2>Recorded refund balances</h2><p>USD totals count each shared capture once. Recorded refunds still require independent provider checks before financial action.</p>
         <div className="ops-metrics">{[["Promised", dashboard.financial.promised], ["Completed", dashboard.financial.completed], ["Pending", dashboard.financial.pending], ["Outstanding, excluding pending", dashboard.financial.outstanding_excluding_pending]].map(([label, amount]) => <div key={label}><span>{label}</span><strong>${amount}</strong></div>)}</div>
         <small>{dashboard.financial.shared_capture_count} shared capture balances · Resolution time uses {dashboard.resolution_time.sample_count} known closed-case timestamps.</small>
@@ -135,5 +149,5 @@ export function OperationsConsole() {
         {keys.map(k => <p className="ops-row" key={k.id}><span>{k.id} · {new Date(k.created_at).toLocaleDateString()}</span>{owner && <Button disabled={busy} onClick={() => void act(async () => { await platform("sdk-keys/" + k.id, "DELETE"); await load(); })}>Revoke key</Button>}</p>)}
       </section></>}
     {tab === "audit" && <section className="section-card"><h2>Workspace activity</h2><p>Individual staff actions and credential-attributed requests.</p>{audit.map(a => <p className="ops-row" key={a.id}><span>{a.action.replaceAll("_", " ")}<small> · {a.actor_id}</small></span><time>{new Date(a.recorded_at).toLocaleString()}</time></p>)}</section>}
-  </main>;
+  </div></WorkspaceShell>;
 }

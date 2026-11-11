@@ -4168,6 +4168,64 @@ frontend, OpenAPI and README.
 - **Store credit and replacement:** still manual (record them once the credit
   or shipment exists).
 
+### CHG-059 - Buyer portal offer card: one bordered row per choice
+
+**Date:** 11 November 2026 (Asia/Calcutta). Branch `feat/ai-part`. Frontend only;
+existing colour tokens only. The behaviour, requests and decision calls are
+unchanged.
+
+**Objective:** the buyer's "Resolution offer" card had several problems:
+
+- raw labels such as "refund · USD 120.00";
+- inline buttons;
+- "completed." running into "Accepted option" with no space;
+- no structure between choices.
+
+**Files and resulting behavior:**
+
+- **`frontend/components/buyer-resolution.tsx` (offer card markup only):**
+  - **One bordered row per choice:**
+    - **Plain-words title:**
+      - **Refunds:** "Refund after return" when the refund has conditions
+        and the merchant's wording mentions a return. "Partial refund" when
+        the wording says partial. Otherwise "Refund".
+      - **Other kinds:** "Return your item", "Replacement" and so on.
+    - **Amount:** right-aligned with the shared money formatter ("$120.00").
+    - **One muted line:**
+      - **Return condition:** "You'll get this once your return arrives."
+      - **Other conditions:** "You'll get this once the required steps are
+        completed."
+      - **No conditions:** the merchant's own description.
+  - **Accept this option:** the primary button at the bottom of each row.
+  - **Decline offer (secondary):** declines the whole offer, as before. It
+    sits in the row when there is one choice, and in a footer row ("None of
+    these work for you?") when there are several.
+  - **After a decision:** the existing status sentence becomes a notice at the
+    top (success when accepted, info when declined or stale). The chosen row
+    gets an "Accepted" pill and the green tint, and the buttons are hidden.
+  - **Unchanged:** the texts tests use ("Resolution offer", "Accept this
+    option", "Your acceptance has been recorded…").
+- **`frontend/app/globals.css`:** offer-card row, amount, note, pill and action
+  styles. At 520px or less the buttons are full width.
+
+**Validation actually performed:**
+
+- `npm run check`: passed.
+- **Screenshots:** before (`5f50bc9`) and after, at 1280 and 390px, of an open
+  offer and an accepted offer. A synthetic refund-after-return choice plus a
+  return choice on the isolated platform fixture, captured with a scratch
+  script. There is no overflow at 390px. Not committed.
+- **Platform suite** (`playwright.platform.config.ts`, system Chrome):
+  2 passed. This covers the buyer accepting an offer in this card.
+- **Full default suite:** not re-run, because the buyer offer card isn't
+  shown there (fixture key sessions have no platform offers).
+- **Backend:** not changed.
+
+**Known limitations:** the titles are inferred from the kind, the conditions
+flag and the merchant's wording. The buyer API doesn't say which prerequisite a
+refund waits for, so "Refund after return" relies on the wording mentioning a
+return.
+
 ## Decision register
 
 ### DEC-001 - Keep FastAPI/Pydantic and the existing uv project
@@ -5055,7 +5113,7 @@ offer endpoints and the one-refund-promise-per-capture rule.
 ## Template for the next entry
 
 ```text
-### CHG-059 - Concrete change title
+### CHG-060 - Concrete change title
 Date:
 Objective:
 Files and resulting behavior:

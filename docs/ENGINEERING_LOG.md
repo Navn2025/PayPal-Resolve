@@ -3840,6 +3840,98 @@ resolution workflow, timeline loading and the Evidence timeline tab.
 - **Paused message scope:** "Paused" is only shown for a refund promise that
   needs review, because the check covers accepted refund promises only.
 
+### CHG-056 - Operations page inside the workspace shell
+
+**Date:** 11 November 2026 (Asia/Calcutta). Branch `feat/ai-part`. Frontend only;
+existing colour tokens only.
+
+**Objective:** `/workspace/operations` used its own separate layout: a brand
+header with text links, pill tabs and large tiles. It now uses the shared
+workspace shell, like Settings. All of Navneet's features, requests, data,
+actions and text are unchanged.
+
+**Files and resulting behavior:**
+
+- **`frontend/components/workspace-shell.tsx` (ours):**
+  - **New "operations" page:** a sidebar "Operations" link, a top-bar
+    Operations button (marked current on that page), the breadcrumb "Workspace
+    > Operations" and a mobile-nav link.
+  - **`merchant` prop:** now takes any `{ name }`, so the operations identity
+    can give the avatar initials.
+- **`frontend/components/operations-console.tsx` (Navneet's page), frame and
+  styling only:**
+  - **Shell:** renders inside `WorkspaceShell`. The separate brand header and
+    `OperationsNavigation` links are no longer shown; the function is still
+    exported.
+  - **Header:** the workspace header style ("Merchant operations" eyebrow,
+    title, subtitle), with the same text as before. The workspace name and role
+    move to a small line under the subtitle. Refresh gets an icon.
+  - **Metric tiles:** the workspace metric-card style (icon, label, value).
+    "Average resolution" shows "—" with a small "No closed-case sample" note
+    when there is no sample.
+  - **Tabs:** the case-tab style (`case-tabs`, `active`, `aria-current`).
+    Labels and enabled rules are unchanged.
+  - **Sections:** unchanged `section-card`s, now spaced and sized by the
+    workspace tokens through the new `.ops-page` wrapper.
+  - **Loading line:** uses the shared `panel-state` style.
+  - **Unchanged:** every request, form, action and text.
+- **`frontend/components/workspace.tsx`:** the case inbox sidebar and mobile
+  nav get the same Operations link (not in demo mode). Navneet's top-bar
+  Operations button there is unchanged.
+- **`frontend/app/globals.css`:** `.ops-page` layout and type, the metric note,
+  the identity line and the case-style tab bar. The mobile nav now scrolls
+  inside its bar, because a fourth link made it 406px wide at 390px.
+  `operations.css` is unchanged.
+- **`/account` left as it is:** it's the sign-in, sign-up and invitation page,
+  shown before there is a workspace session, and it uses the same access layout
+  as `/login`.
+
+**Tests:** `frontend/tests/platform.spec.ts` (run with
+`playwright.platform.config.ts`). After sign-up it checks:
+
+- the sidebar Operations link is the current page;
+- the breadcrumb reads "Workspace › Operations";
+- the workspace-style header shows "Keep every commitment moving.";
+- the Overview tab is current;
+- "Average resolution" shows "—" with the "No closed-case sample" note;
+- there is no overflow at 390px.
+
+The existing workflow steps are unchanged.
+
+**Reason and decision IDs:** DEC-092.
+
+**Validation actually performed:**
+
+- `npm run check`: passed.
+- **Screenshots:** before (`93323f5`) and after, at 1280 and 390px, of the
+  Overview and Connections tabs. They used a synthetic workspace on Navneet's
+  isolated platform fixture, run with a scratch config. Case inbox and settings
+  were also captured with the new link. The screenshots aren't committed.
+- **Width at 390px:**
+
+  | State | Width |
+  | --- | --- |
+  | Before | 390px |
+  | After, first try | 406px (mobile nav) |
+  | After, fixed | 390px |
+
+  The case inbox and settings were also 390px wide at 390px.
+- **Platform suite** (`npx playwright test -c playwright.platform.config.ts`,
+  system Chrome): 2 passed. This includes Navneet's performance test.
+- **Full default suite** (`PLAYWRIGHT_CHROMIUM_EXECUTABLE=<system Chrome> npx
+  playwright test`): 25 passed, 5 skipped, 0 failed.
+- **Backend:** not changed, so not re-run.
+
+**Known limitations and follow-up:**
+
+- **Hard-coded shell chips:** the shell's "Connected · Sandbox" chip and
+  "Sandbox connection" card are fixed text, as on Settings. They don't reflect
+  a platform workspace's connection state.
+- **Tabs on phones:** the operations tabs scroll sideways at narrow widths
+  instead of wrapping.
+- **Form colours:** `operations.css` still sets Navneet's own form and record
+  colours inside sections; they were left unchanged.
+
 ## Decision register
 
 ### DEC-001 - Keep FastAPI/Pydantic and the existing uv project
@@ -4676,6 +4768,14 @@ and short, and never restate the card. Our dates and times use the viewer's
 zone, with UTC kept in tooltips. Shared components owned by Navneet are changed
 only with his agreement; ours work around them instead.
 
+### DEC-092 - Signed-in merchant pages share one workspace shell
+
+Every page a signed-in merchant uses (cases, orders, operations, settings) uses
+the same sidebar, top bar, breadcrumb, header, metric cards, tabs and card
+style. Pages owned by Navneet change only in their frame and styling: their
+requests, actions and text stay his. Pages shown before sign-in keep the access
+layout.
+
 ## Open work and boundaries
 
 1. Verify import (if needed), SSL connection, migration startup, and worker
@@ -4701,7 +4801,7 @@ only with his agreement; ours work around them instead.
 ## Template for the next entry
 
 ```text
-### CHG-056 - Concrete change title
+### CHG-057 - Concrete change title
 Date:
 Objective:
 Files and resulting behavior:

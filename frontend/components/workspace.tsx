@@ -1334,6 +1334,12 @@ export function Workspace({
             </Link>
           )}
           {!demo && (
+            <Link href="/workspace/operations" className="rail-link">
+              <Activity size={18} /> <span>Operations</span>
+              <ChevronRight className="rail-chevron" size={15} />
+            </Link>
+          )}
+          {!demo && (
             <Link href="/workspace/settings" className="rail-link">
               <Settings2 size={18} /> <span>Settings</span>
               <ChevronRight className="rail-chevron" size={15} />
@@ -1456,6 +1462,11 @@ export function Workspace({
           {!demo && (
             <Link href="/workspace/orders" className="button button-ghost">
               <Package size={16} /> Orders
+            </Link>
+          )}
+          {!demo && (
+            <Link href="/workspace/operations" className="button button-ghost">
+              <Activity size={16} /> Operations
             </Link>
           )}
           <Button

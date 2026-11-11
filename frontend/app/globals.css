@@ -3724,3 +3724,100 @@ cite {
 .next-step-block .explain .ai-label {
   justify-self: start;
 }
+
+/* Operations inside the workspace shell: workspace header, metric cards, case-style tabs, existing card style. Existing colour tokens only. */
+.ops-page {
+  display: grid;
+  gap: var(--sp-4);
+  min-width: 0;
+}
+.ops-page > *,
+.ops-page .ops-columns > *,
+.ops-page .section-card > * {
+  min-width: 0;
+}
+.ops-page .workspace-intro,
+.ops-page .metrics-wrap {
+  margin-bottom: 0;
+}
+.intro-identity {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  color: var(--muted);
+  font-size: var(--fs-sm);
+  font-weight: 650;
+}
+.metric-note {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: var(--fs-xs);
+}
+.ops-tabs-bar {
+  background: transparent;
+  padding: 0;
+  max-width: 100%;
+  overflow-x: auto;
+}
+.ops-tabs-bar button {
+  flex-shrink: 0;
+}
+.ops-tabs-bar button:disabled {
+  opacity: 0.55;
+}
+.ops-page .section-card {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.ops-page .section-card h2 {
+  font-size: var(--fs-md);
+  font-weight: 750;
+  letter-spacing: -0.015em;
+  margin-bottom: var(--sp-2);
+}
+.ops-page .section-card h3 {
+  font-size: var(--fs-base);
+  font-weight: 750;
+  margin-bottom: var(--sp-2);
+}
+.ops-page .section-card > p {
+  color: var(--muted);
+  font-size: var(--fs-base);
+  line-height: 1.6;
+  margin-bottom: var(--sp-2);
+}
+.ops-page .ops-metrics {
+  gap: var(--sp-3);
+  margin: var(--sp-3) 0;
+}
+.ops-page .ops-metrics strong {
+  font-size: var(--fs-lg);
+  font-variant-numeric: tabular-nums;
+}
+.ops-page .ops-metrics span {
+  font-size: var(--fs-sm);
+}
+.ops-page .ops-columns {
+  gap: var(--sp-4);
+}
+.ops-page pre,
+.ops-page code {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+}
+.ops-page .ops-row {
+  gap: var(--sp-2) var(--sp-3);
+  font-size: var(--fs-base);
+}
+/* Four mobile nav links: scroll inside the bar instead of widening the page. */
+.mobile-nav {
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.mobile-nav .button {
+  flex-shrink: 0;
+}

@@ -1,7 +1,7 @@
 # Resolve for PayPal
 
 ### From refund promise to verified resolution.
-Live demo: [paypal-resolve.vercel.app](https://paypal-resolve.vercel.app)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-paypal--resolve.vercel.app-2563EB?style=for-the-badge&logo=vercel&logoColor=white)](https://paypal-resolve.vercel.app)
 
 Resolve is a payment aftercare platform for PayPal merchants. It connects customer-support commitments with payment records, identifies incomplete refunds, and helps merchants coordinate authorized remedies.
 

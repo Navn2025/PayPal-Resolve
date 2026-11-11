@@ -333,3 +333,15 @@ def test_cache_holds_raw_output_and_guards_every_hit_again(client):
     usage._cache[key] = reply("Refund $500.00 now.")
     hit = explain(action, fake, settings(), data_policy=POLICY, usage=usage, merchant_id=merchant)
     assert (hit.cache_hit, hit.source, hit.fallback_reason, len(fake.calls)) == (True, "template", "fact_guard", 1)
+
+
+def test_summary_without_a_refund_promise_has_no_raw_placeholders(client):
+    # An accepted agreement on the linked payment, but no refund promise on the case yet.
+    body = next_action(client, resolution(client, payment_case(client, "NANOPH")))
+    assert "{" not in body["summary"] and "}" not in body["summary"]
+    assert body["summary"].startswith("No refund promise is recorded → ")
+    facts = CaseFacts(payment_linked=True, reconciliation_status="refund_required", recommended_refund_amount=D("100.00"))
+    assert template(facts) == "No refund promise is recorded → review a refund of $100.00."
+    assert guard(template(facts), facts) == []
+    waiting = CaseFacts(payment_linked=True, reconciliation_status="awaiting_prerequisite")
+    assert template(waiting) == "No refund promise is recorded → confirm the prerequisite before any refund."

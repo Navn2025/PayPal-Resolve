@@ -24,7 +24,7 @@ const rules = {
     `resolution-cases/${id}/ai/extract-promises`, `resolution-cases/${id}/ai/explain-next-action`,
     `resolution-cases/${id}/ai/rank-remedies`, `resolution-cases/${id}/remedies/promises`,
   ],
-  PUT: [`resolution-cases/${id}/promises/${id}`, `resolution-cases/${id}/(?:operations|payment-link|helpdesk)`],
+  PUT: [`cases/${id}/commitment`, `resolution-cases/${id}/promises/${id}`, `resolution-cases/${id}/(?:operations|payment-link|helpdesk)`],
   DELETE: [`merchant-auth/commerce-keys/${id}`, `resolution-cases/${id}/customer-link`],
 };
 type Context = { params: Promise<{ path: string[] }> };

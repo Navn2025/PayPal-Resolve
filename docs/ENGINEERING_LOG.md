@@ -4226,6 +4226,189 @@ flag and the merchant's wording. The buyer API doesn't say which prerequisite a
 refund waits for, so "Refund after return" relies on the wording mentioning a
 return.
 
+### CHG-060 - Quick fixes: next-action placeholder, agreed amount from the UI, message-test flake, open-work notes
+
+**Date:** 11 November 2026 (Asia/Calcutta). Branch `feat/ai-part`.
+
+**Files and resulting behavior:**
+
+1. **`backend/app/next_action.py`:** fixes the bug found in CHG-052.
+   - **Before:** with a linked payment and no refund promise, the summary
+     printed raw `{recommended}` or `{prerequisite}` placeholders.
+   - **Now:** both template branches use one helper, `_action()`, so every
+     placeholder is filled from the facts.
+   - **Example:** "No refund promise is recorded → review a refund of
+     $100.00."
+   - **Unchanged:** the wording for cases that have a refund promise. The API
+     shape is unchanged, so the OpenAPI contract wasn't regenerated.
+2. **Agreed amount from the UI:**
+   - **Proxy (`frontend/app/api/resolve/[...path]/route.ts`):** allows
+     `PUT cases/{id}/commitment` (the existing endpoint).
+   - **`frontend/components/agreement-form.tsx` (new):** a "Set agreed amount"
+     dialog with the amount, where it was agreed, an optional condition, and
+     "The buyer accepted this amount".
+     - **Prefill:** from the current commitment, so the condition isn't lost.
+     - **Request:** sends the reconciliation `state_fingerprint`.
+     - **Validation:** the backend validates exactly as before, including the
+       capture limit and stale state; its errors are shown in the dialog.
+   - **Where the action appears:**
+     - **`components/case-desk.tsx`:** when the agreement is the first missing
+       step, the Next step has a primary "Set agreed amount" button, with
+       "Record promise" as secondary. Otherwise "Set agreed amount" is an
+       inline action on the "Add the agreed refund amount" or "Mark the
+       refund agreement as accepted" checklist item.
+     - **`workspace.tsx`:** opens the dialog (only once the reconciliation is
+       loaded) and reloads the case after saving.
+     - **`lib/domain.ts`:** `LegacyCase.commitment.condition` is now typed.
+     - **`globals.css`:** a `text-button` style with existing tokens.
+3. **`frontend/tests/workspace.spec.ts`:** the customer-message test is
+   stabilised.
+   - **Texts:** messages are unique per run.
+   - **Saves:** the test waits for each message POST to succeed.
+   - **Refreshes:** "Refresh messages" is retried until the other side's
+     message appears (up to 30 s), instead of one click that could land
+     before the write was visible.
+   - **Unchanged:** the assertions themselves (both sides see both messages,
+     and revocation hides them).
+4. **Open-work notes:** items 4 and 5 under "Open work and boundaries" are
+   corrected. AI extraction is implemented as review-only proposals; the
+   remaining work is the merchant accept step and a live evaluation.
+   - **New note (`docs/README_UPDATES_FOR_NAVNEET.md`):** lists the suggested
+     changes to `README.md`, `docs/BUILD_STATUS.md` and
+     `docs/PROJECT_STATUS.md`. Those files are his and were not edited.
+
+**Tests:**
+
+- **`backend/tests/test_next_action.py`:** a summary without a refund promise
+  has no raw placeholders. The `refund_required` and `awaiting_prerequisite`
+  wording is exact and passes the fact guard.
+- **`frontend/tests/promise-health.spec.ts`:** a linked payment without an
+  agreed amount shows a primary "Set agreed amount".
+  - **Rejected:** $150 against a $100 capture shows the backend error.
+  - **Accepted:** $40 saves, and the card moves to "Record the refund promise".
+
+**Reason and decision IDs:** DEC-088 (the next step names the action; a step
+that can't be done on the page no longer applies to the agreed amount).
+
+**Validation actually performed:**
+
+- `pytest tests/test_next_action.py`: 29 passed.
+- **Updated promise-health test:** 1 passed.
+- **Stabilised customer-message test:** 3 passed out of 3 with
+  `--repeat-each 3`.
+- **Backend:** `uv run pytest`: 499 passed, 63 skipped. `uvx ruff check` on the
+  changed files: passed.
+- **Frontend:**
+  - `npm run check`: passed.
+  - **Full default Playwright suite** (system Chrome): 27 passed, 5 skipped,
+    0 failed, including the stabilised test in a full run.
+
+**Known limitations:** the inline checklist action (where a refund promise
+already exists but the agreement is missing) is covered by type checks and
+code review, not by its own browser test. The flake's root cause wasn't
+reproduced; the test now waits for each save and retries the refresh, so a
+slower environment can't fail it.
+
+### CHG-061 - End-to-end evaluation harness for the README evaluation plan (synthetic)
+
+**Date:** 11 November 2026 (Asia/Calcutta). Branch `feat/ai-part`. Evals and
+tests only; no application code changed, including none of Navneet's.
+
+**Objective:** measure the README's evaluation plan end to end in one
+repeatable run, with a dated, clearly labelled results file. The roadmap item
+"Evaluate complete resolution workflows" covers this, but at the synthetic
+level only (see the limitations).
+
+**Files and resulting behavior:**
+
+- **`backend/evals/run_e2e_eval.py` (new):**
+  - **Setup:** runs the real API on a temporary SQLite database with one
+    synthetic merchant.
+  - **`SyntheticPayPal`:** a local provider with no network, written for the
+    harness (the tests are not imported). Provider refunds go through the
+    store's own recorder, as in the backend tests.
+  - **Each scenario records every check** as expected vs observed:
+    - **Case-to-payment matching (7 checks):** link and re-link; a second
+      payment and a second case are rejected; another merchant's payment
+      returns 404; a promise above the capture is rejected; a PayPal capture
+      with a different amount is refused.
+    - **Incomplete refund detection (2 checks per seeded case):**
+      - **Shapes:** refunds of none, partial, full or two-part, each due or
+        overdue.
+      - **Checked:** the promise-health status and the remaining amount,
+        against `expected_status()`, a rule written from the README rather
+        than imported from `app.promise_health`.
+      - **Reported:** recall, precision and status accuracy.
+    - **Pending refunds (11 checks):** follows the documented reconciliation
+      rules in `backend/README.md`.
+    - **Duplicate and excessive refunds (10 checks):** an approval above the
+      recommendation, an execution replay, a second execution, exactly one
+      PayPal request, no recommendation after a full refund, and a second
+      refund promise on the same capture.
+    - **Recovery after an interrupted request (15 checks):** the provider
+      accepts the refund but the response is lost. Both the retry after an app
+      restart and `app.worker.run_once` are covered: the balance stays
+      reserved, no new approval is possible, the refund completes with the same
+      PayPal request ID, and there is one refund.
+    - **Time to verified resolution:** reuses
+      `evals/run_resolution_eval.run` (seed 7, generated delays).
+    - **Extraction and injection:** quoted from
+      `results/extraction_2026-11-08_r1.json` and
+      `results/extraction_2026-11-08_injection_stability_partial.json`. They
+      are labelled "recorded earlier, live Groq on synthetic chats, not re-run".
+  - **Output:** writes `results/e2e_<date>.json` and `.md`, both headed
+    "SYNTHETIC - local simulation; no PayPal, no AI provider, no real merchant
+    data". The exit code is 1 if any check fails.
+- **`backend/evals/results/e2e_2026-11-11.{json,md}` (new):** seed 11 with 30
+  seeded cases: **103 of 103 checks passed**.
+  - **Incomplete-commitment detection:** recall 1.0 and precision 1.0 (TP 17,
+    FP 0, FN 0, TN 13); status accuracy 1.0.
+  - **Time to verified resolution:** the same as
+    `resolution_time_2026-11-10`, median 86.49 h and p90 124.47 h
+    (24 of 40 resolved).
+- **`backend/evals/README.md` (new):** what each script measures, how to run
+  it, what each README metric checks, and the limits.
+- **`backend/tests/test_e2e_eval.py` (new):** a small seed must pass every
+  check in all seven sections. The files are dated and labelled, and the
+  expected-status rule is checked against the README cases.
+
+**Correction during development (recorded, not hidden):** the first draft
+expected a recommended refund of $70.00 while $30.00 was pending. The backend
+recommends $0.00 until no refund is pending, and `backend/README.md` documents
+exactly that ("`recommended_refund_amount` is zero until … no refund is
+pending"). The expectation was corrected to the documented rules:
+
+- **Subtract the pending refund:** the remaining refundable amount and the
+  uncovered commitment.
+- **Include the pending amount:** the outstanding commitment.
+- **Recommendation:** none while the refund is pending, and the rest
+  recommended again once it completes.
+
+No backend behaviour was changed to make a check pass.
+
+**Reason and decision IDs:** DEC-095.
+
+**Validation actually performed:**
+
+- `uv run python evals/run_e2e_eval.py --date 2026-11-11`: 103/103.
+- `pytest tests/test_e2e_eval.py`: 3 passed.
+- **Full backend suite:** 502 passed, 63 skipped.
+- `uvx ruff check` on the new files: passed.
+- **Frontend:** not changed, so not re-run.
+
+**Known limitations:**
+
+- **Synthetic only:** no PayPal Sandbox, webhook or hosted-database behaviour
+  is exercised.
+- **Detection figures:** the precision and recall compare the API with a rule
+  written from the README. They show the full path works end to end; they
+  aren't a statistical accuracy estimate on real cases.
+- **Extraction figures:** taken from earlier live-on-synthetic runs, not
+  produced here. The injection-stability rerun is still partial (14 of 50
+  chats; CHG-038).
+- **Next step:** a Sandbox-backed variant of the recovery and pending
+  scenarios, run once hosted webhooks are verified.
+
 ## Decision register
 
 ### DEC-001 - Keep FastAPI/Pydantic and the existing uv project
@@ -5088,6 +5271,16 @@ promises and publishing the offer are two separate merchant actions. Both
 re-check the balance on the server, and both reuse the existing promise and
 offer endpoints and the one-refund-promise-per-capture rule.
 
+### DEC-095 - One synthetic harness answers the README evaluation plan
+
+Each README evaluation metric has a scenario that runs the real API and records
+expected against observed outcomes. Expectations come from the README and the
+backend README, never from the module under test. When a check disagrees with
+documented behaviour, the expectation is corrected and the correction is logged;
+the code is not changed to make a check pass. Every figure keeps its own
+provenance: local simulation, generated delays, or earlier live runs on
+synthetic data.
+
 ## Open work and boundaries
 
 1. Verify import (if needed), SSL connection, migration startup, and worker
@@ -5098,13 +5291,19 @@ offer endpoints and the one-refund-promise-per-capture rule.
 3. Register an HTTPS Sandbox webhook, verify a signed account delivery, and
    provision a hosted worker when deploying.
 4. Automatic structured evidence investigations and review are implemented in
-   CHG-034. Commitment extraction from free text remains future work; commitment
-   terms are still manually entered. Enable inference only after synthetic live
-   evaluation and data-policy verification.
+   CHG-034. **Corrected in CHG-060:** AI commitment extraction from free text
+   is implemented as review-only proposals (CHG-035, with masking and injection
+   flags in CHG-044). Remedy suggestions with an optional AI ranking are
+   implemented too (CHG-058). Proposals are never saved as promises
+   automatically. Remaining:
+   - a merchant accept step that turns a reviewed proposal into a promise in
+     one action;
+   - a live, account-backed evaluation under a verified data policy before
+     enabling inference for merchants.
 5. Finish the two remaining CHG-038 injection runs when Groq's daily token
-   budget allows (about 62,000 tokens), human-review the AI eval labels (45
-   flagged generated chats first), and add a merchant accept step. Recorded
-   promises remain manually entered.
+   budget allows (about 62,000 tokens), and human-review the AI eval labels
+   (45 flagged generated chats first). The merchant accept step is tracked in
+   item 4. Recorded promises are still entered or confirmed by the merchant.
 6. Extend production audit/retention and database-side history pagination. New
    manual changes have durable events; legacy untimestamped changes remain gaps.
 7. Verify both hosted interfaces over HTTPS and complete a genuine PayPal
@@ -5113,7 +5312,7 @@ offer endpoints and the one-refund-promise-per-capture rule.
 ## Template for the next entry
 
 ```text
-### CHG-060 - Concrete change title
+### CHG-062 - Concrete change title
 Date:
 Objective:
 Files and resulting behavior:

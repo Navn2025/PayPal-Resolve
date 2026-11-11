@@ -173,8 +173,21 @@ test("a linked payment with nothing promised shows the action as the title and o
   await expect(step.getByRole("heading", { name: "Add the agreed refund amount" })).toBeVisible();
   await expect(step.locator(".checklist li")).toHaveText([
     "Add the agreed refund amount to the linked payment case.", "Record the refund promise."]);
-  await expect(step.locator(".button-primary")).toHaveCount(0);
   await expect(step.locator(".explain")).toHaveCount(0);
+  // The head's primary action sets the agreed amount; the backend validates it as before.
+  await expect(step.getByRole("button", { name: "Set agreed amount" })).toHaveClass(/button-primary/);
+  await expect(step.getByRole("button", { name: "Record promise" })).not.toHaveClass(/button-primary/);
+  await step.getByRole("button", { name: "Set agreed amount" }).click();
+  const form = page.getByRole("dialog", { name: "Set agreed amount" });
+  await form.getByLabel("Agreed refund amount (USD)").fill("150.00");
+  await form.getByLabel("Where it was agreed").fill("Support chat, merchant reply");
+  await form.getByRole("button", { name: "Save agreed amount" }).click();
+  await expect(form.getByRole("alert")).toBeVisible();  // above the $100.00 capture: rejected by the backend
+  await form.getByLabel("Agreed refund amount (USD)").fill("40.00");
+  await form.getByRole("button", { name: "Save agreed amount" }).click();
+  await expect(form).toHaveCount(0);
+  await expect(step.getByRole("heading", { name: "Record the refund promise" })).toBeVisible();
+  await expect(step.locator(".checklist li")).toHaveText(["Record the refund promise."]);
 });
 
 // The inbox reads merchant-wide promise health once per inbox load. Mocked list responses (synthetic data)

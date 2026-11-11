@@ -79,6 +79,8 @@ export interface PaymentActions {
   onRefresh: () => void;
   onCheckExecution: () => void;
   onSimulateOutside?: () => void;
+  /** Opens the agreed-amount form for the linked payment case; absent until its reconciliation is loaded. */
+  onSetAgreement?: () => void;
 }
 
 interface DeskProps {
@@ -318,6 +320,9 @@ function NextStep({
     (step) =>
       step.code === "no_amount" || step.code === "agreement_not_accepted",
   );
+  // The head already offers "Set agreed amount" when the agreement is the first missing step.
+  const needsAgreementHead =
+    !!item.refund_case_id && !progress && !refund && needsAgreement;
   const owed = checks.health?.items.find(
     (entry) =>
       entry.status !== "kept" && cents(entry.suggested_refund_amount) > 0,
@@ -351,14 +356,21 @@ function NextStep({
       </Button>
     );
   } else if (!progress && !refund && needsAgreement) {
-    // The agreed amount lives on the payment case and cannot be edited on this page.
+    // The agreed amount lives on the linked payment case; set it there through the agreement form.
     title = "Add the agreed refund amount";
     reason =
-      "Set it on the linked payment case first, then record the refund promise.";
+      "Set the amount agreed with the buyer, then record the refund promise.";
     buttons = (
-      <Button onClick={onAdd}>
-        <Plus size={16} /> Record promise
-      </Button>
+      <>
+        {payment.onSetAgreement && (
+          <Button variant="primary" onClick={payment.onSetAgreement} disabled={payment.busy}>
+            Set agreed amount
+          </Button>
+        )}
+        <Button onClick={onAdd}>
+          <Plus size={16} /> Record promise
+        </Button>
+      </>
     );
   } else if (!progress && !refund) {
     title = "Record the refund promise";
@@ -493,6 +505,16 @@ function NextStep({
               {steps.map((entry, index) => (
                 <li key={entry.code + index} data-code={entry.code}>
                   {entry.text}
+                  {/* Where the checklist asks for the agreement and the head has no button for it. */}
+                  {(entry.code === "no_amount" || entry.code === "agreement_not_accepted") &&
+                    !needsAgreementHead && payment.onSetAgreement && (
+                      <>
+                        {" "}
+                        <button type="button" className="text-button" onClick={payment.onSetAgreement}>
+                          Set agreed amount
+                        </button>
+                      </>
+                    )}
                 </li>
               ))}
             </ol>

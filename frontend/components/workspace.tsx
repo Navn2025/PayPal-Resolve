@@ -59,6 +59,7 @@ import { Badge, Brand, Button, Empty, Notice, remedyIcons } from "./ui";
 import { CaseDesk, type DeskTab } from "./case-desk";
 import { CaseOperationsPanel } from "./case-operations";
 import { SuggestedRemedies } from "./suggested-remedies";
+import { AgreementForm } from "./agreement-form";
 const InvestigationReviewPanel = dynamic(() =>
   import("./investigation-review").then((m) => m.InvestigationReviewPanel),
 );
@@ -99,7 +100,8 @@ type Dialog =
   | { kind: "evidence"; promise: PromiseView }
   | { kind: "approve"; basis: Reconciliation; prefill?: string }
   | { kind: "execute"; approval: Approval }
-  | { kind: "review"; item: Review };
+  | { kind: "review"; item: Review }
+  | { kind: "agreement"; payment: LegacyCase; fingerprint: string; caseId: string };
 type Detail = {
   item: CaseView;
   timeline: Timeline | null;
@@ -1283,6 +1285,16 @@ export function Workspace({
           active && setDialog({ kind: "execute", approval: active }),
         onRefresh: () => refund && void checkProvider(refund),
         onCheckExecution: checkExecution,
+        onSetAgreement:
+          current?.payment && paymentBasis
+            ? () =>
+                setDialog({
+                  kind: "agreement",
+                  payment: current.payment!,
+                  fingerprint: paymentBasis.state_fingerprint,
+                  caseId: item.id,
+                })
+            : undefined,
         onSimulateOutside:
           demo && item.id === demoPrimary ? simulateOutsideRefund : undefined,
       }}
@@ -1660,6 +1672,19 @@ export function Workspace({
       )}
       {dialog?.kind === "invite" && (
         <InviteForm onClose={closeDialog} request={request} demo={demo} />
+      )}
+      {dialog?.kind === "agreement" && (
+        <AgreementForm
+          payment={dialog.payment}
+          fingerprint={dialog.fingerprint}
+          request={request}
+          onClose={closeDialog}
+          onSaved={() => {
+            closeDialog();
+            setToast("Agreed amount saved.");
+            void loadDetail(dialog.caseId);
+          }}
+        />
       )}
       {dialog?.kind === "payment-link" && (
         <PaymentLinkForm

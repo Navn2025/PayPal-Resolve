@@ -175,12 +175,19 @@ def collect(case_id, merchant_id, store, now: datetime | None = None) -> NextAct
     return NextAction(case_id=case_id, facts=facts, missing=missing, summary=template(facts))
 
 
+def _action(facts: CaseFacts, default: str, open_items: list[str]) -> str:
+    """The action for the reconciliation status, with every placeholder filled from the facts."""
+    return ACTIONS.get(facts.reconciliation_status or "", default).format(
+        recommended=money(facts.recommended_refund_amount or ZERO),
+        prerequisite=" and ".join(open_items) or "prerequisite")
+
+
 def template(facts: CaseFacts) -> str:
     """Plain-English next step built only from the facts."""
     if not facts.payment_linked:
         return "No payment is linked → link the payment before any refund."
     if not facts.refunds:
-        action = ACTIONS.get(facts.reconciliation_status or "", "record the agreed refund promise first")
+        action = _action(facts, "record the agreed refund promise first", [])
         return f"No refund promise is recorded → {action}."
     first = facts.refunds[0]
     parts = [f"Promised {money(first.promised_amount)}"
@@ -191,9 +198,7 @@ def template(facts: CaseFacts) -> str:
     parts.append(f"{money(first.remaining_amount)} remaining")
     parts += [f"{item.name} {'confirmed' if item.done else 'not confirmed'}" for item in first.prerequisites]
     open_items = [item.name for item in first.prerequisites if not item.done]
-    action = ACTIONS.get(facts.reconciliation_status or "", "review the case evidence").format(
-        recommended=money(facts.recommended_refund_amount or ZERO),
-        prerequisite=" and ".join(open_items) or "prerequisite")
+    action = _action(facts, "review the case evidence", open_items)
     more = f" ({len(facts.refunds) - 1} more refund promise{'s' if len(facts.refunds) > 2 else ''} on this case.)" \
         if len(facts.refunds) > 1 else ""
     return "; ".join(parts) + f" → {action}." + more

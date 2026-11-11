@@ -1928,7 +1928,10 @@
             "in": "query",
             "required": false,
             "schema": {
-              "enum": ["open", "resolved"],
+              "enum": [
+                "open",
+                "resolved"
+              ],
               "type": "string",
               "default": "open",
               "title": "Status"
@@ -2040,7 +2043,9 @@
     },
     "/resolution-cases/inbox": {
       "get": {
-        "tags": ["Customer portal"],
+        "tags": [
+          "Customer portal"
+        ],
         "summary": "Merchant Inbox",
         "description": "Filter the merchant's cases before pagination using saved local evidence.",
         "operationId": "merchant_inbox_resolution_cases_inbox_get",
@@ -2133,7 +2138,9 @@
     },
     "/resolution-cases/{case_id}/customer-link": {
       "get": {
-        "tags": ["Customer portal"],
+        "tags": [
+          "Customer portal"
+        ],
         "summary": "Customer Link Status",
         "description": "Read link status without returning the secret token.",
         "operationId": "customer_link_status_resolution_cases__case_id__customer_link_get",
@@ -2178,7 +2185,9 @@
         }
       },
       "post": {
-        "tags": ["Customer portal"],
+        "tags": [
+          "Customer portal"
+        ],
         "summary": "Issue Customer Link",
         "description": "Replace any previous link and return the new token once.",
         "operationId": "issue_customer_link_resolution_cases__case_id__customer_link_post",
@@ -2233,7 +2242,9 @@
         }
       },
       "delete": {
-        "tags": ["Customer portal"],
+        "tags": [
+          "Customer portal"
+        ],
         "summary": "Revoke Customer Link",
         "operationId": "revoke_customer_link_resolution_cases__case_id__customer_link_delete",
         "security": [
@@ -2279,7 +2290,9 @@
     },
     "/resolution-cases/{case_id}/helpdesk": {
       "get": {
-        "tags": ["Customer portal"],
+        "tags": [
+          "Customer portal"
+        ],
         "summary": "Read Helpdesk",
         "operationId": "read_helpdesk_resolution_cases__case_id__helpdesk_get",
         "security": [
@@ -2323,7 +2336,9 @@
         }
       },
       "put": {
-        "tags": ["Customer portal"],
+        "tags": [
+          "Customer portal"
+        ],
         "summary": "Link Helpdesk",
         "operationId": "link_helpdesk_resolution_cases__case_id__helpdesk_put",
         "security": [
@@ -2379,7 +2394,9 @@
     },
     "/resolution-cases/{case_id}/customer-messages": {
       "get": {
-        "tags": ["Customer portal"],
+        "tags": [
+          "Customer portal"
+        ],
         "summary": "Merchant Read Messages",
         "operationId": "merchant_read_messages_resolution_cases__case_id__customer_messages_get",
         "security": [
@@ -2427,7 +2444,9 @@
         }
       },
       "post": {
-        "tags": ["Customer portal"],
+        "tags": [
+          "Customer portal"
+        ],
         "summary": "Merchant Send Message",
         "description": "Save a buyer-visible reply and queue a notice if the case has an email contact.",
         "operationId": "merchant_send_message_resolution_cases__case_id__customer_messages_post",
@@ -2484,7 +2503,9 @@
     },
     "/customer-portal/view": {
       "post": {
-        "tags": ["Customer portal"],
+        "tags": [
+          "Customer portal"
+        ],
         "summary": "Customer View",
         "description": "Read the case referenced by a valid link. No merchant credential is required.",
         "operationId": "customer_view_customer_portal_view_post",
@@ -2527,7 +2548,9 @@
     },
     "/customer-portal/messages": {
       "post": {
-        "tags": ["Customer portal"],
+        "tags": [
+          "Customer portal"
+        ],
         "summary": "Customer Send Message",
         "description": "Record one message for the linked case; retry with the same request ID.",
         "operationId": "customer_send_message_customer_portal_messages_post",
@@ -2573,7 +2596,9 @@
     },
     "/resolution-cases/intake-invites": {
       "post": {
-        "tags": ["Customer portal"],
+        "tags": [
+          "Customer portal"
+        ],
         "summary": "Create Intake Invite",
         "operationId": "create_intake_invite_resolution_cases_intake_invites_post",
         "requestBody": {
@@ -2617,7 +2642,9 @@
     },
     "/customer-account/capabilities": {
       "get": {
-        "tags": ["Customer portal"],
+        "tags": [
+          "Customer portal"
+        ],
         "summary": "Customer Account Capabilities",
         "operationId": "customer_account_capabilities_customer_account_capabilities_get",
         "responses": {
@@ -2636,7 +2663,9 @@
     },
     "/customer-account/google/start": {
       "post": {
-        "tags": ["Customer portal"],
+        "tags": [
+          "Customer portal"
+        ],
         "summary": "Start Google Sign In",
         "operationId": "start_google_sign_in_customer_account_google_start_post",
         "responses": {
@@ -2655,7 +2684,9 @@
     },
     "/customer-account/google/finish": {
       "post": {
-        "tags": ["Customer portal"],
+        "tags": [
+          "Customer portal"
+        ],
         "summary": "Finish Google Sign In",
         "operationId": "finish_google_sign_in_customer_account_google_finish_post",
         "requestBody": {
@@ -2694,7 +2725,9 @@
     },
     "/customer-account/request-sign-in": {
       "post": {
-        "tags": ["Customer portal"],
+        "tags": [
+          "Customer portal"
+        ],
         "summary": "Request Customer Sign In",
         "operationId": "request_customer_sign_in_customer_account_request_sign_in_post",
         "requestBody": {
@@ -2731,7 +2764,9 @@
     },
     "/customer-account/redeem": {
       "post": {
-        "tags": ["Customer portal"],
+        "tags": [
+          "Customer portal"
+        ],
         "summary": "Redeem Customer Sign In",
         "operationId": "redeem_customer_sign_in_customer_account_redeem_post",
         "requestBody": {
@@ -2770,7 +2805,9 @@
     },
     "/customer-account/cases": {
       "get": {
-        "tags": ["Customer portal"],
+        "tags": [
+          "Customer portal"
+        ],
         "summary": "List Customer Account Cases",
         "operationId": "list_customer_account_cases_customer_account_cases_get",
         "parameters": [
@@ -2821,7 +2858,9 @@
     },
     "/customer-account/cases/{case_id}/open": {
       "post": {
-        "tags": ["Customer portal"],
+        "tags": [
+          "Customer portal"
+        ],
         "summary": "Open Customer Account Case",
         "operationId": "open_customer_account_case_customer_account_cases__case_id__open_post",
         "parameters": [
@@ -2878,7 +2917,9 @@
     },
     "/customer-account/sign-out": {
       "post": {
-        "tags": ["Customer portal"],
+        "tags": [
+          "Customer portal"
+        ],
         "summary": "Customer Sign Out",
         "operationId": "customer_sign_out_customer_account_sign_out_post",
         "parameters": [
@@ -2923,7 +2964,9 @@
     },
     "/customer-portal/intake-view": {
       "post": {
-        "tags": ["Customer portal"],
+        "tags": [
+          "Customer portal"
+        ],
         "summary": "Intake View",
         "operationId": "intake_view_customer_portal_intake_view_post",
         "requestBody": {
@@ -2962,7 +3005,9 @@
     },
     "/customer-portal/intake": {
       "post": {
-        "tags": ["Customer portal"],
+        "tags": [
+          "Customer portal"
+        ],
         "summary": "Submit Intake",
         "operationId": "submit_intake_customer_portal_intake_post",
         "requestBody": {
@@ -3001,7 +3046,9 @@
     },
     "/customer-portal/evidence": {
       "post": {
-        "tags": ["Customer portal"],
+        "tags": [
+          "Customer portal"
+        ],
         "summary": "Customer Upload Evidence",
         "operationId": "customer_upload_evidence_customer_portal_evidence_post",
         "parameters": [
@@ -3075,7 +3122,9 @@
     },
     "/customer-portal/evidence/{file_id}": {
       "post": {
-        "tags": ["Customer portal"],
+        "tags": [
+          "Customer portal"
+        ],
         "summary": "Buyer Download Evidence",
         "operationId": "buyer_download_evidence_customer_portal_evidence__file_id__post",
         "parameters": [
@@ -3119,7 +3168,9 @@
     },
     "/resolution-cases/{case_id}/customer-evidence": {
       "get": {
-        "tags": ["Customer portal"],
+        "tags": [
+          "Customer portal"
+        ],
         "summary": "Merchant Customer Evidence",
         "operationId": "merchant_customer_evidence_resolution_cases__case_id__customer_evidence_get",
         "security": [
@@ -3169,7 +3220,9 @@
     },
     "/resolution-cases/{case_id}/customer-evidence/{file_id}": {
       "get": {
-        "tags": ["Customer portal"],
+        "tags": [
+          "Customer portal"
+        ],
         "summary": "Merchant Download Evidence",
         "operationId": "merchant_download_evidence_resolution_cases__case_id__customer_evidence__file_id__get",
         "security": [
@@ -3218,7 +3271,9 @@
     },
     "/resolution-cases/{case_id}/operations": {
       "get": {
-        "tags": ["Customer portal"],
+        "tags": [
+          "Customer portal"
+        ],
         "summary": "Case Operations",
         "operationId": "case_operations_resolution_cases__case_id__operations_get",
         "security": [
@@ -3262,7 +3317,9 @@
         }
       },
       "put": {
-        "tags": ["Customer portal"],
+        "tags": [
+          "Customer portal"
+        ],
         "summary": "Update Case Operations",
         "operationId": "update_case_operations_resolution_cases__case_id__operations_put",
         "security": [
@@ -3318,7 +3375,9 @@
     },
     "/resolution-cases/{case_id}/operations/read": {
       "post": {
-        "tags": ["Customer portal"],
+        "tags": [
+          "Customer portal"
+        ],
         "summary": "Mark Customer Messages Read",
         "operationId": "mark_customer_messages_read_resolution_cases__case_id__operations_read_post",
         "security": [
@@ -3374,7 +3433,9 @@
     },
     "/merchant-auth/capabilities": {
       "get": {
-        "tags": ["Merchant browser authentication"],
+        "tags": [
+          "Merchant browser authentication"
+        ],
         "summary": "Capabilities",
         "operationId": "capabilities_merchant_auth_capabilities_get",
         "responses": {
@@ -3393,7 +3454,9 @@
     },
     "/merchant-auth/session/key": {
       "post": {
-        "tags": ["Merchant browser authentication"],
+        "tags": [
+          "Merchant browser authentication"
+        ],
         "summary": "Key Login",
         "operationId": "key_login_merchant_auth_session_key_post",
         "requestBody": {
@@ -3432,7 +3495,9 @@
     },
     "/merchant-auth/session": {
       "get": {
-        "tags": ["Merchant browser authentication"],
+        "tags": [
+          "Merchant browser authentication"
+        ],
         "summary": "Merchant Session",
         "operationId": "merchant_session_merchant_auth_session_get",
         "responses": {
@@ -3454,7 +3519,9 @@
         ]
       },
       "delete": {
-        "tags": ["Merchant browser authentication"],
+        "tags": [
+          "Merchant browser authentication"
+        ],
         "summary": "Logout",
         "operationId": "logout_merchant_auth_session_delete",
         "responses": {
@@ -3476,7 +3543,9 @@
     },
     "/merchant-auth/paypal/start": {
       "post": {
-        "tags": ["Merchant browser authentication"],
+        "tags": [
+          "Merchant browser authentication"
+        ],
         "summary": "Start Paypal",
         "operationId": "start_paypal_merchant_auth_paypal_start_post",
         "requestBody": {
@@ -3520,7 +3589,9 @@
     },
     "/merchant-auth/paypal/finish": {
       "post": {
-        "tags": ["Merchant browser authentication"],
+        "tags": [
+          "Merchant browser authentication"
+        ],
         "summary": "Finish Paypal",
         "operationId": "finish_paypal_merchant_auth_paypal_finish_post",
         "requestBody": {
@@ -3564,7 +3635,9 @@
     },
     "/merchant-auth/paypal/link": {
       "delete": {
-        "tags": ["Merchant browser authentication"],
+        "tags": [
+          "Merchant browser authentication"
+        ],
         "summary": "Unlink Paypal",
         "operationId": "unlink_paypal_merchant_auth_paypal_link_delete",
         "responses": {
@@ -3586,7 +3659,9 @@
     },
     "/merchant-auth/commerce-keys": {
       "get": {
-        "tags": ["Merchant browser authentication"],
+        "tags": [
+          "Merchant browser authentication"
+        ],
         "summary": "List Commerce Keys",
         "description": "List active SDK key IDs and creation times for the browser session.",
         "operationId": "list_commerce_keys_merchant_auth_commerce_keys_get",
@@ -3609,7 +3684,9 @@
         ]
       },
       "post": {
-        "tags": ["Merchant browser authentication"],
+        "tags": [
+          "Merchant browser authentication"
+        ],
         "summary": "Issue Commerce Key",
         "description": "Create a commerce-only SDK key and return its secret once.",
         "operationId": "issue_commerce_key_merchant_auth_commerce_keys_post",
@@ -3637,7 +3714,9 @@
     },
     "/merchant-auth/commerce-keys/{key_id}": {
       "delete": {
-        "tags": ["Merchant browser authentication"],
+        "tags": [
+          "Merchant browser authentication"
+        ],
         "summary": "Revoke Commerce Key",
         "description": "Revoke one of this merchant's commerce-only keys.",
         "operationId": "revoke_commerce_key_merchant_auth_commerce_keys__key_id__delete",
@@ -3685,7 +3764,9 @@
     },
     "/resolution-cases/promise-health": {
       "get": {
-        "tags": ["Promise health"],
+        "tags": [
+          "Promise health"
+        ],
         "summary": "Promises Needing Attention",
         "description": "At-risk and broken refund promises across the merchant's cases, largest amount at risk first.",
         "operationId": "promises_needing_attention_resolution_cases_promise_health_get",
@@ -3734,7 +3815,9 @@
     },
     "/resolution-cases/{case_id}/promise-health": {
       "get": {
-        "tags": ["Promise health"],
+        "tags": [
+          "Promise health"
+        ],
         "summary": "Case Promise Health",
         "description": "Kept, partially kept, at-risk or broken status for each accepted refund promise on one case.",
         "operationId": "case_promise_health_resolution_cases__case_id__promise_health_get",
@@ -3781,7 +3864,9 @@
     },
     "/resolution-cases/{case_id}/next-action": {
       "get": {
-        "tags": ["Promise health"],
+        "tags": [
+          "Promise health"
+        ],
         "summary": "Case Next Action",
         "description": "What is missing before a refund, the facts behind it, and a code-written next step. No AI.",
         "operationId": "case_next_action_resolution_cases__case_id__next_action_get",
@@ -3826,9 +3911,122 @@
         }
       }
     },
+    "/resolution-cases/{case_id}/remedies": {
+      "get": {
+        "tags": [
+          "Suggested remedies"
+        ],
+        "summary": "Suggested Remedies",
+        "description": "Remedy options that are valid now, with amounts from the reconciliation (captured minus\ncompleted and pending refunds) and the return policy. No model call; nothing is recorded.",
+        "operationId": "suggested_remedies_resolution_cases__case_id__remedies_get",
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RemedySuggestions"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/resolution-cases/{case_id}/remedies/promises": {
+      "post": {
+        "tags": [
+          "Suggested remedies"
+        ],
+        "summary": "Create Remedy Promises",
+        "description": "Record the promises for the suggested remedy the merchant chose, after recomputing it; its\n`expected_amount` must still match. A capture holds one refund promise, so one option is\nrecorded per case. Returns the choice for /platform/cases/{id}/offers but does not publish\nan offer or refund anything.",
+        "operationId": "create_remedy_promises_resolution_cases__case_id__remedies_promises_post",
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRemedy"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatedRemedy"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The option is no longer valid or the balance changed"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/resolution-cases": {
       "post": {
-        "tags": ["Resolution workspace"],
+        "tags": [
+          "Resolution workspace"
+        ],
         "summary": "Create Resolution",
         "description": "Create a case with or without a linked PayPal refund case.",
         "operationId": "create_resolution_resolution_cases_post",
@@ -3871,7 +4069,9 @@
         }
       },
       "get": {
-        "tags": ["Resolution workspace"],
+        "tags": [
+          "Resolution workspace"
+        ],
         "summary": "List Resolutions",
         "operationId": "list_resolutions_resolution_cases_get",
         "security": [
@@ -3931,7 +4131,9 @@
     },
     "/resolution-cases/upsert": {
       "post": {
-        "tags": ["Resolution workspace"],
+        "tags": [
+          "Resolution workspace"
+        ],
         "summary": "Upsert Evidence Case",
         "description": "Create or reuse a resolution case by an exact merchant-scoped external reference.",
         "operationId": "upsert_evidence_case_resolution_cases_upsert_post",
@@ -3979,7 +4181,9 @@
     },
     "/resolution-cases/{case_id}": {
       "get": {
-        "tags": ["Resolution workspace"],
+        "tags": [
+          "Resolution workspace"
+        ],
         "summary": "Get Resolution",
         "operationId": "get_resolution_resolution_cases__case_id__get",
         "security": [
@@ -4025,7 +4229,9 @@
     },
     "/resolution-cases/{case_id}/evidence/records": {
       "post": {
-        "tags": ["Resolution workspace"],
+        "tags": [
+          "Resolution workspace"
+        ],
         "summary": "Link Evidence Record",
         "description": "Associate a record reference without contacting its provider.",
         "operationId": "link_evidence_record_resolution_cases__case_id__evidence_records_post",
@@ -4085,7 +4291,9 @@
     },
     "/resolution-cases/{case_id}/evidence/events": {
       "post": {
-        "tags": ["Resolution workspace"],
+        "tags": [
+          "Resolution workspace"
+        ],
         "summary": "Submit Merchant Evidence",
         "description": "Record merchant evidence once. This cannot approve or execute money movement.",
         "operationId": "submit_merchant_evidence_resolution_cases__case_id__evidence_events_post",
@@ -4145,7 +4353,9 @@
     },
     "/resolution-cases/{case_id}/evidence/refresh": {
       "post": {
-        "tags": ["Resolution workspace"],
+        "tags": [
+          "Resolution workspace"
+        ],
         "summary": "Refresh Case Evidence",
         "description": "Check linked PayPal Sandbox records; report incomplete checks without removing prior facts.",
         "operationId": "refresh_case_evidence_resolution_cases__case_id__evidence_refresh_post",
@@ -4195,7 +4405,9 @@
     },
     "/resolution-cases/{case_id}/payment-link": {
       "put": {
-        "tags": ["Resolution workspace"],
+        "tags": [
+          "Resolution workspace"
+        ],
         "summary": "Link Resolution Payment",
         "description": "Attach a merchant-owned payment record once, without calling PayPal.",
         "operationId": "link_resolution_payment_resolution_cases__case_id__payment_link_put",
@@ -4252,7 +4464,9 @@
     },
     "/resolution-cases/{case_id}/promises": {
       "post": {
-        "tags": ["Resolution workspace"],
+        "tags": [
+          "Resolution workspace"
+        ],
         "summary": "Record Promise",
         "description": "Record an agreed remedy and optional prerequisites in this case.",
         "operationId": "record_promise_resolution_cases__case_id__promises_post",
@@ -4309,7 +4523,9 @@
     },
     "/resolution-cases/{case_id}/promises/{promise_id}": {
       "put": {
-        "tags": ["Resolution workspace"],
+        "tags": [
+          "Resolution workspace"
+        ],
         "summary": "Revise Promise",
         "description": "Revise the exact current version; previous evidence remains in the timeline.",
         "operationId": "revise_promise_resolution_cases__case_id__promises__promise_id__put",
@@ -4376,7 +4592,9 @@
     },
     "/resolution-cases/{case_id}/promises/{promise_id}/evidence": {
       "post": {
-        "tags": ["Resolution workspace"],
+        "tags": [
+          "Resolution workspace"
+        ],
         "summary": "Record Promise Evidence",
         "description": "Save a note or an explicit internal return finding; never provider proof.",
         "operationId": "record_promise_evidence_resolution_cases__case_id__promises__promise_id__evidence_post",
@@ -4443,7 +4661,9 @@
     },
     "/resolution-cases/{case_id}/promises/{promise_id}/refresh": {
       "post": {
-        "tags": ["Resolution workspace"],
+        "tags": [
+          "Resolution workspace"
+        ],
         "summary": "Refresh Promise",
         "description": "Fetch external evidence. No provider mutation or payment submission.",
         "operationId": "refresh_promise_resolution_cases__case_id__promises__promise_id__refresh_post",
@@ -4519,7 +4739,9 @@
     },
     "/resolution-cases/{case_id}/timeline": {
       "get": {
-        "tags": ["Resolution workspace"],
+        "tags": [
+          "Resolution workspace"
+        ],
         "summary": "Resolution Timeline",
         "description": "Read case events newest first; use before_sequence for paging through new activity.",
         "operationId": "resolution_timeline_resolution_cases__case_id__timeline_get",
@@ -4608,7 +4830,9 @@
     },
     "/resolution-cases/{case_id}/evidence-bundle": {
       "get": {
-        "tags": ["Resolution workspace"],
+        "tags": [
+          "Resolution workspace"
+        ],
         "summary": "Evidence Bundle",
         "description": "Export evidence privately for review; does not submit a PayPal dispute.",
         "operationId": "evidence_bundle_resolution_cases__case_id__evidence_bundle_get",
@@ -4679,7 +4903,9 @@
     },
     "/commerce/orders/sync": {
       "post": {
-        "tags": ["Commerce evidence"],
+        "tags": [
+          "Commerce evidence"
+        ],
         "summary": "Sync Commerce Order",
         "description": "Create or reuse a case and atomically save the latest app order snapshot.",
         "operationId": "sync_commerce_order_commerce_orders_sync_post",
@@ -4723,7 +4949,9 @@
     },
     "/commerce/orders/register": {
       "post": {
-        "tags": ["Commerce evidence"],
+        "tags": [
+          "Commerce evidence"
+        ],
         "summary": "Register Commerce Order",
         "description": "Save or update an order for the dashboard without opening a new case.",
         "operationId": "register_commerce_order_commerce_orders_register_post",
@@ -4767,7 +4995,9 @@
     },
     "/commerce/orders": {
       "get": {
-        "tags": ["Commerce evidence"],
+        "tags": [
+          "Commerce evidence"
+        ],
         "summary": "List Commerce Orders",
         "description": "Browse app orders for the authenticated merchant without calling PayPal.",
         "operationId": "list_commerce_orders_commerce_orders_get",
@@ -4851,7 +5081,9 @@
     },
     "/commerce/orders/{order_id}": {
       "get": {
-        "tags": ["Commerce evidence"],
+        "tags": [
+          "Commerce evidence"
+        ],
         "summary": "Get Registered Order",
         "description": "Read the private order snapshot without any shared contact details.",
         "operationId": "get_registered_order_commerce_orders__order_id__get",
@@ -4898,7 +5130,9 @@
     },
     "/commerce/orders/{order_id}/case": {
       "post": {
-        "tags": ["Commerce evidence"],
+        "tags": [
+          "Commerce evidence"
+        ],
         "summary": "Open Commerce Case",
         "description": "Open or reuse a resolution case and attach the registered order evidence.",
         "operationId": "open_commerce_case_commerce_orders__order_id__case_post",
@@ -4945,7 +5179,9 @@
     },
     "/resolution-cases/{case_id}/commerce": {
       "get": {
-        "tags": ["Commerce evidence"],
+        "tags": [
+          "Commerce evidence"
+        ],
         "summary": "Get Commerce Order",
         "description": "Compare the app order with the most recent applicable PayPal check.",
         "operationId": "get_commerce_order_resolution_cases__case_id__commerce_get",
@@ -4992,7 +5228,9 @@
     },
     "/resolution-cases/{case_id}/commerce/refresh": {
       "post": {
-        "tags": ["Commerce evidence"],
+        "tags": [
+          "Commerce evidence"
+        ],
         "summary": "Refresh Commerce Order",
         "description": "Read linked PayPal Sandbox evidence and compare. Never mutate payments.",
         "operationId": "refresh_commerce_order_resolution_cases__case_id__commerce_refresh_post",
@@ -5039,7 +5277,9 @@
     },
     "/resolution-cases/{case_id}/commerce/contact": {
       "get": {
-        "tags": ["Commerce evidence"],
+        "tags": [
+          "Commerce evidence"
+        ],
         "summary": "Get Commerce Contact",
         "description": "Read explicitly shared app contact information with full merchant access.",
         "operationId": "get_commerce_contact_resolution_cases__case_id__commerce_contact_get",
@@ -5086,7 +5326,9 @@
     },
     "/resolution-cases/{case_id}/investigations": {
       "get": {
-        "tags": ["Private investigations"],
+        "tags": [
+          "Private investigations"
+        ],
         "summary": "Investigations",
         "operationId": "investigations_resolution_cases__case_id__investigations_get",
         "security": [
@@ -5132,7 +5374,9 @@
     },
     "/resolution-cases/{case_id}/investigations/{investigation_id}/review": {
       "post": {
-        "tags": ["Private investigations"],
+        "tags": [
+          "Private investigations"
+        ],
         "summary": "Review Investigation",
         "operationId": "review_investigation_resolution_cases__case_id__investigations__investigation_id__review_post",
         "security": [
@@ -5198,7 +5442,9 @@
     },
     "/resolution-cases/{case_id}/ai/extract-promises": {
       "post": {
-        "tags": ["AI promise extraction"],
+        "tags": [
+          "AI promise extraction"
+        ],
         "summary": "Extract Promise Proposals",
         "description": "Propose promises for review from the case's customer conversation, or from\nsupplied messages. Does not record promises or call PayPal.",
         "operationId": "extract_promise_proposals_resolution_cases__case_id__ai_extract_promises_post",
@@ -5265,7 +5511,9 @@
     },
     "/ai/usage": {
       "get": {
-        "tags": ["AI promise extraction"],
+        "tags": [
+          "AI promise extraction"
+        ],
         "summary": "Extraction Usage",
         "description": "Today's (UTC) extraction usage for the authenticated merchant. Counted in this\nAPI process's memory only: it resets on restart and is not shared between\nprocesses.",
         "operationId": "extraction_usage_ai_usage_get",
@@ -5288,9 +5536,115 @@
         ]
       }
     },
+    "/resolution-cases/{case_id}/ai/explain-next-action": {
+      "post": {
+        "tags": [
+          "AI promise extraction"
+        ],
+        "summary": "Explain Next Action",
+        "description": "One-sentence explanation of the next action, written from structured case facts only.\n\nUses the extraction switch, data policy, cache, token cap and daily budget. Text whose\namounts, dates or numbers are not in the facts is replaced by the code template.\nAdvisory only: it never approves, submits or records anything.",
+        "operationId": "explain_next_action_resolution_cases__case_id__ai_explain_next_action_post",
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Explanation"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resolution case not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/resolution-cases/{case_id}/ai/rank-remedies": {
+      "post": {
+        "tags": [
+          "AI promise extraction"
+        ],
+        "summary": "Rank Remedies",
+        "description": "Classify the issue and buyer preference, rank the code-built remedy options with a\none-line reason each, and draft a buyer message, from the masked conversation.\n\nUses the extraction switch, data policy, cache, token cap and daily budget. Any option,\namount or number outside the listed options falls back to code order and a template.\nAdvisory only: it never records promises, publishes offers or refunds.",
+        "operationId": "rank_remedies_resolution_cases__case_id__ai_rank_remedies_post",
+        "security": [
+          {
+            "MerchantBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "case_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Case Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RemedyRanking"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resolution case not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/platform/account/signup": {
       "post": {
-        "tags": ["Merchant operations"],
+        "tags": [
+          "Merchant operations"
+        ],
         "summary": "Signup",
         "operationId": "signup_platform_account_signup_post",
         "requestBody": {
@@ -5329,7 +5683,9 @@
     },
     "/platform/account/login": {
       "post": {
-        "tags": ["Merchant operations"],
+        "tags": [
+          "Merchant operations"
+        ],
         "summary": "Login",
         "operationId": "login_platform_account_login_post",
         "requestBody": {
@@ -5368,7 +5724,9 @@
     },
     "/platform/account/claim": {
       "post": {
-        "tags": ["Merchant operations"],
+        "tags": [
+          "Merchant operations"
+        ],
         "summary": "Claim Owner",
         "operationId": "claim_owner_platform_account_claim_post",
         "requestBody": {
@@ -5412,7 +5770,9 @@
     },
     "/platform/account/accept-invite": {
       "post": {
-        "tags": ["Merchant operations"],
+        "tags": [
+          "Merchant operations"
+        ],
         "summary": "Accept Invite",
         "operationId": "accept_invite_platform_account_accept_invite_post",
         "requestBody": {
@@ -5451,7 +5811,9 @@
     },
     "/platform/me": {
       "get": {
-        "tags": ["Merchant operations"],
+        "tags": [
+          "Merchant operations"
+        ],
         "summary": "Me",
         "operationId": "me_platform_me_get",
         "responses": {
@@ -5475,7 +5837,9 @@
     },
     "/platform/team": {
       "get": {
-        "tags": ["Merchant operations"],
+        "tags": [
+          "Merchant operations"
+        ],
         "summary": "Team",
         "operationId": "team_platform_team_get",
         "responses": {
@@ -5499,7 +5863,9 @@
     },
     "/platform/team/invites": {
       "post": {
-        "tags": ["Merchant operations"],
+        "tags": [
+          "Merchant operations"
+        ],
         "summary": "Invite",
         "operationId": "invite_platform_team_invites_post",
         "requestBody": {
@@ -5543,7 +5909,9 @@
     },
     "/platform/team/{staff_id}": {
       "put": {
-        "tags": ["Merchant operations"],
+        "tags": [
+          "Merchant operations"
+        ],
         "summary": "Update Staff",
         "operationId": "update_staff_platform_team__staff_id__put",
         "security": [
@@ -5599,7 +5967,9 @@
     },
     "/platform/audit": {
       "get": {
-        "tags": ["Merchant operations"],
+        "tags": [
+          "Merchant operations"
+        ],
         "summary": "Audit History",
         "operationId": "audit_history_platform_audit_get",
         "responses": {
@@ -5621,7 +5991,9 @@
     },
     "/platform/sdk-keys": {
       "get": {
-        "tags": ["Merchant operations"],
+        "tags": [
+          "Merchant operations"
+        ],
         "summary": "Sdk Keys",
         "operationId": "sdk_keys_platform_sdk_keys_get",
         "responses": {
@@ -5641,7 +6013,9 @@
         ]
       },
       "post": {
-        "tags": ["Merchant operations"],
+        "tags": [
+          "Merchant operations"
+        ],
         "summary": "Issue Sdk Key",
         "operationId": "issue_sdk_key_platform_sdk_keys_post",
         "responses": {
@@ -5663,7 +6037,9 @@
     },
     "/platform/support-keys": {
       "post": {
-        "tags": ["Merchant operations"],
+        "tags": [
+          "Merchant operations"
+        ],
         "summary": "Issue Support Key",
         "operationId": "issue_support_key_platform_support_keys_post",
         "requestBody": {
@@ -5707,7 +6083,9 @@
     },
     "/platform/sdk-keys/{key_id}": {
       "delete": {
-        "tags": ["Merchant operations"],
+        "tags": [
+          "Merchant operations"
+        ],
         "summary": "Revoke Sdk Key",
         "operationId": "revoke_sdk_key_platform_sdk_keys__key_id__delete",
         "security": [
@@ -5751,7 +6129,9 @@
     },
     "/platform/connections": {
       "get": {
-        "tags": ["Merchant operations"],
+        "tags": [
+          "Merchant operations"
+        ],
         "summary": "Connections",
         "operationId": "connections_platform_connections_get",
         "responses": {
@@ -5775,7 +6155,9 @@
     },
     "/platform/connections/{provider}": {
       "put": {
-        "tags": ["Merchant operations"],
+        "tags": [
+          "Merchant operations"
+        ],
         "summary": "Save Connection",
         "operationId": "save_connection_platform_connections__provider__put",
         "security": [
@@ -5830,7 +6212,9 @@
     },
     "/platform/connections/{provider}/check": {
       "post": {
-        "tags": ["Merchant operations"],
+        "tags": [
+          "Merchant operations"
+        ],
         "summary": "Check Connection",
         "operationId": "check_connection_platform_connections__provider__check_post",
         "security": [
@@ -5875,7 +6259,9 @@
     },
     "/platform/imports": {
       "get": {
-        "tags": ["Merchant operations"],
+        "tags": [
+          "Merchant operations"
+        ],
         "summary": "Imports",
         "operationId": "imports_platform_imports_get",
         "responses": {
@@ -5899,7 +6285,9 @@
     },
     "/platform/imports/zendesk": {
       "post": {
-        "tags": ["Merchant operations"],
+        "tags": [
+          "Merchant operations"
+        ],
         "summary": "Import Ticket",
         "operationId": "import_ticket_platform_imports_zendesk_post",
         "requestBody": {
@@ -5943,7 +6331,9 @@
     },
     "/platform/imports/{import_id}": {
       "get": {
-        "tags": ["Merchant operations"],
+        "tags": [
+          "Merchant operations"
+        ],
         "summary": "Imported Ticket",
         "operationId": "imported_ticket_platform_imports__import_id__get",
         "security": [
@@ -5989,7 +6379,9 @@
     },
     "/platform/imports/{import_id}/match": {
       "put": {
-        "tags": ["Merchant operations"],
+        "tags": [
+          "Merchant operations"
+        ],
         "summary": "Match Ticket",
         "operationId": "match_ticket_platform_imports__import_id__match_put",
         "security": [
@@ -6045,7 +6437,9 @@
     },
     "/platform/dashboard": {
       "get": {
-        "tags": ["Merchant operations"],
+        "tags": [
+          "Merchant operations"
+        ],
         "summary": "Dashboard",
         "operationId": "dashboard_platform_dashboard_get",
         "responses": {
@@ -6069,7 +6463,9 @@
     },
     "/platform/watchdog": {
       "get": {
-        "tags": ["Merchant operations"],
+        "tags": [
+          "Merchant operations"
+        ],
         "summary": "Watchdog",
         "operationId": "watchdog_platform_watchdog_get",
         "responses": {
@@ -6093,7 +6489,9 @@
     },
     "/platform/watchdog/scan": {
       "post": {
-        "tags": ["Merchant operations"],
+        "tags": [
+          "Merchant operations"
+        ],
         "summary": "Scan",
         "operationId": "scan_platform_watchdog_scan_post",
         "responses": {
@@ -6117,7 +6515,9 @@
     },
     "/platform/cases/{case_id}/offers": {
       "get": {
-        "tags": ["Merchant operations"],
+        "tags": [
+          "Merchant operations"
+        ],
         "summary": "Offers",
         "operationId": "offers_platform_cases__case_id__offers_get",
         "security": [
@@ -6161,7 +6561,9 @@
         }
       },
       "post": {
-        "tags": ["Merchant operations"],
+        "tags": [
+          "Merchant operations"
+        ],
         "summary": "Publish Offer",
         "operationId": "publish_offer_platform_cases__case_id__offers_post",
         "security": [
@@ -6217,7 +6619,9 @@
     },
     "/platform/cases/{case_id}/support-requests": {
       "get": {
-        "tags": ["Merchant operations"],
+        "tags": [
+          "Merchant operations"
+        ],
         "summary": "Case Support Requests",
         "operationId": "case_support_requests_platform_cases__case_id__support_requests_get",
         "security": [
@@ -6263,7 +6667,9 @@
     },
     "/platform/cases/{case_id}/returns": {
       "get": {
-        "tags": ["Merchant operations"],
+        "tags": [
+          "Merchant operations"
+        ],
         "summary": "Returns",
         "operationId": "returns_platform_cases__case_id__returns_get",
         "security": [
@@ -6307,7 +6713,9 @@
         }
       },
       "post": {
-        "tags": ["Merchant operations"],
+        "tags": [
+          "Merchant operations"
+        ],
         "summary": "Request Return",
         "operationId": "request_return_platform_cases__case_id__returns_post",
         "security": [
@@ -6363,7 +6771,9 @@
     },
     "/platform/cases/{case_id}/returns/{return_id}": {
       "put": {
-        "tags": ["Merchant operations"],
+        "tags": [
+          "Merchant operations"
+        ],
         "summary": "Progress Return",
         "operationId": "progress_return_platform_cases__case_id__returns__return_id__put",
         "security": [
@@ -6429,7 +6839,9 @@
     },
     "/platform/cases/{case_id}/dispute-packages": {
       "get": {
-        "tags": ["Merchant operations"],
+        "tags": [
+          "Merchant operations"
+        ],
         "summary": "Packages",
         "operationId": "packages_platform_cases__case_id__dispute_packages_get",
         "security": [
@@ -6473,7 +6885,9 @@
         }
       },
       "post": {
-        "tags": ["Merchant operations"],
+        "tags": [
+          "Merchant operations"
+        ],
         "summary": "Build Package",
         "operationId": "build_package_platform_cases__case_id__dispute_packages_post",
         "security": [
@@ -6529,7 +6943,9 @@
     },
     "/platform/cases/{case_id}/dispute-packages/{package_id}": {
       "get": {
-        "tags": ["Merchant operations"],
+        "tags": [
+          "Merchant operations"
+        ],
         "summary": "Read Package",
         "operationId": "read_package_platform_cases__case_id__dispute_packages__package_id__get",
         "security": [
@@ -6585,7 +7001,9 @@
     },
     "/platform/cases/{case_id}/dispute-packages/{package_id}/review": {
       "post": {
-        "tags": ["Merchant operations"],
+        "tags": [
+          "Merchant operations"
+        ],
         "summary": "Review Package",
         "operationId": "review_package_platform_cases__case_id__dispute_packages__package_id__review_post",
         "security": [
@@ -6641,7 +7059,9 @@
     },
     "/platform/cases/{case_id}/dispute-packages/{package_id}/export": {
       "get": {
-        "tags": ["Merchant operations"],
+        "tags": [
+          "Merchant operations"
+        ],
         "summary": "Export Package",
         "operationId": "export_package_platform_cases__case_id__dispute_packages__package_id__export_get",
         "security": [
@@ -6695,7 +7115,9 @@
     },
     "/platform/buyer/offers": {
       "post": {
-        "tags": ["Merchant operations"],
+        "tags": [
+          "Merchant operations"
+        ],
         "summary": "Buyer Offers",
         "operationId": "buyer_offers_platform_buyer_offers_post",
         "requestBody": {
@@ -6734,7 +7156,9 @@
     },
     "/platform/buyer/decision": {
       "post": {
-        "tags": ["Merchant operations"],
+        "tags": [
+          "Merchant operations"
+        ],
         "summary": "Buyer Decision",
         "operationId": "buyer_decision_platform_buyer_decision_post",
         "requestBody": {
@@ -6773,7 +7197,9 @@
     },
     "/platform/buyer/returns": {
       "post": {
-        "tags": ["Merchant operations"],
+        "tags": [
+          "Merchant operations"
+        ],
         "summary": "Buyer Returns",
         "operationId": "buyer_returns_platform_buyer_returns_post",
         "requestBody": {
@@ -6812,7 +7238,9 @@
     },
     "/platform/buyer/returns/request": {
       "post": {
-        "tags": ["Merchant operations"],
+        "tags": [
+          "Merchant operations"
+        ],
         "summary": "Buyer Request Return",
         "operationId": "buyer_request_return_platform_buyer_returns_request_post",
         "requestBody": {
@@ -6851,7 +7279,9 @@
     },
     "/aftercare/issues": {
       "post": {
-        "tags": ["Embedded aftercare"],
+        "tags": [
+          "Embedded aftercare"
+        ],
         "summary": "Open Aftercare Issue",
         "operationId": "open_aftercare_issue_aftercare_issues_post",
         "requestBody": {
@@ -6895,7 +7325,9 @@
     },
     "/aftercare/status": {
       "post": {
-        "tags": ["Embedded aftercare"],
+        "tags": [
+          "Embedded aftercare"
+        ],
         "summary": "Aftercare Status",
         "operationId": "aftercare_status_aftercare_status_post",
         "requestBody": {
@@ -6939,7 +7371,9 @@
     },
     "/aftercare/portal": {
       "post": {
-        "tags": ["Embedded aftercare"],
+        "tags": [
+          "Embedded aftercare"
+        ],
         "summary": "Aftercare Portal",
         "operationId": "aftercare_portal_aftercare_portal_post",
         "requestBody": {
@@ -6983,7 +7417,9 @@
     },
     "/platform/return-policy": {
       "get": {
-        "tags": ["Resolution assurance"],
+        "tags": [
+          "Resolution assurance"
+        ],
         "summary": "Policy",
         "operationId": "policy_platform_return_policy_get",
         "responses": {
@@ -7005,7 +7441,9 @@
         ]
       },
       "put": {
-        "tags": ["Resolution assurance"],
+        "tags": [
+          "Resolution assurance"
+        ],
         "summary": "Policy Save",
         "operationId": "policy_save_platform_return_policy_put",
         "requestBody": {
@@ -7049,7 +7487,9 @@
     },
     "/cases/{case_id}/disputes": {
       "post": {
-        "tags": ["Resolution assurance"],
+        "tags": [
+          "Resolution assurance"
+        ],
         "summary": "Dispute Record",
         "operationId": "dispute_record_cases__case_id__disputes_post",
         "security": [
@@ -7101,7 +7541,9 @@
         }
       },
       "get": {
-        "tags": ["Resolution assurance"],
+        "tags": [
+          "Resolution assurance"
+        ],
         "summary": "Dispute List",
         "operationId": "dispute_list_cases__case_id__disputes_get",
         "security": [
@@ -7145,7 +7587,9 @@
     },
     "/platform/cases/{case_id}/disputes": {
       "get": {
-        "tags": ["Resolution assurance"],
+        "tags": [
+          "Resolution assurance"
+        ],
         "summary": "Resolution Disputes",
         "operationId": "resolution_disputes_platform_cases__case_id__disputes_get",
         "security": [
@@ -7187,7 +7631,9 @@
         }
       },
       "post": {
-        "tags": ["Resolution assurance"],
+        "tags": [
+          "Resolution assurance"
+        ],
         "summary": "Resolution Dispute Record",
         "operationId": "resolution_dispute_record_platform_cases__case_id__disputes_post",
         "security": [
@@ -7241,7 +7687,9 @@
     },
     "/platform/cases/{case_id}/refund-traces": {
       "post": {
-        "tags": ["Resolution assurance"],
+        "tags": [
+          "Resolution assurance"
+        ],
         "summary": "Trace Record",
         "operationId": "trace_record_platform_cases__case_id__refund_traces_post",
         "security": [
@@ -7295,7 +7743,9 @@
     },
     "/platform/cases/{case_id}/dispute-documents": {
       "post": {
-        "tags": ["Resolution assurance"],
+        "tags": [
+          "Resolution assurance"
+        ],
         "summary": "Dispute Document",
         "operationId": "dispute_document_platform_cases__case_id__dispute_documents_post",
         "security": [
@@ -7349,7 +7799,9 @@
     },
     "/platform/cases/{case_id}/returns/{return_id}/guide": {
       "get": {
-        "tags": ["Resolution assurance"],
+        "tags": [
+          "Resolution assurance"
+        ],
         "summary": "Return Guide",
         "operationId": "return_guide_platform_cases__case_id__returns__return_id__guide_get",
         "security": [
@@ -7403,7 +7855,9 @@
         }
       },
       "put": {
-        "tags": ["Resolution assurance"],
+        "tags": [
+          "Resolution assurance"
+        ],
         "summary": "Save Return Guide",
         "operationId": "save_return_guide_platform_cases__case_id__returns__return_id__guide_put",
         "security": [
@@ -7469,7 +7923,9 @@
     },
     "/platform/cases/{case_id}/returns/{return_id}/inspection": {
       "post": {
-        "tags": ["Resolution assurance"],
+        "tags": [
+          "Resolution assurance"
+        ],
         "summary": "Inspect Return",
         "operationId": "inspect_return_platform_cases__case_id__returns__return_id__inspection_post",
         "security": [
@@ -7533,7 +7989,9 @@
     },
     "/platform/cases/{case_id}/returns/{return_id}/labels": {
       "post": {
-        "tags": ["Resolution assurance"],
+        "tags": [
+          "Resolution assurance"
+        ],
         "summary": "Upload Label",
         "operationId": "upload_label_platform_cases__case_id__returns__return_id__labels_post",
         "security": [
@@ -7597,7 +8055,9 @@
     },
     "/aftercare/journey": {
       "post": {
-        "tags": ["Resolution assurance"],
+        "tags": [
+          "Resolution assurance"
+        ],
         "summary": "Refund Journey",
         "operationId": "refund_journey_aftercare_journey_post",
         "requestBody": {
@@ -7641,7 +8101,9 @@
     },
     "/aftercare/context": {
       "post": {
-        "tags": ["Resolution assurance"],
+        "tags": [
+          "Resolution assurance"
+        ],
         "summary": "Support Context",
         "operationId": "support_context_aftercare_context_post",
         "requestBody": {
@@ -7685,7 +8147,9 @@
     },
     "/aftercare/received": {
       "post": {
-        "tags": ["Resolution assurance"],
+        "tags": [
+          "Resolution assurance"
+        ],
         "summary": "Received Refund",
         "operationId": "received_refund_aftercare_received_post",
         "requestBody": {
@@ -7729,7 +8193,9 @@
     },
     "/aftercare/issues/lookup": {
       "post": {
-        "tags": ["Resolution assurance"],
+        "tags": [
+          "Resolution assurance"
+        ],
         "summary": "Issue Lookup",
         "operationId": "issue_lookup_aftercare_issues_lookup_post",
         "requestBody": {
@@ -7773,7 +8239,9 @@
     },
     "/aftercare/events": {
       "post": {
-        "tags": ["Resolution assurance"],
+        "tags": [
+          "Resolution assurance"
+        ],
         "summary": "Event Pull",
         "operationId": "event_pull_aftercare_events_post",
         "requestBody": {
@@ -7817,7 +8285,9 @@
     },
     "/aftercare/returns/eligibility": {
       "post": {
-        "tags": ["Resolution assurance"],
+        "tags": [
+          "Resolution assurance"
+        ],
         "summary": "Check Eligibility",
         "operationId": "check_eligibility_aftercare_returns_eligibility_post",
         "requestBody": {
@@ -7861,7 +8331,9 @@
     },
     "/aftercare/returns": {
       "post": {
-        "tags": ["Resolution assurance"],
+        "tags": [
+          "Resolution assurance"
+        ],
         "summary": "Support Returns",
         "operationId": "support_returns_aftercare_returns_post",
         "requestBody": {
@@ -7905,7 +8377,9 @@
     },
     "/aftercare/returns/request": {
       "post": {
-        "tags": ["Resolution assurance"],
+        "tags": [
+          "Resolution assurance"
+        ],
         "summary": "Support Return Request",
         "operationId": "support_return_request_aftercare_returns_request_post",
         "requestBody": {
@@ -7949,7 +8423,9 @@
     },
     "/aftercare/returns/guide": {
       "post": {
-        "tags": ["Resolution assurance"],
+        "tags": [
+          "Resolution assurance"
+        ],
         "summary": "Support Return Guide",
         "operationId": "support_return_guide_aftercare_returns_guide_post",
         "requestBody": {
@@ -7993,7 +8469,9 @@
     },
     "/aftercare/returns/label": {
       "post": {
-        "tags": ["Resolution assurance"],
+        "tags": [
+          "Resolution assurance"
+        ],
         "summary": "Support Label",
         "operationId": "support_label_aftercare_returns_label_post",
         "requestBody": {
@@ -8037,7 +8515,9 @@
     },
     "/platform/buyer/assurance": {
       "post": {
-        "tags": ["Resolution assurance"],
+        "tags": [
+          "Resolution assurance"
+        ],
         "summary": "Buyer Assurance",
         "operationId": "buyer_assurance_platform_buyer_assurance_post",
         "requestBody": {
@@ -8074,7 +8554,9 @@
     },
     "/platform/buyer/returns/guide": {
       "post": {
-        "tags": ["Resolution assurance"],
+        "tags": [
+          "Resolution assurance"
+        ],
         "summary": "Buyer Guide",
         "operationId": "buyer_guide_platform_buyer_returns_guide_post",
         "requestBody": {
@@ -8113,7 +8595,9 @@
     },
     "/platform/buyer/returns/label": {
       "post": {
-        "tags": ["Resolution assurance"],
+        "tags": [
+          "Resolution assurance"
+        ],
         "summary": "Buyer Label",
         "operationId": "buyer_label_platform_buyer_returns_label_post",
         "requestBody": {
@@ -8152,7 +8636,9 @@
     },
     "/platform/buyer/return-policy": {
       "post": {
-        "tags": ["Resolution assurance"],
+        "tags": [
+          "Resolution assurance"
+        ],
         "summary": "Buyer Return Policy",
         "operationId": "buyer_return_policy_platform_buyer_return_policy_post",
         "requestBody": {
@@ -8191,7 +8677,9 @@
     },
     "/webhooks/zendesk/{merchant_id}": {
       "post": {
-        "tags": ["Support webhooks"],
+        "tags": [
+          "Support webhooks"
+        ],
         "summary": "Zendesk Hook",
         "operationId": "zendesk_hook_webhooks_zendesk__merchant_id__post",
         "parameters": [
@@ -8214,56 +8702,6 @@
                 "schema": {}
               }
             }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/resolution-cases/{case_id}/ai/explain-next-action": {
-      "post": {
-        "tags": ["AI promise extraction"],
-        "summary": "Explain Next Action",
-        "description": "One-sentence explanation of the next action, written from structured case facts only.\n\nUses the extraction switch, data policy, cache, token cap and daily budget. Text whose\namounts, dates or numbers are not in the facts is replaced by the code template.\nAdvisory only: it never approves, submits or records anything.",
-        "operationId": "explain_next_action_resolution_cases__case_id__ai_explain_next_action_post",
-        "security": [
-          {
-            "MerchantBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "case_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Case Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Explanation"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Resolution case not found"
           },
           "422": {
             "description": "Validation Error",
@@ -8313,7 +8751,12 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["email", "password", "token", "name"],
+        "required": [
+          "email",
+          "password",
+          "token",
+          "name"
+        ],
         "title": "AcceptInvite"
       },
       "AccountCase": {
@@ -8378,7 +8821,10 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["email", "password"],
+        "required": [
+          "email",
+          "password"
+        ],
         "title": "AccountInput"
       },
       "AccountSession": {
@@ -8432,7 +8878,10 @@
           }
         },
         "type": "object",
-        "required": ["token", "expires_at"],
+        "required": [
+          "token",
+          "expires_at"
+        ],
         "title": "AccountToken"
       },
       "Adjustment": {
@@ -8461,7 +8910,12 @@
           }
         },
         "type": "object",
-        "required": ["reason", "detail", "kind", "source_message_id"],
+        "required": [
+          "reason",
+          "detail",
+          "kind",
+          "source_message_id"
+        ],
         "title": "Adjustment",
         "description": "A kept proposal that the validators changed."
       },
@@ -8476,7 +8930,9 @@
           }
         },
         "type": "object",
-        "required": ["items"],
+        "required": [
+          "items"
+        ],
         "title": "AlertPage"
       },
       "AlertView": {
@@ -8621,7 +9077,11 @@
           },
           "action": {
             "type": "string",
-            "enum": ["cancel_invoice", "duplicate_charge", "incorrect_amount"],
+            "enum": [
+              "cancel_invoice",
+              "duplicate_charge",
+              "incorrect_amount"
+            ],
             "title": "Action"
           },
           "paypal_invoice_id": {
@@ -8651,7 +9111,10 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["kind", "action"],
+        "required": [
+          "kind",
+          "action"
+        ],
         "title": "BillingCorrectionTarget"
       },
       "BuyerChoice": {
@@ -8741,7 +9204,11 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["token", "return_id", "label_id"],
+        "required": [
+          "token",
+          "return_id",
+          "label_id"
+        ],
         "title": "BuyerLabelLocator"
       },
       "BuyerOffer": {
@@ -8824,7 +9291,9 @@
           }
         },
         "type": "object",
-        "required": ["items"],
+        "required": [
+          "items"
+        ],
         "title": "BuyerOfferPage"
       },
       "BuyerReturn": {
@@ -8875,7 +9344,13 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["request_id", "order_id", "items", "reason", "token"],
+        "required": [
+          "request_id",
+          "order_id",
+          "items",
+          "reason",
+          "token"
+        ],
         "title": "BuyerReturn"
       },
       "BuyerReturnLocator": {
@@ -8894,7 +9369,10 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["token", "return_id"],
+        "required": [
+          "token",
+          "return_id"
+        ],
         "title": "BuyerReturnLocator"
       },
       "Capabilities": {
@@ -8916,7 +9394,10 @@
           }
         },
         "type": "object",
-        "required": ["paypal_enabled", "paypal_environment"],
+        "required": [
+          "paypal_enabled",
+          "paypal_environment"
+        ],
         "title": "Capabilities"
       },
       "CaseAction": {
@@ -8930,7 +9411,9 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["reason"],
+        "required": [
+          "reason"
+        ],
         "title": "CaseAction"
       },
       "CaseAttachment": {
@@ -9009,7 +9492,11 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["order_id", "complaint", "payment"],
+        "required": [
+          "order_id",
+          "complaint",
+          "payment"
+        ],
         "title": "CaseCreate"
       },
       "CaseFacts": {
@@ -9088,7 +9575,9 @@
           }
         },
         "type": "object",
-        "required": ["payment_linked"],
+        "required": [
+          "payment_linked"
+        ],
         "title": "CaseFacts",
         "description": "Structured, message-free facts. This is all the model ever sees."
       },
@@ -9115,7 +9604,12 @@
           }
         },
         "type": "object",
-        "required": ["items", "total", "limit", "offset"],
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
         "title": "CasePage"
       },
       "CasePromiseHealth": {
@@ -9138,7 +9632,11 @@
           }
         },
         "type": "object",
-        "required": ["case_id", "overdue_after_days", "items"],
+        "required": [
+          "case_id",
+          "overdue_after_days",
+          "items"
+        ],
         "title": "CasePromiseHealth"
       },
       "CaseResponse": {
@@ -9180,14 +9678,23 @@
           },
           "status": {
             "type": "string",
-            "enum": ["open", "closed"],
+            "enum": [
+              "open",
+              "closed"
+            ],
             "title": "Status",
             "default": "open"
           }
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["order_id", "complaint", "payment", "id", "merchant_id"],
+        "required": [
+          "order_id",
+          "complaint",
+          "payment",
+          "id",
+          "merchant_id"
+        ],
         "title": "CaseResponse"
       },
       "CaseTimelineEntry": {
@@ -9235,7 +9742,11 @@
           },
           "actor_kind": {
             "type": "string",
-            "enum": ["merchant", "system", "unknown"],
+            "enum": [
+              "merchant",
+              "system",
+              "unknown"
+            ],
             "title": "Actor Kind"
           },
           "occurred_at": {
@@ -9286,7 +9797,12 @@
           }
         },
         "type": "object",
-        "required": ["items", "total", "limit", "offset"],
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
         "title": "CaseTimelinePage"
       },
       "ChatMessage": {
@@ -9299,7 +9815,10 @@
           },
           "sender": {
             "type": "string",
-            "enum": ["buyer", "merchant"],
+            "enum": [
+              "buyer",
+              "merchant"
+            ],
             "title": "Sender"
           },
           "text": {
@@ -9316,7 +9835,12 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["id", "sender", "text", "sent_at"],
+        "required": [
+          "id",
+          "sender",
+          "text",
+          "sent_at"
+        ],
         "title": "ChatMessage"
       },
       "CommerceContact": {
@@ -9402,7 +9926,12 @@
           },
           "status": {
             "type": "string",
-            "enum": ["match", "mismatch", "missing_app", "unverified"],
+            "enum": [
+              "match",
+              "mismatch",
+              "missing_app",
+              "unverified"
+            ],
             "title": "Status"
           },
           "checked_at": {
@@ -9419,7 +9948,12 @@
           }
         },
         "type": "object",
-        "required": ["field", "app_value", "paypal_value", "status"],
+        "required": [
+          "field",
+          "app_value",
+          "paypal_value",
+          "status"
+        ],
         "title": "CommerceFieldCheck"
       },
       "CommerceItem-Input": {
@@ -9479,7 +10013,10 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["product_id", "quantity"],
+        "required": [
+          "product_id",
+          "quantity"
+        ],
         "title": "CommerceItem"
       },
       "CommerceItem-Output": {
@@ -9535,7 +10072,10 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["product_id", "quantity"],
+        "required": [
+          "product_id",
+          "quantity"
+        ],
         "title": "CommerceItem"
       },
       "CommerceKeySummary": {
@@ -9552,7 +10092,10 @@
           }
         },
         "type": "object",
-        "required": ["key_id", "created_at"],
+        "required": [
+          "key_id",
+          "created_at"
+        ],
         "title": "CommerceKeySummary"
       },
       "CommerceKeys": {
@@ -9570,7 +10113,10 @@
           }
         },
         "type": "object",
-        "required": ["keys", "can_manage"],
+        "required": [
+          "keys",
+          "can_manage"
+        ],
         "title": "CommerceKeys"
       },
       "CommerceOrderDetail": {
@@ -9780,7 +10326,12 @@
           }
         },
         "type": "object",
-        "required": ["items", "total", "limit", "offset"],
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
         "title": "CommerceOrdersPage"
       },
       "CommercePayment-Input": {
@@ -9964,7 +10515,12 @@
           },
           "status": {
             "type": "string",
-            "enum": ["missing", "unsupported", "unavailable", "mismatch"],
+            "enum": [
+              "missing",
+              "unsupported",
+              "unavailable",
+              "mismatch"
+            ],
             "title": "Status"
           },
           "detail": {
@@ -9973,7 +10529,11 @@
           }
         },
         "type": "object",
-        "required": ["kind", "status", "detail"],
+        "required": [
+          "kind",
+          "status",
+          "detail"
+        ],
         "title": "CommerceProviderIssue"
       },
       "CommerceRegisterInput": {
@@ -10050,7 +10610,11 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["source", "order_reference", "revision"],
+        "required": [
+          "source",
+          "order_reference",
+          "revision"
+        ],
         "title": "CommerceRegisterInput"
       },
       "CommerceReport": {
@@ -10082,7 +10646,11 @@
           },
           "status": {
             "type": "string",
-            "enum": ["match", "mismatch", "incomplete"],
+            "enum": [
+              "match",
+              "mismatch",
+              "incomplete"
+            ],
             "title": "Status"
           },
           "checks": {
@@ -10113,7 +10681,13 @@
           }
         },
         "type": "object",
-        "required": ["case_id", "app", "synced_at", "status", "checks"],
+        "required": [
+          "case_id",
+          "app",
+          "synced_at",
+          "status",
+          "checks"
+        ],
         "title": "CommerceReport"
       },
       "CommerceSnapshot": {
@@ -10180,7 +10754,11 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["source", "order_reference", "revision"],
+        "required": [
+          "source",
+          "order_reference",
+          "revision"
+        ],
         "title": "CommerceSnapshot"
       },
       "CommerceSyncInput": {
@@ -10269,7 +10847,11 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["source", "order_reference", "revision"],
+        "required": [
+          "source",
+          "order_reference",
+          "revision"
+        ],
         "title": "CommerceSyncInput"
       },
       "CommerceSyncResult": {
@@ -10322,14 +10904,20 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["state_fingerprint", "commitment"],
+        "required": [
+          "state_fingerprint",
+          "commitment"
+        ],
         "title": "CommitmentUpdate"
       },
       "ConditionCheck": {
         "properties": {
           "status": {
             "type": "string",
-            "enum": ["met", "not_met"],
+            "enum": [
+              "met",
+              "not_met"
+            ],
             "title": "Status"
           },
           "evidence_note": {
@@ -10358,14 +10946,20 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["status", "evidence_note"],
+        "required": [
+          "status",
+          "evidence_note"
+        ],
         "title": "ConditionCheck"
       },
       "ConditionCheckCreate": {
         "properties": {
           "status": {
             "type": "string",
-            "enum": ["met", "not_met"],
+            "enum": [
+              "met",
+              "not_met"
+            ],
             "title": "Status"
           },
           "evidence_note": {
@@ -10377,7 +10971,10 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["status", "evidence_note"],
+        "required": [
+          "status",
+          "evidence_note"
+        ],
         "title": "ConditionCheckCreate"
       },
       "ConnectionInput": {
@@ -10420,7 +11017,9 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["expected_revision"],
+        "required": [
+          "expected_revision"
+        ],
         "title": "ConnectionInput"
       },
       "ConnectionPage": {
@@ -10438,14 +11037,22 @@
           }
         },
         "type": "object",
-        "required": ["items", "encryption_configured"],
+        "required": [
+          "items",
+          "encryption_configured"
+        ],
         "title": "ConnectionPage"
       },
       "ConnectionView": {
         "properties": {
           "provider": {
             "type": "string",
-            "enum": ["paypal", "zendesk", "shopify", "easypost"],
+            "enum": [
+              "paypal",
+              "zendesk",
+              "shopify",
+              "easypost"
+            ],
             "title": "Provider"
           },
           "config": {
@@ -10536,7 +11143,10 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["source", "order_reference"],
+        "required": [
+          "source",
+          "order_reference"
+        ],
         "title": "ContextRequest"
       },
       "ContextView": {
@@ -10591,6 +11201,92 @@
         ],
         "title": "ContextView"
       },
+      "CreateRemedy": {
+        "properties": {
+          "option_id": {
+            "type": "string",
+            "enum": [
+              "refund_after_return",
+              "partial_refund"
+            ],
+            "title": "Option Id"
+          },
+          "expected_amount": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Expected Amount"
+          },
+          "return_reference": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 160,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Return Reference"
+          },
+          "due_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "option_id",
+          "expected_amount"
+        ],
+        "title": "CreateRemedy",
+        "description": "The one option the merchant chose. A capture holds one cumulative refund promise\n(ResolutionWorkspace rule), so refund options cannot be recorded side by side."
+      },
+      "CreatedRemedy": {
+        "properties": {
+          "option_id": {
+            "type": "string",
+            "enum": [
+              "refund_after_return",
+              "partial_refund"
+            ],
+            "title": "Option Id"
+          },
+          "promises": {
+            "items": {
+              "$ref": "#/components/schemas/PromiseView"
+            },
+            "type": "array",
+            "title": "Promises"
+          },
+          "offer_choice": {
+            "$ref": "#/components/schemas/OfferChoiceDraft"
+          }
+        },
+        "type": "object",
+        "required": [
+          "option_id",
+          "promises",
+          "offer_choice"
+        ],
+        "title": "CreatedRemedy"
+      },
       "CustomerAccountCapabilities": {
         "properties": {
           "email_enabled": {
@@ -10603,7 +11299,10 @@
           }
         },
         "type": "object",
-        "required": ["email_enabled", "google_enabled"],
+        "required": [
+          "email_enabled",
+          "google_enabled"
+        ],
         "title": "CustomerAccountCapabilities"
       },
       "CustomerCase": {
@@ -10625,7 +11324,12 @@
           },
           "outcome": {
             "type": "string",
-            "enum": ["waiting", "pending", "fulfilled", "needs_review"],
+            "enum": [
+              "waiting",
+              "pending",
+              "fulfilled",
+              "needs_review"
+            ],
             "title": "Outcome"
           },
           "expires_at": {
@@ -10753,7 +11457,11 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["request_id", "body", "token"],
+        "required": [
+          "request_id",
+          "body",
+          "token"
+        ],
         "title": "CustomerMessageCreate"
       },
       "CustomerMilestone": {
@@ -10779,14 +11487,23 @@
           }
         },
         "type": "object",
-        "required": ["label", "occurred_at", "source"],
+        "required": [
+          "label",
+          "occurred_at",
+          "source"
+        ],
         "title": "CustomerMilestone"
       },
       "CustomerNextStep": {
         "properties": {
           "actor": {
             "type": "string",
-            "enum": ["customer", "merchant", "paypal", "none"],
+            "enum": [
+              "customer",
+              "merchant",
+              "paypal",
+              "none"
+            ],
             "title": "Actor"
           },
           "action": {
@@ -10811,7 +11528,12 @@
           }
         },
         "type": "object",
-        "required": ["actor", "action", "due_at", "overdue"],
+        "required": [
+          "actor",
+          "action",
+          "due_at",
+          "overdue"
+        ],
         "title": "CustomerNextStep"
       },
       "Dashboard": {
@@ -10873,7 +11595,10 @@
         "properties": {
           "status": {
             "type": "string",
-            "enum": ["accepted", "declined"],
+            "enum": [
+              "accepted",
+              "declined"
+            ],
             "title": "Status"
           },
           "decision_at": {
@@ -10888,7 +11613,11 @@
           }
         },
         "type": "object",
-        "required": ["status", "decision_at", "authorizes_payment"],
+        "required": [
+          "status",
+          "decision_at",
+          "authorizes_payment"
+        ],
         "title": "DecisionReceipt"
       },
       "DisputeDocument": {
@@ -10931,14 +11660,23 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["request_id", "requirement", "note"],
+        "required": [
+          "request_id",
+          "requirement",
+          "note"
+        ],
         "title": "DisputeDocument"
       },
       "DisputeEvent": {
         "properties": {
           "provider": {
             "type": "string",
-            "enum": ["paypal", "stripe", "bank", "merchant"],
+            "enum": [
+              "paypal",
+              "stripe",
+              "bank",
+              "merchant"
+            ],
             "title": "Provider"
           },
           "reference": {
@@ -11000,7 +11738,10 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["kind", "paypal_dispute_id"],
+        "required": [
+          "kind",
+          "paypal_dispute_id"
+        ],
         "title": "DisputeHandoffTarget"
       },
       "DroppedProposal": {
@@ -11059,7 +11800,10 @@
           }
         },
         "type": "object",
-        "required": ["reason", "detail"],
+        "required": [
+          "reason",
+          "detail"
+        ],
         "title": "DroppedProposal"
       },
       "EligibilityInput": {
@@ -11098,7 +11842,11 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["source", "order_reference", "items"],
+        "required": [
+          "source",
+          "order_reference",
+          "items"
+        ],
         "title": "EligibilityInput"
       },
       "EligibilityView": {
@@ -11110,7 +11858,10 @@
           },
           "decision": {
             "type": "string",
-            "enum": ["eligible", "needs_review"],
+            "enum": [
+              "eligible",
+              "needs_review"
+            ],
             "title": "Decision"
           },
           "policy_revision": {
@@ -11138,7 +11889,10 @@
           },
           "shipping_paid_by": {
             "type": "string",
-            "enum": ["merchant", "buyer"],
+            "enum": [
+              "merchant",
+              "buyer"
+            ],
             "title": "Shipping Paid By"
           },
           "restocking_fee": {
@@ -11189,7 +11943,9 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["email"],
+        "required": [
+          "email"
+        ],
         "title": "EmailSignIn"
       },
       "EventPage": {
@@ -11258,7 +12014,9 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["source"],
+        "required": [
+          "source"
+        ],
         "title": "EventPull"
       },
       "EvidenceBundle": {
@@ -11345,7 +12103,10 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["title", "external_reference"],
+        "required": [
+          "title",
+          "external_reference"
+        ],
         "title": "EvidenceCaseUpsert"
       },
       "EvidenceCaseView": {
@@ -11389,7 +12150,12 @@
           },
           "outcome": {
             "type": "string",
-            "enum": ["waiting", "pending", "fulfilled", "needs_review"],
+            "enum": [
+              "waiting",
+              "pending",
+              "fulfilled",
+              "needs_review"
+            ],
             "title": "Outcome"
           },
           "promises": {
@@ -11455,7 +12221,10 @@
           }
         },
         "type": "object",
-        "required": ["item", "present"],
+        "required": [
+          "item",
+          "present"
+        ],
         "title": "EvidenceChecklist"
       },
       "EvidenceInput": {
@@ -11474,7 +12243,11 @@
           },
           "evidence_type": {
             "type": "string",
-            "enum": ["refund_approved", "return_confirmed", "support_note"],
+            "enum": [
+              "refund_approved",
+              "return_confirmed",
+              "support_note"
+            ],
             "title": "Evidence Type"
           },
           "occurred_at": {
@@ -11546,7 +12319,12 @@
           },
           "status": {
             "type": "string",
-            "enum": ["missing", "unsupported", "unavailable", "mismatch"],
+            "enum": [
+              "missing",
+              "unsupported",
+              "unavailable",
+              "mismatch"
+            ],
             "title": "Status"
           },
           "detail": {
@@ -11555,7 +12333,11 @@
           }
         },
         "type": "object",
-        "required": ["kind", "status", "detail"],
+        "required": [
+          "kind",
+          "status",
+          "detail"
+        ],
         "title": "EvidenceIssue"
       },
       "EvidenceReceipt": {
@@ -11574,7 +12356,11 @@
           },
           "evidence_type": {
             "type": "string",
-            "enum": ["refund_approved", "return_confirmed", "support_note"],
+            "enum": [
+              "refund_approved",
+              "return_confirmed",
+              "support_note"
+            ],
             "title": "Evidence Type"
           },
           "occurred_at": {
@@ -11670,7 +12456,10 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["kind", "reference"],
+        "required": [
+          "kind",
+          "reference"
+        ],
         "title": "EvidenceRecordInput"
       },
       "EvidenceRefreshResult": {
@@ -11701,7 +12490,11 @@
           }
         },
         "type": "object",
-        "required": ["checked_at", "verified", "issues"],
+        "required": [
+          "checked_at",
+          "verified",
+          "issues"
+        ],
         "title": "EvidenceRefreshResult"
       },
       "EvidenceSummary": {
@@ -11874,7 +12667,10 @@
           },
           "source": {
             "type": "string",
-            "enum": ["ai", "template"],
+            "enum": [
+              "ai",
+              "template"
+            ],
             "title": "Source"
           },
           "label": {
@@ -11991,12 +12787,18 @@
           },
           "status": {
             "type": "string",
-            "enum": ["ok", "needs_review"],
+            "enum": [
+              "ok",
+              "needs_review"
+            ],
             "title": "Status"
           },
           "source": {
             "type": "string",
-            "enum": ["case_conversation", "merchant_supplied"],
+            "enum": [
+              "case_conversation",
+              "merchant_supplied"
+            ],
             "title": "Source"
           },
           "review_reasons": {
@@ -12117,7 +12919,11 @@
           },
           "source": {
             "type": "string",
-            "enum": ["provider_fact", "merchant_claim", "system"],
+            "enum": [
+              "provider_fact",
+              "merchant_claim",
+              "system"
+            ],
             "title": "Source"
           },
           "kind": {
@@ -12165,7 +12971,12 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["evidence_id", "source", "kind", "status"],
+        "required": [
+          "evidence_id",
+          "source",
+          "kind",
+          "status"
+        ],
         "title": "Finding"
       },
       "GoogleFinish": {
@@ -12191,7 +13002,11 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["state", "browser_token", "code"],
+        "required": [
+          "state",
+          "browser_token",
+          "code"
+        ],
         "title": "GoogleFinish"
       },
       "GoogleStart": {
@@ -12206,7 +13021,10 @@
           }
         },
         "type": "object",
-        "required": ["authorize_url", "browser_token"],
+        "required": [
+          "authorize_url",
+          "browser_token"
+        ],
         "title": "GoogleStart"
       },
       "GuideInput": {
@@ -12230,14 +13048,20 @@
           },
           "shipping_paid_by": {
             "type": "string",
-            "enum": ["merchant", "buyer"],
+            "enum": [
+              "merchant",
+              "buyer"
+            ],
             "title": "Shipping Paid By",
             "default": "merchant"
           }
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["expected_revision", "instructions"],
+        "required": [
+          "expected_revision",
+          "instructions"
+        ],
         "title": "GuideInput"
       },
       "HTTPValidationError": {
@@ -12271,7 +13095,10 @@
           }
         },
         "type": "object",
-        "required": ["configured", "ticket"],
+        "required": [
+          "configured",
+          "ticket"
+        ],
         "title": "HelpdeskState"
       },
       "ImportMatch": {
@@ -12284,7 +13111,9 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["case_id"],
+        "required": [
+          "case_id"
+        ],
         "title": "ImportMatch"
       },
       "InboxItem": {
@@ -12328,7 +13157,12 @@
           },
           "outcome": {
             "type": "string",
-            "enum": ["waiting", "pending", "fulfilled", "needs_review"],
+            "enum": [
+              "waiting",
+              "pending",
+              "fulfilled",
+              "needs_review"
+            ],
             "title": "Outcome"
           },
           "promises": {
@@ -12378,8 +13212,93 @@
           }
         },
         "type": "object",
-        "required": ["items", "total", "limit", "offset"],
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
         "title": "InboxPage"
+      },
+      "InjectionFlag": {
+        "properties": {
+          "rule_id": {
+            "type": "string",
+            "title": "Rule Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "message_id": {
+            "type": "string",
+            "title": "Message Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rule_id",
+          "label",
+          "message_id"
+        ],
+        "title": "InjectionFlag"
+      },
+      "InspectionInput": {
+        "properties": {
+          "expected_revision": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Expected Revision"
+          },
+          "request_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Request Id"
+          },
+          "finding": {
+            "type": "string",
+            "enum": [
+              "clear",
+              "needs_review",
+              "reject"
+            ],
+            "title": "Finding"
+          },
+          "quantities_match": {
+            "type": "boolean",
+            "title": "Quantities Match"
+          },
+          "evidence_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "maxItems": 10,
+            "title": "Evidence Ids"
+          },
+          "override_policy": {
+            "type": "boolean",
+            "title": "Override Policy",
+            "default": false
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Note"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "expected_revision",
+          "request_id",
+          "finding",
+          "quantities_match",
+          "note"
+        ],
+        "title": "InspectionInput"
       },
       "IntakeSubmit": {
         "properties": {
@@ -12409,7 +13328,11 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["token", "issue_type", "description"],
+        "required": [
+          "token",
+          "issue_type",
+          "description"
+        ],
         "title": "IntakeSubmit"
       },
       "IntakeView": {
@@ -12424,7 +13347,10 @@
           }
         },
         "type": "object",
-        "required": ["order_reference", "submitted"],
+        "required": [
+          "order_reference",
+          "submitted"
+        ],
         "title": "IntakeView"
       },
       "InvestigationPage": {
@@ -12439,14 +13365,19 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["items"],
+        "required": [
+          "items"
+        ],
         "title": "InvestigationPage"
       },
       "InvestigationResult": {
         "properties": {
           "issue_type": {
             "type": "string",
-            "enum": ["refund", "unknown"],
+            "enum": [
+              "refund",
+              "unknown"
+            ],
             "title": "Issue Type"
           },
           "status": {
@@ -12575,13 +13506,21 @@
           },
           "decision": {
             "type": "string",
-            "enum": ["approve", "reject", "request_evidence"],
+            "enum": [
+              "approve",
+              "reject",
+              "request_evidence"
+            ],
             "title": "Decision"
           }
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["expected_revision", "evidence_snapshot", "decision"],
+        "required": [
+          "expected_revision",
+          "evidence_snapshot",
+          "decision"
+        ],
         "title": "InvestigationReview"
       },
       "InvestigationView": {
@@ -12602,7 +13541,12 @@
           },
           "state": {
             "type": "string",
-            "enum": ["queued", "running", "finished", "blocked"],
+            "enum": [
+              "queued",
+              "running",
+              "finished",
+              "blocked"
+            ],
             "title": "State"
           },
           "stale": {
@@ -12677,7 +13621,11 @@
           }
         },
         "type": "object",
-        "required": ["id", "token", "expires_at"],
+        "required": [
+          "id",
+          "token",
+          "expires_at"
+        ],
         "title": "Invitation"
       },
       "Invite": {
@@ -12696,7 +13644,10 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["email", "role"],
+        "required": [
+          "email",
+          "role"
+        ],
         "title": "Invite"
       },
       "InviteCreate": {
@@ -12726,7 +13677,9 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["order_reference"],
+        "required": [
+          "order_reference"
+        ],
         "title": "InviteCreate"
       },
       "InviteIssued": {
@@ -12762,7 +13715,11 @@
           }
         },
         "type": "object",
-        "required": ["token", "order_reference", "expires_at"],
+        "required": [
+          "token",
+          "order_reference",
+          "expires_at"
+        ],
         "title": "InviteIssued"
       },
       "IssueInput": {
@@ -12801,7 +13758,12 @@
           },
           "requested_resolution": {
             "type": "string",
-            "enum": ["refund", "replacement", "return", "help"],
+            "enum": [
+              "refund",
+              "replacement",
+              "return",
+              "help"
+            ],
             "title": "Requested Resolution",
             "default": "help"
           }
@@ -12852,7 +13814,12 @@
           }
         },
         "type": "object",
-        "required": ["issue_id", "case_id", "order_reference", "created_at"],
+        "required": [
+          "issue_id",
+          "case_id",
+          "order_reference",
+          "created_at"
+        ],
         "title": "IssueReceipt"
       },
       "IssuedCommerceKey": {
@@ -12868,7 +13835,10 @@
           }
         },
         "type": "object",
-        "required": ["key_id", "api_key"],
+        "required": [
+          "key_id",
+          "api_key"
+        ],
         "title": "IssuedCommerceKey"
       },
       "IssuedLink": {
@@ -12922,7 +13892,10 @@
           }
         },
         "type": "object",
-        "required": ["active", "token"],
+        "required": [
+          "active",
+          "token"
+        ],
         "title": "IssuedLink"
       },
       "IssuedMerchantSession": {
@@ -12932,7 +13905,11 @@
           },
           "method": {
             "type": "string",
-            "enum": ["key", "paypal", "password"],
+            "enum": [
+              "key",
+              "paypal",
+              "password"
+            ],
             "title": "Method"
           },
           "expires_at": {
@@ -12986,7 +13963,10 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["filename", "content_base64"],
+        "required": [
+          "filename",
+          "content_base64"
+        ],
         "title": "LabelInput"
       },
       "LabelLocator": {
@@ -13014,7 +13994,12 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["source", "order_reference", "return_id", "label_id"],
+        "required": [
+          "source",
+          "order_reference",
+          "return_id",
+          "label_id"
+        ],
         "title": "LabelLocator"
       },
       "LabelMetadata": {
@@ -13039,7 +14024,12 @@
           }
         },
         "type": "object",
-        "required": ["id", "filename", "sha256", "created_at"],
+        "required": [
+          "id",
+          "filename",
+          "sha256",
+          "created_at"
+        ],
         "title": "LabelMetadata"
       },
       "LedgerSummary": {
@@ -13142,7 +14132,9 @@
           }
         },
         "type": "object",
-        "required": ["active"],
+        "required": [
+          "active"
+        ],
         "title": "LinkStatus"
       },
       "LinkedEvidenceRecord": {
@@ -13190,7 +14182,12 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["kind", "reference", "id", "linked_at"],
+        "required": [
+          "kind",
+          "reference",
+          "id",
+          "linked_at"
+        ],
         "title": "LinkedEvidenceRecord"
       },
       "LinkedTicket": {
@@ -13214,7 +14211,12 @@
           }
         },
         "type": "object",
-        "required": ["ticket_id", "status", "checked_at", "url"],
+        "required": [
+          "ticket_id",
+          "status",
+          "checked_at",
+          "url"
+        ],
         "title": "LinkedTicket"
       },
       "LookupIssue": {
@@ -13237,7 +14239,11 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["source", "order_reference", "request_id"],
+        "required": [
+          "source",
+          "order_reference",
+          "request_id"
+        ],
         "title": "LookupIssue"
       },
       "MarkRead": {
@@ -13251,7 +14257,9 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["through"],
+        "required": [
+          "through"
+        ],
         "title": "MarkRead"
       },
       "MerchantEvidence": {
@@ -13282,14 +14290,21 @@
           },
           "finding": {
             "type": "string",
-            "enum": ["note", "confirmed", "not_confirmed"],
+            "enum": [
+              "note",
+              "confirmed",
+              "not_confirmed"
+            ],
             "title": "Finding",
             "default": "note"
           }
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["expected_revision", "note"],
+        "required": [
+          "expected_revision",
+          "note"
+        ],
         "title": "MerchantEvidence"
       },
       "MerchantIdentity": {
@@ -13313,7 +14328,11 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["name", "id", "created_at"],
+        "required": [
+          "name",
+          "id",
+          "created_at"
+        ],
         "title": "MerchantIdentity"
       },
       "MerchantKeyInput": {
@@ -13327,7 +14346,9 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["key"],
+        "required": [
+          "key"
+        ],
         "title": "MerchantKeyInput"
       },
       "MerchantSession": {
@@ -13337,7 +14358,11 @@
           },
           "method": {
             "type": "string",
-            "enum": ["key", "paypal", "password"],
+            "enum": [
+              "key",
+              "paypal",
+              "password"
+            ],
             "title": "Method"
           },
           "expires_at": {
@@ -13363,7 +14388,12 @@
           }
         },
         "type": "object",
-        "required": ["merchant", "method", "expires_at", "paypal_linked"],
+        "required": [
+          "merchant",
+          "method",
+          "expires_at",
+          "paypal_linked"
+        ],
         "title": "MerchantSession"
       },
       "MessageCreate": {
@@ -13382,8 +14412,397 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["request_id", "body"],
+        "required": [
+          "request_id",
+          "body"
+        ],
         "title": "MessageCreate"
+      },
+      "MissingItem": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "no_linked_payment",
+              "no_refund_promise",
+              "no_amount",
+              "agreement_not_accepted",
+              "no_deadline",
+              "unmet_condition",
+              "pending_refund_unconfirmed"
+            ],
+            "title": "Code"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "promise_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Promise Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "text"
+        ],
+        "title": "MissingItem"
+      },
+      "NextAction": {
+        "properties": {
+          "case_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Case Id"
+          },
+          "facts": {
+            "$ref": "#/components/schemas/CaseFacts"
+          },
+          "missing": {
+            "items": {
+              "$ref": "#/components/schemas/MissingItem"
+            },
+            "type": "array",
+            "title": "Missing"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          }
+        },
+        "type": "object",
+        "required": [
+          "case_id",
+          "facts",
+          "missing",
+          "summary"
+        ],
+        "title": "NextAction"
+      },
+      "OfferChoice": {
+        "properties": {
+          "promise_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Promise Id"
+          },
+          "expected_revision": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Expected Revision"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "promise_id",
+          "expected_revision"
+        ],
+        "title": "OfferChoice"
+      },
+      "OfferChoiceDraft": {
+        "properties": {
+          "promise_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Promise Id"
+          },
+          "expected_revision": {
+            "type": "integer",
+            "title": "Expected Revision"
+          }
+        },
+        "type": "object",
+        "required": [
+          "promise_id",
+          "expected_revision"
+        ],
+        "title": "OfferChoiceDraft"
+      },
+      "OfferCreate": {
+        "properties": {
+          "choices": {
+            "items": {
+              "$ref": "#/components/schemas/OfferChoice"
+            },
+            "type": "array",
+            "maxItems": 4,
+            "minItems": 1,
+            "title": "Choices"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "choices",
+          "expires_at"
+        ],
+        "title": "OfferCreate"
+      },
+      "OfferDecision": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "format": "password",
+            "title": "Token",
+            "writeOnly": true
+          },
+          "offer_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Offer Id"
+          },
+          "expected_revision": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Expected Revision"
+          },
+          "choice_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Choice Id"
+          },
+          "decision": {
+            "type": "string",
+            "pattern": "^(accept|decline)$",
+            "title": "Decision"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "token",
+          "offer_id",
+          "expected_revision",
+          "decision"
+        ],
+        "title": "OfferDecision"
+      },
+      "OfferOption": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "promise_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Promise Id"
+          },
+          "promise_revision": {
+            "type": "integer",
+            "title": "Promise Revision"
+          },
+          "promise": {
+            "type": "string",
+            "title": "Promise"
+          },
+          "target": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/RefundTarget-Output"
+              },
+              {
+                "$ref": "#/components/schemas/ReturnTarget"
+              },
+              {
+                "$ref": "#/components/schemas/ReplacementTarget"
+              },
+              {
+                "$ref": "#/components/schemas/OrderCancellationTarget"
+              },
+              {
+                "$ref": "#/components/schemas/SubscriptionTarget"
+              },
+              {
+                "$ref": "#/components/schemas/StoreCreditOrExchangeTarget-Output"
+              },
+              {
+                "$ref": "#/components/schemas/BillingCorrectionTarget"
+              },
+              {
+                "$ref": "#/components/schemas/DisputeHandoffTarget"
+              }
+            ],
+            "title": "Target",
+            "discriminator": {
+              "propertyName": "kind",
+              "mapping": {
+                "billing_correction": "#/components/schemas/BillingCorrectionTarget",
+                "dispute_handoff": "#/components/schemas/DisputeHandoffTarget",
+                "order_cancellation": "#/components/schemas/OrderCancellationTarget",
+                "refund": "#/components/schemas/RefundTarget-Output",
+                "replacement": "#/components/schemas/ReplacementTarget",
+                "return": "#/components/schemas/ReturnTarget",
+                "store_credit_or_exchange": "#/components/schemas/StoreCreditOrExchangeTarget-Output",
+                "subscription": "#/components/schemas/SubscriptionTarget"
+              }
+            }
+          },
+          "requires": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Requires"
+          },
+          "due_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "promise_id",
+          "promise_revision",
+          "promise",
+          "target",
+          "requires",
+          "due_at"
+        ],
+        "title": "OfferOption"
+      },
+      "OfferPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/OfferView"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "OfferPage"
+      },
+      "OfferView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "case_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Case Id"
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          },
+          "choices": {
+            "items": {
+              "$ref": "#/components/schemas/OfferOption"
+            },
+            "type": "array",
+            "title": "Choices"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "published",
+              "accepted",
+              "declined",
+              "superseded"
+            ],
+            "title": "Status"
+          },
+          "selected_choice": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selected Choice"
+          },
+          "decision_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision At"
+          },
+          "decision_actor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision Actor"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "case_id",
+          "revision",
+          "choices",
+          "expires_at",
+          "status",
+          "selected_choice",
+          "decision_at",
+          "decision_actor",
+          "created_at"
+        ],
+        "title": "OfferView"
       },
       "Operations": {
         "properties": {
@@ -13447,7 +14866,12 @@
           },
           "next_actor": {
             "type": "string",
-            "enum": ["customer", "merchant", "paypal", "none"],
+            "enum": [
+              "customer",
+              "merchant",
+              "paypal",
+              "none"
+            ],
             "title": "Next Actor"
           },
           "next_action": {
@@ -13531,7 +14955,9 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["expected_revision"],
+        "required": [
+          "expected_revision"
+        ],
         "title": "OperationsUpdate"
       },
       "OrderCancellationTarget": {
@@ -13568,7 +14994,9 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["kind"],
+        "required": [
+          "kind"
+        ],
         "title": "OrderCancellationTarget"
       },
       "OrderLocator": {
@@ -13586,7 +15014,10 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["source", "order_reference"],
+        "required": [
+          "source",
+          "order_reference"
+        ],
         "title": "OrderLocator"
       },
       "OrderResolution": {
@@ -13700,7 +15131,11 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["email", "password", "name"],
+        "required": [
+          "email",
+          "password",
+          "name"
+        ],
         "title": "OwnerAccount"
       },
       "PackageCreate": {
@@ -13718,7 +15153,10 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["dispute_id", "reason"],
+        "required": [
+          "dispute_id",
+          "reason"
+        ],
         "title": "PackageCreate"
       },
       "PackageDetail": {
@@ -13773,7 +15211,9 @@
           }
         },
         "type": "object",
-        "required": ["items"],
+        "required": [
+          "items"
+        ],
         "title": "PackagePage"
       },
       "PackageReceipt": {
@@ -13801,7 +15241,12 @@
           }
         },
         "type": "object",
-        "required": ["id", "snapshot_hash", "checklist", "submitted_to_paypal"],
+        "required": [
+          "id",
+          "snapshot_hash",
+          "checklist",
+          "submitted_to_paypal"
+        ],
         "title": "PackageReceipt"
       },
       "PackageSummary": {
@@ -13958,7 +15403,11 @@
         "properties": {
           "kind": {
             "type": "string",
-            "enum": ["paypal_order", "paypal_capture", "paypal_refund"],
+            "enum": [
+              "paypal_order",
+              "paypal_capture",
+              "paypal_refund"
+            ],
             "title": "Kind"
           },
           "reference": {
@@ -14028,7 +15477,12 @@
           }
         },
         "type": "object",
-        "required": ["kind", "reference", "status", "checked_at"],
+        "required": [
+          "kind",
+          "reference",
+          "status",
+          "checked_at"
+        ],
         "title": "PayPalEvidenceFact"
       },
       "PayPalFinish": {
@@ -14054,7 +15508,11 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["state", "browser_token", "code"],
+        "required": [
+          "state",
+          "browser_token",
+          "code"
+        ],
         "title": "PayPalFinish"
       },
       "PayPalRedirect": {
@@ -14069,7 +15527,10 @@
           }
         },
         "type": "object",
-        "required": ["authorize_url", "browser_token"],
+        "required": [
+          "authorize_url",
+          "browser_token"
+        ],
         "title": "PayPalRedirect"
       },
       "PayPalRefundHistory": {
@@ -14179,7 +15640,12 @@
           },
           "provider_status": {
             "type": "string",
-            "enum": ["CANCELLED", "FAILED", "PENDING", "COMPLETED"],
+            "enum": [
+              "CANCELLED",
+              "FAILED",
+              "PENDING",
+              "COMPLETED"
+            ],
             "title": "Provider Status"
           },
           "checked_at": {
@@ -14242,14 +15708,19 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["refund_id"],
+        "required": [
+          "refund_id"
+        ],
         "title": "PayPalRefundVerificationCreate"
       },
       "PayPalResult": {
         "properties": {
           "intent": {
             "type": "string",
-            "enum": ["signin", "link"],
+            "enum": [
+              "signin",
+              "link"
+            ],
             "title": "Intent"
           },
           "session": {
@@ -14264,14 +15735,19 @@
           }
         },
         "type": "object",
-        "required": ["intent"],
+        "required": [
+          "intent"
+        ],
         "title": "PayPalResult"
       },
       "PayPalStart": {
         "properties": {
           "intent": {
             "type": "string",
-            "enum": ["signin", "link"],
+            "enum": [
+              "signin",
+              "link"
+            ],
             "title": "Intent",
             "default": "signin"
           }
@@ -14309,7 +15785,10 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["capture_id", "captured_amount"],
+        "required": [
+          "capture_id",
+          "captured_amount"
+        ],
         "title": "PaymentReference"
       },
       "PaymentReference-Output": {
@@ -14333,7 +15812,10 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["capture_id", "captured_amount"],
+        "required": [
+          "capture_id",
+          "captured_amount"
+        ],
         "title": "PaymentReference"
       },
       "PlatformIdentity": {
@@ -14347,12 +15829,22 @@
           },
           "role": {
             "type": "string",
-            "enum": ["owner", "manager", "finance", "agent", "viewer"],
+            "enum": [
+              "owner",
+              "manager",
+              "finance",
+              "agent",
+              "viewer"
+            ],
             "title": "Role"
           }
         },
         "type": "object",
-        "required": ["merchant", "actor_id", "role"],
+        "required": [
+          "merchant",
+          "actor_id",
+          "role"
+        ],
         "title": "PlatformIdentity"
       },
       "PolicyUpdate": {
@@ -14383,7 +15875,10 @@
           },
           "shipping_paid_by": {
             "type": "string",
-            "enum": ["merchant", "buyer"],
+            "enum": [
+              "merchant",
+              "buyer"
+            ],
             "title": "Shipping Paid By",
             "default": "merchant"
           },
@@ -14421,7 +15916,10 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["window_days", "expected_revision"],
+        "required": [
+          "window_days",
+          "expected_revision"
+        ],
         "title": "PolicyUpdate"
       },
       "PolicyView": {
@@ -14435,7 +15933,10 @@
           }
         },
         "type": "object",
-        "required": ["revision", "policy"],
+        "required": [
+          "revision",
+          "policy"
+        ],
         "title": "PolicyView"
       },
       "PortalCredentials": {
@@ -14449,7 +15950,9 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["token"],
+        "required": [
+          "token"
+        ],
         "title": "PortalCredentials"
       },
       "PortalMessage": {
@@ -14461,7 +15964,10 @@
           },
           "sender": {
             "type": "string",
-            "enum": ["merchant", "customer"],
+            "enum": [
+              "merchant",
+              "customer"
+            ],
             "title": "Sender"
           },
           "body": {
@@ -14475,7 +15981,12 @@
           }
         },
         "type": "object",
-        "required": ["id", "sender", "body", "created_at"],
+        "required": [
+          "id",
+          "sender",
+          "body",
+          "created_at"
+        ],
         "title": "PortalMessage"
       },
       "Prerequisite": {
@@ -14490,7 +16001,10 @@
           }
         },
         "type": "object",
-        "required": ["name", "done"],
+        "required": [
+          "name",
+          "done"
+        ],
         "title": "Prerequisite"
       },
       "PromiseHealth": {
@@ -14535,7 +16049,12 @@
           },
           "status": {
             "type": "string",
-            "enum": ["kept", "partially_kept", "at_risk", "broken"],
+            "enum": [
+              "kept",
+              "partially_kept",
+              "at_risk",
+              "broken"
+            ],
             "title": "Status"
           },
           "currency": {
@@ -14862,7 +16381,12 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["promise", "source_note", "target", "expected_revision"],
+        "required": [
+          "promise",
+          "source_note",
+          "target",
+          "expected_revision"
+        ],
         "title": "PromiseRevision"
       },
       "PromiseTerms-Input": {
@@ -14958,7 +16482,11 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["promise", "source_note", "target"],
+        "required": [
+          "promise",
+          "source_note",
+          "target"
+        ],
         "title": "PromiseTerms"
       },
       "PromiseTerms-Output": {
@@ -15054,7 +16582,11 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["promise", "source_note", "target"],
+        "required": [
+          "promise",
+          "source_note",
+          "target"
+        ],
         "title": "PromiseTerms"
       },
       "PromiseView": {
@@ -15073,12 +16605,21 @@
           },
           "outcome": {
             "type": "string",
-            "enum": ["waiting", "pending", "fulfilled", "needs_review"],
+            "enum": [
+              "waiting",
+              "pending",
+              "fulfilled",
+              "needs_review"
+            ],
             "title": "Outcome"
           },
           "evidence_source": {
             "type": "string",
-            "enum": ["merchant_recorded", "provider_confirmed", "system"],
+            "enum": [
+              "merchant_recorded",
+              "provider_confirmed",
+              "system"
+            ],
             "title": "Evidence Source"
           },
           "reason": {
@@ -15147,7 +16688,11 @@
         "properties": {
           "provider": {
             "type": "string",
-            "enum": ["paypal", "shopify", "easypost"],
+            "enum": [
+              "paypal",
+              "shopify",
+              "easypost"
+            ],
             "title": "Provider"
           },
           "resource_id": {
@@ -15160,7 +16705,12 @@
           },
           "outcome": {
             "type": "string",
-            "enum": ["waiting", "pending", "fulfilled", "needs_review"],
+            "enum": [
+              "waiting",
+              "pending",
+              "fulfilled",
+              "needs_review"
+            ],
             "title": "Outcome"
           },
           "detail": {
@@ -15171,7 +16721,11 @@
             "anyOf": [
               {
                 "type": "string",
-                "enum": ["sandbox", "test", "production"]
+                "enum": [
+                  "sandbox",
+                  "test",
+                  "production"
+                ]
               },
               {
                 "type": "null"
@@ -15215,7 +16769,13 @@
           }
         },
         "type": "object",
-        "required": ["provider", "resource_id", "status", "outcome", "detail"],
+        "required": [
+          "provider",
+          "resource_id",
+          "status",
+          "outcome",
+          "detail"
+        ],
         "title": "ProviderProof"
       },
       "PublicPromise": {
@@ -15240,7 +16800,12 @@
           },
           "outcome": {
             "type": "string",
-            "enum": ["waiting", "pending", "fulfilled", "needs_review"],
+            "enum": [
+              "waiting",
+              "pending",
+              "fulfilled",
+              "needs_review"
+            ],
             "title": "Outcome"
           },
           "due_at": {
@@ -15261,7 +16826,12 @@
           }
         },
         "type": "object",
-        "required": ["kind", "promise", "outcome", "provider_confirmed"],
+        "required": [
+          "kind",
+          "promise",
+          "outcome",
+          "provider_confirmed"
+        ],
         "title": "PublicPromise"
       },
       "PublicRefund": {
@@ -15329,7 +16899,10 @@
             "anyOf": [
               {
                 "type": "string",
-                "enum": ["merchant", "buyer"]
+                "enum": [
+                  "merchant",
+                  "buyer"
+                ]
               },
               {
                 "type": "null"
@@ -15379,6 +16952,28 @@
           "instructions"
         ],
         "title": "PublicReturnPolicy"
+      },
+      "RankedOption": {
+        "properties": {
+          "option_id": {
+            "type": "string",
+            "enum": [
+              "refund_after_return",
+              "partial_refund"
+            ],
+            "title": "Option Id"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "option_id",
+          "reason"
+        ],
+        "title": "RankedOption"
       },
       "ReconciliationResponse": {
         "properties": {
@@ -15604,7 +17199,9 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["token"],
+        "required": [
+          "token"
+        ],
         "title": "RedeemSignIn"
       },
       "RefreshEvidence": {
@@ -15617,7 +17214,9 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["expected_revision"],
+        "required": [
+          "expected_revision"
+        ],
         "title": "RefreshEvidence"
       },
       "RefundApproval": {
@@ -15665,7 +17264,12 @@
           },
           "status": {
             "type": "string",
-            "enum": ["approved", "revoked", "expired", "invalidated"],
+            "enum": [
+              "approved",
+              "revoked",
+              "expired",
+              "invalidated"
+            ],
             "title": "Status"
           },
           "approved_at": {
@@ -15784,7 +17388,12 @@
           },
           "event_type": {
             "type": "string",
-            "enum": ["approved", "revoked", "expired", "invalidated"],
+            "enum": [
+              "approved",
+              "revoked",
+              "expired",
+              "invalidated"
+            ],
             "title": "Event Type"
           },
           "actor_merchant_id": {
@@ -15831,7 +17440,9 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["reason"],
+        "required": [
+          "reason"
+        ],
         "title": "RefundApprovalRevoke"
       },
       "RefundCommitment-Input": {
@@ -15874,14 +17485,20 @@
           },
           "status": {
             "type": "string",
-            "enum": ["proposed", "accepted"],
+            "enum": [
+              "proposed",
+              "accepted"
+            ],
             "title": "Status",
             "default": "proposed"
           }
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["amount", "source_message"],
+        "required": [
+          "amount",
+          "source_message"
+        ],
         "title": "RefundCommitment"
       },
       "RefundCommitment-Output": {
@@ -15916,14 +17533,20 @@
           },
           "status": {
             "type": "string",
-            "enum": ["proposed", "accepted"],
+            "enum": [
+              "proposed",
+              "accepted"
+            ],
             "title": "Status",
             "default": "proposed"
           }
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["amount", "source_message"],
+        "required": [
+          "amount",
+          "source_message"
+        ],
         "title": "RefundCommitment"
       },
       "RefundExecution": {
@@ -16083,7 +17706,10 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["request_id", "approval_id"],
+        "required": [
+          "request_id",
+          "approval_id"
+        ],
         "title": "RefundExecutionCreate"
       },
       "RefundExecutionEvent": {
@@ -16140,6 +17766,143 @@
           "recorded_at"
         ],
         "title": "RefundExecutionEvent"
+      },
+      "RefundFacts": {
+        "properties": {
+          "promise_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Promise Id"
+          },
+          "promised_amount": {
+            "type": "string",
+            "title": "Promised Amount"
+          },
+          "refunded_amount": {
+            "type": "string",
+            "title": "Refunded Amount"
+          },
+          "pending_amount": {
+            "type": "string",
+            "title": "Pending Amount"
+          },
+          "remaining_amount": {
+            "type": "string",
+            "title": "Remaining Amount"
+          },
+          "due_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due Date"
+          },
+          "days_since_promise": {
+            "type": "integer",
+            "title": "Days Since Promise"
+          },
+          "prerequisites": {
+            "items": {
+              "$ref": "#/components/schemas/Prerequisite"
+            },
+            "type": "array",
+            "title": "Prerequisites"
+          }
+        },
+        "type": "object",
+        "required": [
+          "promise_id",
+          "promised_amount",
+          "refunded_amount",
+          "pending_amount",
+          "remaining_amount",
+          "due_date",
+          "days_since_promise",
+          "prerequisites"
+        ],
+        "title": "RefundFacts"
+      },
+      "RefundJourney": {
+        "properties": {
+          "stage": {
+            "type": "string",
+            "enum": [
+              "not_promised",
+              "needs_verification",
+              "promised",
+              "processor_pending",
+              "sent_to_original_method",
+              "buyer_reports_received",
+              "needs_review"
+            ],
+            "title": "Stage"
+          },
+          "explanation": {
+            "type": "string",
+            "title": "Explanation"
+          },
+          "last_checked_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Checked At"
+          },
+          "buyer_reported_received_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Buyer Reported Received At"
+          },
+          "bank_receipt_verified": {
+            "type": "boolean",
+            "const": false,
+            "title": "Bank Receipt Verified",
+            "default": false
+          },
+          "resolution": {
+            "$ref": "#/components/schemas/OrderResolution"
+          },
+          "traces": {
+            "items": {
+              "$ref": "#/components/schemas/TraceView"
+            },
+            "type": "array",
+            "title": "Traces"
+          },
+          "authorizes_payment": {
+            "type": "boolean",
+            "const": false,
+            "title": "Authorizes Payment",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "stage",
+          "explanation",
+          "last_checked_at",
+          "buyer_reported_received_at",
+          "resolution",
+          "traces"
+        ],
+        "title": "RefundJourney"
       },
       "RefundProgress": {
         "properties": {
@@ -16238,13 +18001,22 @@
           },
           "status": {
             "type": "string",
-            "enum": ["pending", "completed", "failed"],
+            "enum": [
+              "pending",
+              "completed",
+              "failed"
+            ],
             "title": "Status"
           }
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["refund_id", "capture_id", "amount", "status"],
+        "required": [
+          "refund_id",
+          "capture_id",
+          "amount",
+          "status"
+        ],
         "title": "RefundRecord"
       },
       "RefundRecord-Output": {
@@ -16273,26 +18045,41 @@
           },
           "status": {
             "type": "string",
-            "enum": ["pending", "completed", "failed"],
+            "enum": [
+              "pending",
+              "completed",
+              "failed"
+            ],
             "title": "Status"
           }
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["refund_id", "capture_id", "amount", "status"],
+        "required": [
+          "refund_id",
+          "capture_id",
+          "amount",
+          "status"
+        ],
         "title": "RefundRecord"
       },
       "RefundStatusUpdate": {
         "properties": {
           "status": {
             "type": "string",
-            "enum": ["pending", "completed", "failed"],
+            "enum": [
+              "pending",
+              "completed",
+              "failed"
+            ],
             "title": "Status"
           }
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["status"],
+        "required": [
+          "status"
+        ],
         "title": "RefundStatusUpdate"
       },
       "RefundTarget-Input": {
@@ -16323,7 +18110,10 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["kind", "amount"],
+        "required": [
+          "kind",
+          "amount"
+        ],
         "title": "RefundTarget"
       },
       "RefundTarget-Output": {
@@ -16346,8 +18136,326 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["kind", "amount"],
+        "required": [
+          "kind",
+          "amount"
+        ],
         "title": "RefundTarget"
+      },
+      "RemedyFacts": {
+        "properties": {
+          "payment_linked": {
+            "type": "boolean",
+            "title": "Payment Linked"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency",
+            "default": "USD"
+          },
+          "captured_amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Captured Amount"
+          },
+          "completed_refund_amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed Refund Amount"
+          },
+          "pending_refund_amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pending Refund Amount"
+          },
+          "refundable_amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refundable Amount"
+          },
+          "payment_hold": {
+            "type": "boolean",
+            "title": "Payment Hold",
+            "default": false
+          },
+          "return_policy_enabled": {
+            "type": "boolean",
+            "title": "Return Policy Enabled"
+          },
+          "return_policy_revision": {
+            "type": "integer",
+            "title": "Return Policy Revision"
+          },
+          "restocking_fee": {
+            "type": "string",
+            "title": "Restocking Fee"
+          },
+          "return_window_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Return Window Days"
+          },
+          "inspection_required": {
+            "type": "boolean",
+            "title": "Inspection Required"
+          },
+          "partial_refund_percent": {
+            "type": "integer",
+            "title": "Partial Refund Percent"
+          }
+        },
+        "type": "object",
+        "required": [
+          "payment_linked",
+          "return_policy_enabled",
+          "return_policy_revision",
+          "restocking_fee",
+          "return_window_days",
+          "inspection_required",
+          "partial_refund_percent"
+        ],
+        "title": "RemedyFacts"
+      },
+      "RemedyOption": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "enum": [
+              "refund_after_return",
+              "partial_refund"
+            ],
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "amount": {
+            "type": "string",
+            "title": "Amount"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency"
+          },
+          "requires_return": {
+            "type": "boolean",
+            "title": "Requires Return"
+          },
+          "return_milestone": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "warehouse_received",
+                  "inspection_passed"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Return Milestone"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "description",
+          "amount",
+          "currency",
+          "requires_return",
+          "reason"
+        ],
+        "title": "RemedyOption"
+      },
+      "RemedyRanking": {
+        "properties": {
+          "case_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Case Id"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "ai",
+              "code"
+            ],
+            "title": "Source"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "fallback_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fallback Reason"
+          },
+          "issue": {
+            "type": "string",
+            "enum": [
+              "damaged",
+              "not_received",
+              "wrong_item",
+              "not_as_described",
+              "changed_mind",
+              "other",
+              "unknown"
+            ],
+            "title": "Issue"
+          },
+          "buyer_preference": {
+            "type": "string",
+            "enum": [
+              "full_refund",
+              "partial_refund",
+              "replacement",
+              "store_credit",
+              "keep_item",
+              "unknown"
+            ],
+            "title": "Buyer Preference"
+          },
+          "ranking": {
+            "items": {
+              "$ref": "#/components/schemas/RankedOption"
+            },
+            "type": "array",
+            "title": "Ranking"
+          },
+          "buyer_message": {
+            "type": "string",
+            "title": "Buyer Message"
+          },
+          "guard_violations": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Guard Violations"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "tokens": {
+            "type": "integer",
+            "title": "Tokens",
+            "default": 0
+          },
+          "cache_hit": {
+            "type": "boolean",
+            "title": "Cache Hit",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "case_id",
+          "source",
+          "label",
+          "fallback_reason",
+          "issue",
+          "buyer_preference",
+          "ranking",
+          "buyer_message"
+        ],
+        "title": "RemedyRanking"
+      },
+      "RemedySuggestions": {
+        "properties": {
+          "case_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Case Id"
+          },
+          "facts": {
+            "$ref": "#/components/schemas/RemedyFacts"
+          },
+          "options": {
+            "items": {
+              "$ref": "#/components/schemas/RemedyOption"
+            },
+            "type": "array",
+            "title": "Options"
+          },
+          "unavailable": {
+            "items": {
+              "$ref": "#/components/schemas/Unavailable"
+            },
+            "type": "array",
+            "title": "Unavailable"
+          }
+        },
+        "type": "object",
+        "required": [
+          "case_id",
+          "facts",
+          "options",
+          "unavailable"
+        ],
+        "title": "RemedySuggestions"
       },
       "ReplacementTarget": {
         "properties": {
@@ -16364,7 +18472,10 @@
           },
           "milestone": {
             "type": "string",
-            "enum": ["shipped", "delivered"],
+            "enum": [
+              "shipped",
+              "delivered"
+            ],
             "title": "Milestone"
           },
           "tracking": {
@@ -16373,7 +18484,12 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["kind", "replacement_reference", "milestone", "tracking"],
+        "required": [
+          "kind",
+          "replacement_reference",
+          "milestone",
+          "tracking"
+        ],
         "title": "ReplacementTarget"
       },
       "ResolutionCreate": {
@@ -16412,7 +18528,9 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["title"],
+        "required": [
+          "title"
+        ],
         "title": "ResolutionCreate"
       },
       "ResolutionEvent": {
@@ -16455,7 +18573,11 @@
           },
           "source": {
             "type": "string",
-            "enum": ["merchant_recorded", "provider_confirmed", "system"],
+            "enum": [
+              "merchant_recorded",
+              "provider_confirmed",
+              "system"
+            ],
             "title": "Source"
           },
           "actor_merchant_id": {
@@ -16518,7 +18640,12 @@
           }
         },
         "type": "object",
-        "required": ["items", "total", "limit", "offset"],
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
         "title": "ResolutionPage"
       },
       "ResolutionPaymentLink": {
@@ -16531,7 +18658,9 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["refund_case_id"],
+        "required": [
+          "refund_case_id"
+        ],
         "title": "ResolutionPaymentLink"
       },
       "ResolutionSummary": {
@@ -16603,7 +18732,10 @@
           }
         },
         "type": "object",
-        "required": ["sample_count", "average_hours"],
+        "required": [
+          "sample_count",
+          "average_hours"
+        ],
         "title": "ResolutionTime"
       },
       "ResolutionTimeline": {
@@ -16652,7 +18784,12 @@
           }
         },
         "type": "object",
-        "required": ["items", "total", "limit", "offset"],
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
         "title": "ResolutionTimeline"
       },
       "ResolutionView": {
@@ -16696,7 +18833,12 @@
           },
           "outcome": {
             "type": "string",
-            "enum": ["waiting", "pending", "fulfilled", "needs_review"],
+            "enum": [
+              "waiting",
+              "pending",
+              "fulfilled",
+              "needs_review"
+            ],
             "title": "Outcome"
           },
           "promises": {
@@ -16737,7 +18879,10 @@
           }
         },
         "type": "object",
-        "required": ["orders", "items"],
+        "required": [
+          "orders",
+          "items"
+        ],
         "title": "ReturnCatalog"
       },
       "ReturnCreate": {
@@ -16782,7 +18927,12 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["request_id", "order_id", "items", "reason"],
+        "required": [
+          "request_id",
+          "order_id",
+          "items",
+          "reason"
+        ],
         "title": "ReturnCreate"
       },
       "ReturnGuideView": {
@@ -16805,7 +18955,10 @@
           },
           "shipping_paid_by": {
             "type": "string",
-            "enum": ["merchant", "buyer"],
+            "enum": [
+              "merchant",
+              "buyer"
+            ],
             "title": "Shipping Paid By"
           },
           "restocking_fee": {
@@ -16843,7 +18996,12 @@
           },
           "inspection_status": {
             "type": "string",
-            "enum": ["unknown", "clear", "needs_review", "reject"],
+            "enum": [
+              "unknown",
+              "clear",
+              "needs_review",
+              "reject"
+            ],
             "title": "Inspection Status"
           },
           "policy_revision": {
@@ -16890,7 +19048,10 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["product_id", "quantity"],
+        "required": [
+          "product_id",
+          "quantity"
+        ],
         "title": "ReturnItem"
       },
       "ReturnLabelFile": {
@@ -16910,7 +19071,11 @@
           }
         },
         "type": "object",
-        "required": ["filename", "content_type", "content_base64"],
+        "required": [
+          "filename",
+          "content_type",
+          "content_base64"
+        ],
         "title": "ReturnLabelFile"
       },
       "ReturnLocator": {
@@ -16933,7 +19098,11 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["source", "order_reference", "return_id"],
+        "required": [
+          "source",
+          "order_reference",
+          "return_id"
+        ],
         "title": "ReturnLocator"
       },
       "ReturnPolicy": {
@@ -16956,7 +19125,10 @@
           },
           "shipping_paid_by": {
             "type": "string",
-            "enum": ["merchant", "buyer"],
+            "enum": [
+              "merchant",
+              "buyer"
+            ],
             "title": "Shipping Paid By",
             "default": "merchant"
           },
@@ -16989,7 +19161,9 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["window_days"],
+        "required": [
+          "window_days"
+        ],
         "title": "ReturnPolicy"
       },
       "ReturnTarget": {
@@ -17027,7 +19201,11 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["kind", "milestone", "return_reference"],
+        "required": [
+          "kind",
+          "milestone",
+          "return_reference"
+        ],
         "title": "ReturnTarget"
       },
       "ReturnUpdate": {
@@ -17085,7 +19263,11 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["expected_revision", "action", "note"],
+        "required": [
+          "expected_revision",
+          "action",
+          "note"
+        ],
         "title": "ReturnUpdate"
       },
       "ReturnView": {
@@ -17244,7 +19426,11 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["product_id", "quantity", "available_quantity"],
+        "required": [
+          "product_id",
+          "quantity",
+          "available_quantity"
+        ],
         "title": "ReturnableItem"
       },
       "ReturnableOrder": {
@@ -17267,7 +19453,11 @@
           }
         },
         "type": "object",
-        "required": ["id", "order_reference", "items"],
+        "required": [
+          "id",
+          "order_reference",
+          "items"
+        ],
         "title": "ReturnableOrder"
       },
       "ReviewException": {
@@ -17310,7 +19500,10 @@
           },
           "status": {
             "type": "string",
-            "enum": ["open", "resolved"],
+            "enum": [
+              "open",
+              "resolved"
+            ],
             "title": "Status"
           },
           "blocking": {
@@ -17377,7 +19570,12 @@
           }
         },
         "type": "object",
-        "required": ["items", "total", "limit", "offset"],
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
         "title": "ReviewPage"
       },
       "ReviewReceipt": {
@@ -17394,7 +19592,11 @@
           },
           "decision": {
             "type": "string",
-            "enum": ["approve", "reject", "request_evidence"],
+            "enum": [
+              "approve",
+              "reject",
+              "request_evidence"
+            ],
             "title": "Decision"
           },
           "reviewer_merchant_id": {
@@ -17453,7 +19655,11 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["carrier", "tracking_code", "reference"],
+        "required": [
+          "carrier",
+          "tracking_code",
+          "reference"
+        ],
         "title": "Shipment"
       },
       "Signup": {
@@ -17488,7 +19694,12 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["email", "password", "workspace", "name"],
+        "required": [
+          "email",
+          "password",
+          "workspace",
+          "name"
+        ],
         "title": "Signup"
       },
       "StaffPage": {
@@ -17502,7 +19713,9 @@
           }
         },
         "type": "object",
-        "required": ["items"],
+        "required": [
+          "items"
+        ],
         "title": "StaffPage"
       },
       "StaffUpdate": {
@@ -17519,7 +19732,10 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["role", "active"],
+        "required": [
+          "role",
+          "active"
+        ],
         "title": "StaffUpdate"
       },
       "StaffView": {
@@ -17544,7 +19760,13 @@
           },
           "role": {
             "type": "string",
-            "enum": ["owner", "manager", "finance", "agent", "viewer"],
+            "enum": [
+              "owner",
+              "manager",
+              "finance",
+              "agent",
+              "viewer"
+            ],
             "title": "Role"
           },
           "active": {
@@ -17578,7 +19800,10 @@
           },
           "action": {
             "type": "string",
-            "enum": ["store_credit", "exchange"],
+            "enum": [
+              "store_credit",
+              "exchange"
+            ],
             "title": "Action"
           },
           "credit_transaction_id": {
@@ -17671,7 +19896,10 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["kind", "action"],
+        "required": [
+          "kind",
+          "action"
+        ],
         "title": "StoreCreditOrExchangeTarget"
       },
       "StoreCreditOrExchangeTarget-Output": {
@@ -17683,7 +19911,10 @@
           },
           "action": {
             "type": "string",
-            "enum": ["store_credit", "exchange"],
+            "enum": [
+              "store_credit",
+              "exchange"
+            ],
             "title": "Action"
           },
           "credit_transaction_id": {
@@ -17772,7 +20003,10 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["kind", "action"],
+        "required": [
+          "kind",
+          "action"
+        ],
         "title": "StoreCreditOrExchangeTarget"
       },
       "SubscriptionTarget": {
@@ -17789,13 +20023,20 @@
           },
           "action": {
             "type": "string",
-            "enum": ["cancel", "pause"],
+            "enum": [
+              "cancel",
+              "pause"
+            ],
             "title": "Action"
           }
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["kind", "paypal_subscription_id", "action"],
+        "required": [
+          "kind",
+          "paypal_subscription_id",
+          "action"
+        ],
         "title": "SubscriptionTarget"
       },
       "SupportKeyInput": {
@@ -17808,7 +20049,9 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["source"],
+        "required": [
+          "source"
+        ],
         "title": "SupportKeyInput"
       },
       "SupportKeyReceipt": {
@@ -17829,14 +20072,22 @@
           "capabilities": {
             "items": {
               "type": "string",
-              "enum": ["order_sync", "customer_support"]
+              "enum": [
+                "order_sync",
+                "customer_support"
+              ]
             },
             "type": "array",
             "title": "Capabilities"
           }
         },
         "type": "object",
-        "required": ["key_id", "api_key", "source", "capabilities"],
+        "required": [
+          "key_id",
+          "api_key",
+          "source",
+          "capabilities"
+        ],
         "title": "SupportKeyReceipt"
       },
       "SupportRefund": {
@@ -17899,7 +20150,10 @@
           },
           "verification": {
             "type": "string",
-            "enum": ["current", "unverified"],
+            "enum": [
+              "current",
+              "unverified"
+            ],
             "title": "Verification"
           },
           "last_checked_at": {
@@ -17937,7 +20191,9 @@
           }
         },
         "type": "object",
-        "required": ["items"],
+        "required": [
+          "items"
+        ],
         "title": "SupportRequestPage"
       },
       "SupportRequestView": {
@@ -18086,7 +20342,10 @@
           },
           "state": {
             "type": "string",
-            "enum": ["matched", "needs_match"],
+            "enum": [
+              "matched",
+              "needs_match"
+            ],
             "title": "State"
           },
           "suggestions": {
@@ -18145,7 +20404,9 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["ticket_id"],
+        "required": [
+          "ticket_id"
+        ],
         "title": "TicketImport"
       },
       "TicketInput": {
@@ -18159,7 +20420,9 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["ticket_id"],
+        "required": [
+          "ticket_id"
+        ],
         "title": "TicketInput"
       },
       "TicketMessage": {
@@ -18170,7 +20433,10 @@
           },
           "sender": {
             "type": "string",
-            "enum": ["buyer", "merchant"],
+            "enum": [
+              "buyer",
+              "merchant"
+            ],
             "title": "Sender"
           },
           "body": {
@@ -18188,7 +20454,13 @@
           }
         },
         "type": "object",
-        "required": ["source_id", "sender", "body", "public", "sent_at"],
+        "required": [
+          "source_id",
+          "sender",
+          "body",
+          "public",
+          "sent_at"
+        ],
         "title": "TicketMessage"
       },
       "TicketPage": {
@@ -18202,7 +20474,9 @@
           }
         },
         "type": "object",
-        "required": ["items"],
+        "required": [
+          "items"
+        ],
         "title": "TicketPage"
       },
       "TicketView": {
@@ -18255,7 +20529,10 @@
           },
           "state": {
             "type": "string",
-            "enum": ["matched", "needs_match"],
+            "enum": [
+              "matched",
+              "needs_match"
+            ],
             "title": "State"
           },
           "suggestions": {
@@ -18309,7 +20586,12 @@
           },
           "reference_type": {
             "type": "string",
-            "enum": ["ARN", "STAN", "RRN", "bank_reference"],
+            "enum": [
+              "ARN",
+              "STAN",
+              "RRN",
+              "bank_reference"
+            ],
             "title": "Reference Type"
           },
           "reference": {
@@ -18432,8 +20714,36 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": ["tracker_id", "tracking_code", "carrier"],
+        "required": [
+          "tracker_id",
+          "tracking_code",
+          "carrier"
+        ],
         "title": "TrackingReference"
+      },
+      "Unavailable": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "refund_after_return",
+              "partial_refund",
+              "store_credit",
+              "replacement"
+            ],
+            "title": "Kind"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "reason"
+        ],
+        "title": "Unavailable"
       },
       "UsageCall": {
         "properties": {
@@ -18476,7 +20786,10 @@
           },
           "status": {
             "type": "string",
-            "enum": ["ok", "needs_review"],
+            "enum": [
+              "ok",
+              "needs_review"
+            ],
             "title": "Status"
           }
         },
@@ -18584,7 +20897,11 @@
           }
         },
         "type": "object",
-        "required": ["loc", "msg", "type"],
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
         "title": "ValidationError"
       }
     },

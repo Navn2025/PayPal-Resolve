@@ -168,6 +168,7 @@ class Operations:
                         "due_at": terms["due_at"],
                     }
                 )
+            self._check_refund_balance(db, merchant, case, choices)
             revision = (
                 db.execute(
                     "SELECT COALESCE(max(revision),0) FROM platform_offers WHERE case_id=?",
@@ -207,6 +208,28 @@ class Operations:
                 },
             )
         return self.offers(merchant, case_id)["items"][0]
+
+    def _check_refund_balance(self, db, merchant, case, choices):
+        """Each refund choice is an alternative, so each must fit the current refundable balance
+        (captured minus completed and pending refunds) of the linked payment, and no hold may apply."""
+        refunds = [c for c in choices if c["target"]["kind"] == "refund"]
+        legacy = self.workspace._legacy(db, case) if refunds else None
+        if legacy is None:
+            return
+        if provider_hold(db, merchant, legacy.payment.capture_id):
+            raise StoreError(409, "A dispute or provider hold blocks refund offers for this payment")
+        basis = self.store._reconcile(db, legacy)
+        refundable = (
+            basis.captured_amount
+            - basis.completed_refund_amount
+            - basis.pending_refund_amount
+        )
+        for choice in refunds:
+            if Decimal(str(choice["target"]["amount"])) > refundable:
+                raise StoreError(
+                    409,
+                    "A refund choice exceeds the current refundable balance; reload before publishing",
+                )
 
     @staticmethod
     def _safe_choice(choice):

@@ -3821,3 +3821,114 @@ cite {
 .mobile-nav .button {
   flex-shrink: 0;
 }
+
+/* Suggested remedies: one card, radio options, separate create and publish steps. Existing colour tokens only. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.remedies-panel {
+  display: grid;
+  gap: var(--sp-3);
+  min-width: 0;
+}
+.remedies-panel .section-head {
+  margin-bottom: 0;
+  flex-wrap: wrap;
+}
+.remedy-balance {
+  font-variant-numeric: tabular-nums;
+}
+.remedy-ai {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--fs-sm);
+}
+.remedy-list {
+  display: grid;
+  gap: var(--sp-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.remedy-option {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  padding: var(--sp-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  cursor: pointer;
+  min-width: 0;
+}
+.remedy-option input {
+  margin-top: 3px;
+  flex: none;
+}
+.remedy-chosen {
+  border-color: var(--blue);
+  background: var(--blue-soft);
+}
+.remedy-body {
+  display: grid;
+  gap: var(--sp-1);
+  min-width: 0;
+  flex: 1;
+}
+.remedy-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--sp-3);
+  font-size: var(--fs-base);
+  color: var(--ink);
+}
+.remedy-text {
+  font-size: var(--fs-base);
+  color: var(--text);
+}
+.remedy-message {
+  padding: var(--sp-3);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--canvas);
+}
+.remedy-message h4 {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--ink);
+}
+.remedy-message p {
+  margin: 0;
+  font-size: var(--fs-base);
+  overflow-wrap: anywhere;
+}
+.remedy-created,
+.remedy-publish {
+  display: grid;
+  gap: var(--sp-3);
+}
+.remedy-publish .field {
+  max-width: 280px;
+}
+.remedy-unavailable summary {
+  cursor: pointer;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  color: var(--muted);
+}
+.remedy-unavailable ul {
+  margin: var(--sp-2) 0 0;
+  padding-left: var(--sp-4);
+  font-size: var(--fs-sm);
+  color: var(--muted);
+}

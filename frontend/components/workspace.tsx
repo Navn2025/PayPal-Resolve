@@ -58,6 +58,7 @@ import { workflowLabels, type Operations, type Workflow } from "@/lib/customer";
 import { Badge, Brand, Button, Empty, Notice, remedyIcons } from "./ui";
 import { CaseDesk, type DeskTab } from "./case-desk";
 import { CaseOperationsPanel } from "./case-operations";
+import { SuggestedRemedies } from "./suggested-remedies";
 const InvestigationReviewPanel = dynamic(() =>
   import("./investigation-review").then((m) => m.InvestigationReviewPanel),
 );
@@ -1202,6 +1203,16 @@ export function Workspace({
 
   const desk = item && (
     <CaseDesk
+      remedies={
+        demo ? undefined : (
+          <SuggestedRemedies
+            key={"remedies-" + item.id}
+            caseId={item.id}
+            request={request}
+            onCreated={() => void loadDetail(item.id)}
+          />
+        )
+      }
       assistant={
         demo ? undefined : (
           <div className="ai-stack" aria-label="AI and promise checks">

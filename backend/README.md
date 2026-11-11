@@ -645,6 +645,58 @@ refund fails, the recommendation becomes $80 again. A completed refund can fulfi
 an accepted commitment even if a prior condition was not checked; it has already
 been paid according to the submitted records.
 
+## Suggested remedies
+
+`GET /resolution-cases/{id}/remedies` builds remedy options in code (no model call).
+
+**Supported options:**
+
+- **Refund after the return:** the refundable balance minus the restocking fee
+  from the enabled return policy. The return milestone is `inspection_passed`
+  when the policy requires inspection.
+- **Partial refund (the buyer keeps the item):**
+  `RESOLVE_REMEDY_PARTIAL_REFUND_PERCENT` of the refundable balance; default
+  20, range 1–90.
+
+**Refundable balance:** captured minus completed and pending refunds, from the
+existing reconciliation.
+
+**When no refund option is offered:** no payment is linked, a dispute or
+provider hold applies, a refund promise is already open, or nothing is left to
+refund.
+
+**Not offered:** store credit and replacement. The promise models need an
+issued Shopify credit transaction or a shipment tracker before they can be
+recorded.
+
+**AI ranking:** `POST /resolution-cases/{id}/ai/rank-remedies` classifies the
+issue and the buyer's preference, ranks the listed options with a one-line
+reason each, and drafts a buyer message.
+
+- **Input:** the masked conversation. It reuses the extraction switch, data
+  policy, cache, token cap and daily budget.
+- **Guard:** an option, amount, number or unoffered remedy (replacement, store
+  credit and similar) outside the list returns code order and a template.
+- **Advisory:** it never records or publishes anything.
+
+**Creating promises:** `POST /resolution-cases/{id}/remedies/promises` takes
+`{option_id, expected_amount}`.
+
+- **Re-check:** it recomputes the option and returns `409` if the balance
+  changed or the option is no longer valid.
+- **What it records:** the promises (a return promise plus a refund that
+  requires it, or one refund), and it returns an `offer_choice`.
+- **One refund promise per capture:** a capture holds one cumulative refund
+  promise, so one option is recorded per case.
+
+**Publishing:** the existing `POST /platform/cases/{id}/offers` endpoint, called
+separately by the merchant. It now rejects a refund choice above the current
+refundable balance, or one on a held payment, with `409`.
+
+**AI cache:** the extraction, explanation and ranking caches store only the
+model's raw output. Every cache hit is parsed and validated again against the
+current case.
+
 ## Tests
 
 ```powershell

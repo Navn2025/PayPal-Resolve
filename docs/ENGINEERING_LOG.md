@@ -3932,6 +3932,242 @@ The existing workflow steps are unchanged.
 - **Form colours:** `operations.css` still sets Navneet's own form and record
   colours inside sections; they were left unchanged.
 
+### CHG-057 - AI caches store raw model output and re-validate every hit
+
+**Date:** 11 November 2026 (Asia/Calcutta). Branch `feat/ai-part`. Backend only.
+
+**Objective:** a cache hit must never skip validation. Before this change:
+
+- **Promise extraction:** the cache stored the validated `ExtractionResult`
+  and returned it as is.
+- **Next-action explanation:** the cache stored already-guarded text.
+
+A change to the validators or the case facts after an answer was cached would
+not apply on a hit.
+
+**Files and resulting behavior:**
+
+- **`backend/app/ai_extraction.py`:**
+  - **What is cached:** only the provider's raw JSON string, and only after a
+    clean validation (the same "only `low_confidence`" rule as before).
+  - **On a hit:** the stored string goes through the same JSON parsing, schema
+    check, quote and amount checks and consolidation against the current
+    messages. The result is `cache_hit=true` with zero tokens.
+- **`backend/app/next_action.py`:**
+  - **What is cached:** the raw JSON string, stored only after the text passed
+    the fact guard.
+  - **On a hit:** it is parsed and fact-guarded again against the current
+    `CaseFacts`, and falls back to the template if it no longer passes.
+- **`backend/app/remedies.py`** (CHG-058): its ranking cache follows the same
+  rule from the start.
+- **Unchanged:** the cache keys, the per-merchant scope, the budget
+  accounting, and the rule that failures are never cached.
+
+**Tests:**
+
+- **`tests/test_extraction_cost.py`:** the cached value is the raw provider
+  JSON. A cached answer whose quote is not in the conversation is dropped on
+  the hit, with no second model call.
+- **`tests/test_next_action.py`:** the cached value is the raw reply. A cached
+  reply with an invented amount falls back to the template on the hit.
+
+**Reason and decision IDs:** DEC-093.
+
+**Validation actually performed:** see CHG-058 (same change set). The existing
+cache tests in `test_extraction_cost.py` and `test_next_action.py` still pass
+unchanged.
+
+**Known limitations:** the cache is still in-process memory (as before), so it
+resets on restart and isn't shared between processes.
+
+### CHG-058 - Suggested remedies (code options, fact-guarded AI ranking, merchant-confirmed promises)
+
+**Date:** 11 November 2026 (Asia/Calcutta). Branch `feat/ai-part`. Backend,
+frontend, OpenAPI and README.
+
+**Audit (before building):**
+
+- **Refundable balance:** `ResolveStore._reconcile(...)` on the linked payment
+  case gives `captured_amount`, `completed_refund_amount` and
+  `pending_refund_amount`. The balance is captured minus completed minus
+  pending, the same base `promise_health.suggested_refund` uses.
+  `provider_hold` (dispute guard, blocking review exceptions, queued webhooks)
+  blocks refunds.
+- **Promise kinds that can be recorded before anything happens:**
+  - **`refund`:** an amount up to the capture.
+  - **`return`:** a milestone plus a return reference.
+- **Kinds that can't be:**
+  - **`store_credit_or_exchange` with `store_credit`:** needs an issued Shopify
+    credit transaction and account.
+  - **`replacement`:** needs a replacement reference and a tracker.
+- **One refund promise per capture:** `ResolutionWorkspace` allows one
+  cumulative refund promise per capture ("Use the existing cumulative refund
+  promise for this capture").
+- **Offers:**
+  - **Create:** `POST /platform/cases/{id}/offers` takes up to four distinct
+    promise choices (`promise_id`, `expected_revision`) and an expiry within 30
+    days. It supersedes earlier offers and invalidates approvals.
+  - **Buyer view:** buyers see only safe fields and accept or decline.
+  - **Before this change:** it didn't check amounts.
+- **ReturnPolicy:** set per merchant in `assurance_policies`. Fields: enabled,
+  window days, restocking fee, who pays shipping, inspection and photo
+  requirements, excluded products and instructions. The window is evaluated on
+  buyer return requests that carry a delivery date.
+
+**Resulting decisions:**
+
+- **No second offer system:** promises are created by the existing
+  `add_promise`, and publishing uses the existing offer endpoint.
+- **Unsupported kinds skipped:** store credit and replacement are listed as
+  unavailable, with the reason.
+- **Partial-refund policy:** none existed, so a small env setting was added.
+
+**Files and resulting behavior:**
+
+- **`backend/app/remedies.py` (new):**
+  - **`suggest()` (code only):**
+    - **Refund after return:** the balance minus the enabled policy's
+      restocking fee. Its milestone is `inspection_passed` when inspection is
+      required, otherwise `warehouse_received`. The return window is stated in
+      the description, because cases have no delivery date to check it
+      against.
+    - **Partial refund:** the configured percentage of the balance, rounded
+      down to the cent; the buyer keeps the item.
+    - **No refund options when:** no payment is linked, a hold applies, a
+      refund promise is already open, or nothing is left to refund.
+  - **`create()`:** recomputes the options and requires `expected_amount` to
+    match, otherwise returns 409. It records either a return promise plus a
+    refund that requires it, or one refund, through `add_promise`, which keeps
+    the captured-amount and one-refund-per-capture rules. It returns
+    `offer_choice` and publishes nothing.
+  - **`rank()` (Groq, masked with `mask_text`):**
+    - **What it returns:** an issue category, the buyer's preference, a
+      ranking with one-line reasons, and a buyer message.
+    - **Reuses:** the extraction switch, data policy, budget, token cap and
+      usage recording. The cache holds raw output only (CHG-057).
+    - **Fact guard:** every option must be ranked exactly once. Any amount or
+      number must be an option amount, categories must be known, and the text
+      can't mention an unoffered remedy (replacement, exchange, store credit,
+      voucher, gift card, coupon).
+    - **Fallback:** otherwise, code order and a template message.
+- **`backend/app/remedies_routes.py` (new):**
+  - `GET /resolution-cases/{id}/remedies`
+  - `POST /resolution-cases/{id}/remedies/promises`
+- **`backend/app/ai_routes.py`:** adds
+  `POST /resolution-cases/{id}/ai/rank-remedies`. Its transcript is the stored
+  conversation plus imported tickets, as for extraction.
+- **`backend/app/platform_operations.py`:** `publish()` now calls
+  `_check_refund_balance`. Each refund choice on a linked payment must be at
+  most the current refundable balance, with no hold, otherwise 409. Non-refund
+  choices and unlinked cases behave as before.
+- **`backend/app/settings.py`:** `RESOLVE_REMEDY_PARTIAL_REFUND_PERCENT`
+  (default 20, range 1–90).
+- **`backend/app/main.py`:** registers the remedies router.
+- **`postman/contracts/resolve.openapi.json`:** regenerated.
+- **`backend/README.md`:** new "Suggested remedies" section.
+- **Frontend:**
+  - **`components/suggested-remedies.tsx` (new):** the first card in
+    Promises & AI.
+    - **Shows:** the balance formula, the options as radio choices, an optional
+      "Rank with AI" step (with the AI label or the fallback reason, the
+      ranked order with reasons, and a copyable buyer message), and the
+      unavailable kinds.
+    - **Create promises:** records the chosen option.
+    - **Publish offer:** a separate button, with an expiry field (default one
+      week), posts the created choice to the existing platform endpoint. It's
+      never automatic.
+  - **Wiring:**
+    - **`case-desk.tsx`:** a new `remedies` slot.
+    - **`workspace.tsx`:** passes the card in and reloads the case after
+      creation.
+    - **Proxy allow-list:** GET `remedies`, POST `remedies/promises` and
+      `ai/rank-remedies`.
+    - **`globals.css`:** card styles with existing tokens, and a `sr-only`
+      helper.
+
+**Reason and decision IDs:** DEC-094.
+
+**Alternatives and tradeoffs:**
+
+- **Rejected: recording several refund options side by side for one offer.**
+  It was tried first and rejected because it contradicts the
+  cumulative-refund-promise rule. One option is recorded per case. The offer
+  endpoint still accepts several choices, for example the existing return
+  promises.
+- **Rejected: a database table for the partial-refund policy.** An env
+  setting avoids a migration for one number.
+
+**Tests:**
+
+- **`backend/tests/test_remedies.py` (new, 28 tests):**
+  - **Options:** captured − completed − pending with simulated PayPal
+    refunds; the policy fee, inspection and window; the env percentage; and no
+    options when unlinked, an open refund, fully refunded or held.
+  - **Creating promises:**
+    - **Shape:** the return and its dependent refund, or the single partial
+      refund.
+    - **Stale or unavailable:** a stale amount returns 409, and nothing is
+      recorded.
+    - **Limits:** an unknown option returns 422, and only one refund option
+      per case is recorded.
+    - **No publishing:** no offer is published by creation.
+  - **Ranking (fake client):**
+    - **Normal path:** masking (no card digits reach the provider), the order
+      and the label.
+    - **Fact guard:** six guard violations fall back to code order and the
+      template.
+    - **Fallbacks without a call:** the disabled, unconfigured, policy, budget
+      and bad-JSON paths.
+    - **Cache:** it stores raw output, and a stale cached answer is re-guarded
+      on the hit.
+    - **Route:** it uses the AI dependencies and records nothing.
+  - **Publishing (platform session):** a refund choice above the balance after
+    a later refund returns 409, and a choice within the balance publishes.
+- **`frontend/tests/remedies.spec.ts` (new):**
+  - **Fresh linked case:**
+    - **Card and options:** the card is first in Promises & AI, with the
+      balance formula, two options and the unavailable list.
+    - **Mocked AI ranking (synthetic):** reorders the options and shows the
+      label and the message.
+    - **Create promises:** records one refund promise and makes no offer
+      request.
+    - **Width:** no overflow at 390px.
+    - **Publish offer (mocked response):** sends exactly the created choice
+      with a future expiry, only after the click.
+  - **Fixture case:** with an open refund promise, it gets no suggestion.
+
+**Validation actually performed:**
+
+- **Backend:** `uv run pytest`: 498 passed, 63 skipped; the skips are the
+  existing PostgreSQL and optional-provider tests. `uvx ruff check` on the new
+  files: passed. `tests/test_remedies.py`: 28 passed.
+- **OpenAPI:** `uv run python scripts/export_openapi.py` regenerated the
+  contract with the three new paths.
+- **Frontend:**
+  - `npm run check`: passed.
+  - **Full default Playwright suite** (system Chrome): 27 passed, 5 skipped,
+    0 failed.
+  - **Platform suite** (`playwright.platform.config.ts`): 2 passed. Navneet's
+    offer workflow still publishes return-promise offers after the
+    balance-check change.
+- **Screenshots:** the card with options, after the mocked ranking, and after
+  creation, at 1280 and 390px, with a scratch script on the fixture backend.
+  Not committed.
+
+**Known limitations and follow-up:**
+
+- **Evidence level:** the AI ranking was validated with fake clients and
+  mocked browser responses only. No live Groq call was made in this change.
+- **Return window:** stated in the option, not checked, because cases have no
+  delivery date.
+- **Partial-refund policy:** a server-wide percentage, not per merchant.
+- **One option per case:** only one refund option can become a promise per
+  case. Offering the buyer both a partial refund and a refund-after-return
+  would need a change to the cumulative-refund rule, which is Navneet's
+  decision.
+- **Store credit and replacement:** still manual (record them once the credit
+  or shipment exists).
+
 ## Decision register
 
 ### DEC-001 - Keep FastAPI/Pydantic and the existing uv project
@@ -4776,6 +5012,24 @@ style. Pages owned by Navneet change only in their frame and styling: their
 requests, actions and text stay his. Pages shown before sign-in keep the access
 layout.
 
+### DEC-093 - Cache raw model output; validate on every use
+
+An AI cache stores only what the provider returned, never a checked result. Every
+hit goes through the same parsing, validators and fact guard against the current
+case, so a validator change or new case facts always apply, and a hit costs no
+tokens. Answers that fail validation are not cached.
+
+### DEC-094 - Remedies are suggested by code, ranked by AI, confirmed by the merchant
+
+Remedy options and amounts come only from code: the reconciliation balance
+(captured minus completed and pending), the return policy and a small
+partial-refund setting. Only kinds that can be recorded as promises up front
+are offered. The AI may only reorder the listed options, explain them in one
+line and draft a message; anything outside the list falls back to code. Creating
+promises and publishing the offer are two separate merchant actions. Both
+re-check the balance on the server, and both reuse the existing promise and
+offer endpoints and the one-refund-promise-per-capture rule.
+
 ## Open work and boundaries
 
 1. Verify import (if needed), SSL connection, migration startup, and worker
@@ -4801,7 +5055,7 @@ layout.
 ## Template for the next entry
 
 ```text
-### CHG-057 - Concrete change title
+### CHG-059 - Concrete change title
 Date:
 Objective:
 Files and resulting behavior:

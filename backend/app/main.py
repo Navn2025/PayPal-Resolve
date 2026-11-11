@@ -32,6 +32,7 @@ from .models import (
 from .auth import CurrentMerchant, Store
 from .approvals import RefundApprovalService
 from .promise_health_routes import router as promise_health_router
+from .remedies_routes import router as remedies_router
 from .settings import Settings
 from .storage import ResolveStore, StoreError, configured_store
 from .paypal import PayPalSandboxClient
@@ -434,6 +435,7 @@ def create_app(
     application.include_router(customer_router)
     application.include_router(merchant_auth_router)
     application.include_router(promise_health_router)  # before /resolution-cases/{case_id}
+    application.include_router(remedies_router)
     application.include_router(resolution_router)
     application.include_router(commerce_router)
     application.include_router(investigation_router)

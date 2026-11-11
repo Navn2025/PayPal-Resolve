@@ -41,6 +41,8 @@ class Settings(BaseSettings):
     auto_provider_refresh_enabled: bool = False
     # Days after a refund promise is recorded before it counts as overdue when it has no due date.
     promise_overdue_days: int = Field(3, ge=1, le=365)
+    # Suggested remedies: a partial refund (buyer keeps the item) as a percentage of the refundable balance.
+    remedy_partial_refund_percent: int = Field(20, ge=1, le=90)
     customer_email_enabled: bool = False
     customer_email_transport: Literal["resend", "smtp"] = "resend"
     customer_email_merchant_id: UUID | None = None

@@ -337,31 +337,30 @@ def explain(action: NextAction, client, settings, *, data_policy, usage=None, me
         fallback("data_policy_blocked", skip=True)
         return finish()
     key = explanation_key(settings.model, action.facts)
-    if usage is not None:
-        stored = usage.cached(merchant_id, key)
-        if stored is not None:
-            result.text, result.source, result.label = stored, "ai", AI_LABEL
-            result.model, result.cache_hit = settings.model, True
-            return finish()
-        if usage.tokens_today(merchant_id) >= settings.daily_token_limit:
+    # The cache holds only the model's raw output; a hit is parsed and fact-guarded again below.
+    content = usage.cached(merchant_id, key) if usage is not None else None
+    if isinstance(content, str):
+        result.cache_hit = True
+    else:
+        if usage is not None and usage.tokens_today(merchant_id) >= settings.daily_token_limit:
             fallback("budget_exceeded", skip=True)
             return finish()
-    try:
-        called = True
-        response = client.chat.completions.create(
-            model=settings.model, temperature=0, max_tokens=MAX_COMPLETION_TOKENS,
-            response_format={"type": "json_object"}, timeout=settings.timeout_seconds,
-            messages=[{"role": "system", "content": EXPLAIN_PROMPT},
-                      {"role": "user", "content": "Case facts as JSON data:\n" + json.dumps(_facts_payload(action.facts))}],
-        )
-        tokens = getattr(getattr(response, "usage", None), "total_tokens", 0)
-        result.tokens = tokens if isinstance(tokens, int) else 0
-        content = response.choices[0].message.content
-    except Exception as error:  # noqa: BLE001 - always return the template instead
-        reason = _failure_reason(error)
-        _log_failure(action.case_id, error, reason, settings)
-        fallback(reason)
-        return finish()
+        try:
+            called = True
+            response = client.chat.completions.create(
+                model=settings.model, temperature=0, max_tokens=MAX_COMPLETION_TOKENS,
+                response_format={"type": "json_object"}, timeout=settings.timeout_seconds,
+                messages=[{"role": "system", "content": EXPLAIN_PROMPT},
+                          {"role": "user", "content": "Case facts as JSON data:\n" + json.dumps(_facts_payload(action.facts))}],
+            )
+            tokens = getattr(getattr(response, "usage", None), "total_tokens", 0)
+            result.tokens = tokens if isinstance(tokens, int) else 0
+            content = response.choices[0].message.content
+        except Exception as error:  # noqa: BLE001 - always return the template instead
+            reason = _failure_reason(error)
+            _log_failure(action.case_id, error, reason, settings)
+            fallback(reason)
+            return finish()
     try:
         text = json.loads(content or "")["summary"]
         if not isinstance(text, str) or not text.strip():
@@ -376,6 +375,6 @@ def explain(action: NextAction, client, settings, *, data_policy, usage=None, me
         fallback("fact_guard")
         return finish()
     result.text, result.source, result.label, result.model = text, "ai", AI_LABEL, settings.model
-    if usage is not None:
-        usage.store(merchant_id, key, text)
+    if usage is not None and called:
+        usage.store(merchant_id, key, content)
     return finish()

@@ -106,6 +106,8 @@ interface DeskProps {
   onOperations: (id: string, operations: Operations) => void;
   /** Merchant-only AI and check panels, shown in the overview's promises area. */
   assistant?: ReactNode;
+  /** Suggested remedies, the first card in the overview's promises area. */
+  remedies?: ReactNode;
   /** Case operations (offers, returns, dispute evidence); kept mounted so drafts survive tab changes. */
   operations?: ReactNode;
 }
@@ -1038,6 +1040,7 @@ export function CaseDesk(props: DeskProps) {
               <h3 className="area-title" id="area-promises-title">
                 Promises &amp; AI
               </h3>
+              {props.remedies}
               <PromiseCards {...props} />
               {!demo && (
                 <PromiseCheckList

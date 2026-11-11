@@ -94,7 +94,7 @@ export interface LegacyCase {
   complaint: string;
   status: "open" | "closed";
   payment: { capture_id: string; captured_amount: string; currency: "USD" };
-  commitment?: { amount: string; currency: "USD"; status: string; source_message: string } | null;
+  commitment?: { amount: string; currency: "USD"; status: string; source_message: string; condition?: string | null } | null;
 }
 export interface Reconciliation {
   state_fingerprint: string;

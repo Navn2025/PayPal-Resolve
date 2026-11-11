@@ -4009,3 +4009,19 @@ cite {
     flex: 1 1 100%;
   }
 }
+
+/* Inline action inside the Missing before refund checklist. Existing colour tokens only. */
+.text-button {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: var(--blue);
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.text-button:hover {
+  color: var(--blue-deep);
+}

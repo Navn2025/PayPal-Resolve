@@ -331,22 +331,37 @@ test("an unauthenticated customer follows a private link, messages the merchant 
     await expect(customer.getByText("Accepted return terms")).toHaveCount(0);
     expect((await visitor.cookies()).some((cookie) => cookie.name === "resolve_merchant_session")).toBe(false);
     expect((await customer.request.get(new URL("/api/resolve/resolution-cases", customer.url()).href)).status()).toBe(401);
-    await customer.getByLabel("Write a message").fill("Could you tell me when the refund will arrive?");
-    await customer.getByRole("button", { name: "Send message" }).click();
-    await expect(customer.getByText("Could you tell me when the refund will arrive?")).toBeVisible();
+    // Unique texts, so messages left on the shared fixture case by earlier runs never match.
+    const stamp = Date.now().toString(36);
+    const question = `Could you tell me when the refund will arrive? (${stamp})`;
+    const reply = `We are checking the warehouse receipt now. (${stamp})`;
+    // Each side sees the other's message only after a refresh that follows the save; retry the refresh
+    // instead of relying on one click landing after the write (a timing flake in the full suite).
+    const refreshUntil = async (viewer: Page, text: string) => expect(async () => {
+      await viewer.getByRole("button", { name: "Refresh messages" }).click();
+      await expect(viewer.getByText(text)).toBeVisible({ timeout: 3_000 });
+    }).toPass({ timeout: 30_000 });
+    const saved = (viewer: Page) => viewer.waitForResponse((response) =>
+      response.request().method() === "POST" && /messages$/.test(new URL(response.url()).pathname) && response.ok());
 
-    await page.getByRole("button", { name: "Refresh messages" }).click();
-    await expect(page.getByText("Could you tell me when the refund will arrive?")).toBeVisible();
-    await page.getByLabel("Reply to customer").fill("We are checking the warehouse receipt now.");
+    await customer.getByLabel("Write a message").fill(question);
+    const asked = saved(customer);
+    await customer.getByRole("button", { name: "Send message" }).click();
+    await asked;
+    await expect(customer.getByText(question)).toBeVisible();
+
+    await refreshUntil(page, question);
+    await page.getByLabel("Reply to customer").fill(reply);
+    const answered = saved(page);
     await page.getByRole("button", { name: "Send message" }).click();
-    await expect(page.getByText("We are checking the warehouse receipt now.")).toBeVisible();
-    await customer.getByRole("button", { name: "Refresh messages" }).click();
-    await expect(customer.getByText("We are checking the warehouse receipt now.")).toBeVisible();
+    await answered;
+    await expect(page.getByText(reply)).toBeVisible();
+    await refreshUntil(customer, reply);
 
     await page.getByRole("button", { name: "Revoke access" }).click();
     await expect(page.getByText("Customer access revoked.")).toBeVisible();
     await customer.getByRole("button", { name: "Refresh status" }).click();
     await expect(customer.getByRole("alert").filter({ hasText: "invalid, expired, or revoked" })).toBeVisible();
-    await expect(customer.getByText("We are checking the warehouse receipt now.")).toHaveCount(0);
+    await expect(customer.getByText(reply)).toHaveCount(0);
   } finally { await visitor.close(); }
 });

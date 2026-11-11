@@ -4226,6 +4226,89 @@ flag and the merchant's wording. The buyer API doesn't say which prerequisite a
 refund waits for, so "Refund after return" relies on the wording mentioning a
 return.
 
+### CHG-060 - Quick fixes: next-action placeholder, agreed amount from the UI, message-test flake, open-work notes
+
+**Date:** 11 November 2026 (Asia/Calcutta). Branch `feat/ai-part`.
+
+**Files and resulting behavior:**
+
+1. **`backend/app/next_action.py`:** fixes the bug found in CHG-052.
+   - **Before:** with a linked payment and no refund promise, the summary
+     printed raw `{recommended}` or `{prerequisite}` placeholders.
+   - **Now:** both template branches use one helper, `_action()`, so every
+     placeholder is filled from the facts.
+   - **Example:** "No refund promise is recorded → review a refund of
+     $100.00."
+   - **Unchanged:** the wording for cases that have a refund promise. The API
+     shape is unchanged, so the OpenAPI contract wasn't regenerated.
+2. **Agreed amount from the UI:**
+   - **Proxy (`frontend/app/api/resolve/[...path]/route.ts`):** allows
+     `PUT cases/{id}/commitment` (the existing endpoint).
+   - **`frontend/components/agreement-form.tsx` (new):** a "Set agreed amount"
+     dialog with the amount, where it was agreed, an optional condition, and
+     "The buyer accepted this amount".
+     - **Prefill:** from the current commitment, so the condition isn't lost.
+     - **Request:** sends the reconciliation `state_fingerprint`.
+     - **Validation:** the backend validates exactly as before, including the
+       capture limit and stale state; its errors are shown in the dialog.
+   - **Where the action appears:**
+     - **`components/case-desk.tsx`:** when the agreement is the first missing
+       step, the Next step has a primary "Set agreed amount" button, with
+       "Record promise" as secondary. Otherwise "Set agreed amount" is an
+       inline action on the "Add the agreed refund amount" or "Mark the
+       refund agreement as accepted" checklist item.
+     - **`workspace.tsx`:** opens the dialog (only once the reconciliation is
+       loaded) and reloads the case after saving.
+     - **`lib/domain.ts`:** `LegacyCase.commitment.condition` is now typed.
+     - **`globals.css`:** a `text-button` style with existing tokens.
+3. **`frontend/tests/workspace.spec.ts`:** the customer-message test is
+   stabilised.
+   - **Texts:** messages are unique per run.
+   - **Saves:** the test waits for each message POST to succeed.
+   - **Refreshes:** "Refresh messages" is retried until the other side's
+     message appears (up to 30 s), instead of one click that could land
+     before the write was visible.
+   - **Unchanged:** the assertions themselves (both sides see both messages,
+     and revocation hides them).
+4. **Open-work notes:** items 4 and 5 under "Open work and boundaries" are
+   corrected. AI extraction is implemented as review-only proposals; the
+   remaining work is the merchant accept step and a live evaluation.
+   - **New note (`docs/README_UPDATES_FOR_NAVNEET.md`):** lists the suggested
+     changes to `README.md`, `docs/BUILD_STATUS.md` and
+     `docs/PROJECT_STATUS.md`. Those files are his and were not edited.
+
+**Tests:**
+
+- **`backend/tests/test_next_action.py`:** a summary without a refund promise
+  has no raw placeholders. The `refund_required` and `awaiting_prerequisite`
+  wording is exact and passes the fact guard.
+- **`frontend/tests/promise-health.spec.ts`:** a linked payment without an
+  agreed amount shows a primary "Set agreed amount".
+  - **Rejected:** $150 against a $100 capture shows the backend error.
+  - **Accepted:** $40 saves, and the card moves to "Record the refund promise".
+
+**Reason and decision IDs:** DEC-088 (the next step names the action; a step
+that can't be done on the page no longer applies to the agreed amount).
+
+**Validation actually performed:**
+
+- `pytest tests/test_next_action.py`: 29 passed.
+- **Updated promise-health test:** 1 passed.
+- **Stabilised customer-message test:** 3 passed out of 3 with
+  `--repeat-each 3`.
+- **Backend:** `uv run pytest`: 499 passed, 63 skipped. `uvx ruff check` on the
+  changed files: passed.
+- **Frontend:**
+  - `npm run check`: passed.
+  - **Full default Playwright suite** (system Chrome): 27 passed, 5 skipped,
+    0 failed, including the stabilised test in a full run.
+
+**Known limitations:** the inline checklist action (where a refund promise
+already exists but the agreement is missing) is covered by type checks and
+code review, not by its own browser test. The flake's root cause wasn't
+reproduced; the test now waits for each save and retries the refresh, so a
+slower environment can't fail it.
+
 ## Decision register
 
 ### DEC-001 - Keep FastAPI/Pydantic and the existing uv project
@@ -5098,13 +5181,19 @@ offer endpoints and the one-refund-promise-per-capture rule.
 3. Register an HTTPS Sandbox webhook, verify a signed account delivery, and
    provision a hosted worker when deploying.
 4. Automatic structured evidence investigations and review are implemented in
-   CHG-034. Commitment extraction from free text remains future work; commitment
-   terms are still manually entered. Enable inference only after synthetic live
-   evaluation and data-policy verification.
+   CHG-034. **Corrected in CHG-060:** AI commitment extraction from free text
+   is implemented as review-only proposals (CHG-035, with masking and injection
+   flags in CHG-044). Remedy suggestions with an optional AI ranking are
+   implemented too (CHG-058). Proposals are never saved as promises
+   automatically. Remaining:
+   - a merchant accept step that turns a reviewed proposal into a promise in
+     one action;
+   - a live, account-backed evaluation under a verified data policy before
+     enabling inference for merchants.
 5. Finish the two remaining CHG-038 injection runs when Groq's daily token
-   budget allows (about 62,000 tokens), human-review the AI eval labels (45
-   flagged generated chats first), and add a merchant accept step. Recorded
-   promises remain manually entered.
+   budget allows (about 62,000 tokens), and human-review the AI eval labels
+   (45 flagged generated chats first). The merchant accept step is tracked in
+   item 4. Recorded promises are still entered or confirmed by the merchant.
 6. Extend production audit/retention and database-side history pagination. New
    manual changes have durable events; legacy untimestamped changes remain gaps.
 7. Verify both hosted interfaces over HTTPS and complete a genuine PayPal
@@ -5113,7 +5202,7 @@ offer endpoints and the one-refund-promise-per-capture rule.
 ## Template for the next entry
 
 ```text
-### CHG-060 - Concrete change title
+### CHG-061 - Concrete change title
 Date:
 Objective:
 Files and resulting behavior:

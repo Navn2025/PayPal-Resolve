@@ -1,0 +1,1 @@
+"""Resolve merchant package."""

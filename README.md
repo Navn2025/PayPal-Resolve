@@ -30,6 +30,23 @@ changes. See [performance and local preview](docs/PERFORMANCE.md).
 
 ## Documentation
 
+The backend's current [architecture guide](backend/ARCHITECTURE.md) describes
+its API, service, integration, schema and repository packages. The refactor keeps
+the existing HTTP contract, environment names and startup commands; legacy
+Python imports remain compatible. See [validation](backend/REFACTOR_VALIDATION.md)
+for the regression and integration evidence.
+
+The [documentation-library index](SUBMISSION_README.md) describes the separate
+PDF-only bundle: engineering history, database design, API reference,
+implementation, setup, testing, operations and the illustrated manual.
+
+The submission package includes a self-contained, 14-page
+[technical documentation PDF](output/pdf/Resolve_Technical_Documentation.pdf)
+and an [archive reading guide](SUBMISSION_README.md). These cover setup, architecture,
+API/SDK integration, Postman tooling and the scope of recorded validation. The
+source ZIP excludes the ignored `docs/` tree, so some historical links below refer
+to material outside that package.
+
 The [production-readiness assessment](docs/deployment/production-readiness-report.md)
 and [testing report](docs/testing/testing-report.md) distinguish local evidence
 from unverified hosted behavior. The [Render deployment guide](docs/deployment/deployment-guide.md)
@@ -39,14 +56,16 @@ are still required. No production URL is claimed. The illustrated
 [screenshot index](docs/user-manual/screenshots/README.md),
 [video script](docs/presentation/video-script.md) and
 [recording checklist](docs/presentation/recording-checklist.md) support demonstrations.
-The [current Resolve film](video-production/README.md) has a complete 4:30 master,
-an exact 1.5× / 3:00 reference, and a 2:57 submission derived from that master.
-It follows the actual USD 8 Sandbox purchase, approval/capture, support, refund
-and genuine Groq-backed automatic investigation. Local files are delivered in
-`Resolve_Hackathon_Demo`, with captions, script, timeline, thumbnail and no-music
-versions. PayPal uses REST alongside the first-party Resolve SDK; hosted
-deployment and actual incoming webhook delivery remain unverified. Earlier
-films in `video-production` and `PayPal_Resolve_Demo` are preserved.
+The [current Resolve film](video-production/README.md) is the **2:50 final
+submission** in `Resolve_Final_Submission_Package/Resolve_Final_Submission.mp4`
+(CHG-064). It adds actual Next.js dashboard coverage, complete paragraph-level
+af_heart narration, stable footage, canonical subtitles and a no-music edition.
+The native narration master and exact pitch-preserving 1.5× submission WAV are
+included. It follows the actual USD 8 Sandbox purchase through complaint,
+commitment, separate refund approval/execution and genuine Groq investigation.
+PayPal uses REST alongside the first-party Resolve SDK; hosted deployment and
+actual incoming webhook delivery remain unverified. The prior 4:30 master,
+3:00 reference and 2:57 films remain intact in their original directories.
 The [English narrated videos](docs/presentation/video/README.md) include a 7:32
 project overview and a 24:31 detailed guide, using actual screenshots with
 captions and chapters. [Open the local player](docs/presentation/video/watch.html)

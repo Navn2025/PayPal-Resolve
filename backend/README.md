@@ -1,5 +1,17 @@
 # Resolve backend
 
+The backend now uses a [modular architecture](ARCHITECTURE.md): API adapters,
+shared schemas/configuration, feature services, external integrations and
+transactional repositories. `app.main:app`, existing CLI commands, HTTP contracts
+and environment names are preserved. Legacy Python modules are compatibility
+imports; new implementation belongs in the canonical packages described there.
+See [refactor validation](REFACTOR_VALIDATION.md) for checks and limitations.
+
+For the source submission, the [technical documentation PDF](../output/pdf/Resolve_Technical_Documentation.pdf)
+provides self-contained setup, architecture and API/SDK instructions. The source
+ZIP respects Git ignore rules and omits the repository's ignored `docs/` tree;
+some historical guide links below therefore refer outside that package.
+
 Production preparation is documented in the [Render deployment guide](../docs/deployment/deployment-guide.md)
 and [readiness report](../docs/deployment/production-readiness-report.md).
 `GET /health` and the existing `POST /health` are liveness checks;

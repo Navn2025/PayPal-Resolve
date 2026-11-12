@@ -1,6 +1,9 @@
 # Private disposable validation services, audit evidence and media intermediates.
 .local/
 
+# Regenerable document render checks; final PDFs remain submission deliverables.
+/tmp/pdfs/
+
 # Regenerable video deliverables remain local; source, captions and provenance are reviewable.
 docs/presentation/video/*.mp4
 docs/presentation
@@ -31,6 +34,7 @@ Resolve_Hackathon_Demo/Voiceover/
 Resolve_Hackathon_Demo/Assets/
 Resolve_Hackathon_Demo/Previous_Versions/
 Resolve_Hackathon_Demo/Steady/
+Resolve_Final_Submission_Package/
 video-production/scenes/master-steady/
 scripts
 PayPal_Resolve_Demo

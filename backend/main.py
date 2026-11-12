@@ -1,6 +1,3 @@
-def main():
-    print("Hello from backend!")
+"""Compatibility ASGI entry point; prefer ``uvicorn app.main:app``."""
 
-
-if __name__ == "__main__":
-    main()
+from app.main import app as app, create_app as create_app

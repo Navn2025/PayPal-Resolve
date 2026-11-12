@@ -1,5 +1,7 @@
 # Resolve engineering log
 
+<!-- Current production: CHG-064 final submission delivered; see appended entry. -->
+
 ## Purpose and maintenance
 
 This is the project's durable record of changes and engineering decisions: what
@@ -19,6 +21,48 @@ contains development examples and validation metadata, with no credentials or
 real customer data.
 
 ## Current implementation
+
+- CHG-077 creates a separate PDF-only documentation library, including complete
+  engineering history, implementation, database/API references and the user manual.
+
+- CHG-076 adds a 14-page technical documentation PDF, editable source and
+  reproducible packaging; the 383-file documented submission ZIP is 1,113,877 bytes.
+
+- CHG-075 delivers a checked 378-file source submission ZIP (1,008,884 bytes),
+  excluding all Git-ignored paths, Git metadata, assistant bundles and archives.
+
+- CHG-074 delivers 15 fresh actual Next.js dashboard screenshots and a checked
+  upload ZIP, superseding conceptual artwork as the owner's gallery selection.
+
+- CHG-073 adds a new 16:9 YouTube thumbnail with the headline "REFUNDS. RESOLVED.",
+  a preserved generated original and a checked 1280x720 upload JPEG.
+
+- CHG-072 delivers15 newly generated3:2 project-gallery illustrations, upload
+  JPEGs, preserved originals, prompts, a reviewed overview and a checked ZIP.
+
+- CHG-071 polishes the owner's six-section submission draft, correcting payment
+  roles, refund terminology and financial-control wording while preserving scope.
+
+- CHG-070 applies the owner's final wording edits to the submission story and
+  verifies unescaped Markdown emphasis and the evaluation's documented rerun path.
+
+- CHG-069 refines the submission story's motivation, plain-language investigation
+  explanation and closing, preserving the challenges and security evaluation scope.
+
+- CHG-068 expands the submission story's lessons on selective AI use, agent
+  engineering, limited authority and the measured synthetic red-team result.
+
+- CHG-067 adds the submission-ready project story, grounded in the repository's
+  payment/aftercare implementation and documented engineering history.
+
+- CHG-066 adds a1536×1024 (3:2) submission thumbnail for the owner's upload form;
+  the16:9 video thumbnail and movies remain available.
+
+- CHG-065 adds the Resolve project thumbnail and generation notes to the final
+  submission package. This is editorial artwork based on existing screenshots,
+  not new financial evidence or an application change.
+
+- CHG-064 delivers the **2:50 final submission** in `Resolve_Final_Submission_Package`, with fresh actual Next.js dashboard coverage, complete paragraph af_heart narration, stable locked UI, source/application split screens, separate approval/execution and the genuine recorded Groq investigation. Original films remain intact. See the final media validation and review scope below.
 
 - CHG-062 delivers the complete **4:30 Resolve master**, an exact **1.5× / 3:00**
   reference, and the **2:57 submission** derived from the same master. All ten
@@ -6998,3 +7042,592 @@ Fresh final-frame extraction produced361 checkpoints across the three pictures. 
 **Recorded:** 12 November 2026. **Objective:** Address the owner's report that the CHG-062 screen footage wobbles. Supersedes CHG-062's continuous UI camera choice; retain the original edition for comparison.
 
 **Implementation in progress:** `prepare_master.py --steady` removes continuous zoompan completely and preserves fixed native source geometry, crop, cursor, typing and timestamps. Small native-resolution zoom steps can disturb fine text; locked framing removes this added movement without optical-flow warping. `assemble_master.py --steady --picture-only` isolates source/normalization/scene caches. New `stabilize_film.py` builds the same270/180/177-second picture timelines and copies the corresponding original AAC packets and chapters exactly. Output is a separate `Resolve_Hackathon_Demo/Steady` folder; original movies and reports remain. Title/code emphasis and explanatory diagrams retain their intentional internal motion. `.gitignore` excludes the generated steady assets. No application, model/API, database, credential or financial change is authorized or needed. Final measured motion comparison, decode, playback and independent review will be appended before delivery.
+
+### CHG-064 - Final complete-journey hackathon submission
+
+**Recorded:** 12 November 2026. **Objective:** Deliver the owner's final 2:50
+submission, superseding [CHG-062](#chg-062---complete-master-and-pitch-preserving-accelerated-delivery)
+and [CHG-063](#chg-063---locked-screen-correction-after-motion-feedback) for active edit choices while preserving
+all earlier movies. This is a media-only change, not an application rollout.
+
+**Files / behavior:** New `video-production/scripts/final_*` scripts, `scenes/final.tsx`,
+`research/final-submission-brief.md` and the independent review implement discovery,
+read-only capture, paragraph narration, exact current source/application split
+screens, stable editing, word-anchored captions, normalization, export and QA.
+README/production README and `.gitignore` identify the new local package.
+`Resolve_Final_Submission_Package` contains the primary/no-music MP4, native and
+submission WAVs, SRT, script, timeline, provenance and measured review reports.
+No frontend/backend application code, API/model, migration or financial behavior
+changed; contract regeneration and reconciliation regression tests do not apply.
+
+**Decisions / alternatives:** The new real Next.js dashboard/inbox/case/evidence
+capture uses a disposable copy of the genuinely filmed completed case, with
+providers disabled, rather than fabricating records or replaying money movement.
+The official eight-dollar approval/capture/refund and actual three-finding Groq
+investigation remain CHG-058/060/061 evidence. The example store's server is
+Node.js; Resolve's financial business logic is Python. The film correctly names
+Next.js and distinguishes Resolve SDK from PayPal REST. Locked crop/scale replaces
+continuous zoompan because fine UI text showed wobble. Custom cubic 0.8-second
+title/code reveals preserve stable holds; no Gallery-card replication is claimed.
+Manrope and app tokens retain brand continuity. Subtle documented Mixkit music
+uses a three-second loop crossfade and sidechain ducking; untraceable keyboard Foley is omitted.
+
+Each scene is synthesized as a complete native-speed Kokoro af_heart paragraph,
+not independent sentences. Excess low-amplitude gaps are bounded while preserving
+voiced samples and margins. Technical phrasing was clarified after actual ASR
+identified ambiguous REST/retry/model-authority readings. Official full-precision Kokoro CPU synthesis was
+chosen after slow int8 inference and failed DirectML ConvTranspose probes;
+the downloaded model's official SHA-256 was checked. Tooling remains isolated
+under `.local`, with no application dependency changes. `atempo=1.5` preserves
+pitch. Seven proven digital-zero tail seconds are removed to reach exactly170s;
+no word or product stage is cut. During visual preflight, an early promise-dialog
+shot was corrected to the actual payment-link confirmation. All cuts are explicitly
+normalized to limited-range BT.709 to avoid mixed source color metadata. Initial
+independent review rejected40–41px effective captions and small editorial code.
+The corrected final uses70px captions,52px callouts and44px custom/source type,
+with shorter exact source ranges and readable resolution labels. The final
+callout-only correction preserves the reviewed AAC packets exactly; loudness
+results transfer only after independent packet-hash matching. Fresh preflight
+and final measurements and superseding hashes remain in the independent report.
+
+**Actual validation:** `.local/final-submission/verification.json`, `playback.json`,
+`speech-review.json` and the independent report record exact candidate hashes,
+full A/V decodes, 1080p H.264/30fps/5100 frames/170s/AAC stereo48kHz, ten chapters,
+music/no-music identical encoded picture, caption bounds, narration duration and
+zero clipped samples, loudness, exact source/hash comparisons, production Python
+compilation, fresh final-frame coverage and full normal-speed Chromium playback
+through ended. Local accelerated ASR is checked against canonical text, never
+displayed as invented narration. The clean-context independent reviewer follows
+the skill's final-review/aesthetic instructions. The previous application test
+scope stays in CHG-060; no application suite or provider retest was run here.
+
+**Commands / results (local):** `npm --prefix video-production run check` passed;
+`node --check` passed for `final_capture.mjs`, `final_graphics.mjs` and
+`final_playback.mjs`. `uv run --with pillow --with soundfile==0.14.0 python
+video-production/scripts/final_verify.py --audio-unchanged` passed both complete
+final decodes and generated115 fresh final checkpoints/eight sheets; its Python
+compilation checks passed. `node video-production/scripts/final_playback.mjs`
+played the exact final primary to170s/ended with no media/page errors and zero
+corrupted frames;221 browser display frames were dropped under concurrent review
+load, distinct from encoded frame loss. Both files retain5100 encoded frames.
+`uv run python video-production/scripts/final_package.py` completed the measured
+package and documentation update. The independent final report approves the
+exact final hashes after both typography corrections; required fixes remaining:none.
+
+**Limits / next step:** Actual recorded Sandbox and Groq outcomes are reused,
+not fresh balances today, production acceptance, bank receipt or verified incoming
+webhooks. Visual inspection, playback and automated speech recognition are not
+claimed as continuous human subjective listening or exhaustive pixel privacy OCR.
+No new payment, customer message, Groq/OpenRouter call, upload, deployment, commit or
+push occurred. The finished local primary MP4 is ready for the owner's submission.
+
+### CHG-065 - Resolve project thumbnail
+
+**Recorded:** 12 November 2026. **Objective:** Create the owner's requested
+project thumbnail using the established Resolve identity and aftercare story.
+
+**Files / behavior:** `Resolve_Final_Submission_Package/Resolve_Project_Thumbnail.png`
+retains the generated1672×941 artwork; the sibling `.jpg` provides a1920×1080
+thumbnail export. `Thumbnail_Generation_Notes.md` preserves the complete prompt,
+tool mode and reference scope. No application, API, schema, dependency or video
+file was changed.
+
+**Reason / choices:** Built-in image generation uses the actual dashboard and
+completed-refund screenshot as references. Navy/blue Resolve branding and the
+large “BEYOND THE PAYMENT.” headline communicate payment aftercare at thumbnail
+size. The image is an editorial cover, not a new provider response. Native PNG
+is preserved; FFmpeg Lanczos scaling/JPEG encoding supplies a standard16:9 export.
+The dashboard's visible counts and USD balances agree with the reference snapshot.
+
+**Actual validation:** Visually inspected headline spelling, Resolve identity,
+subtitle, composition and visible dashboard values. Pillow `Image.verify()`
+passed on the PNG and reported1672×941/1,633,748bytes. FFmpeg JPEG export completed;
+`ffprobe -show_entries stream=width,height,codec_name` confirmed1920×1080/mjpeg.
+No application tests or provider calls were needed or performed for this asset.
+
+**Limits / next step:** AI-styled screenshot reference is not a pixel-identical
+application capture or fresh payment evidence. The local PNG/JPG and prompt are
+ready for the owner's project cover use; no upload, commit or push occurred.
+
+### CHG-066 - Fit the submission form's 3:2 thumbnail
+
+**Recorded:** 12 November 2026. **Objective:** Correct the cropped thumbnail
+shown in the owner's form, which explicitly recommends a3:2 image under5MB.
+
+**Files / behavior:** New `Resolve_Final_Submission_Package/Resolve_Thumbnail_3x2.png`,
+the sibling `.jpg`, and `Thumbnail_3x2_Notes.md` provide the recomposed cover and
+complete generation prompt. For this form, the3:2 asset supersedes the16:9
+asset choice in [CHG-065](#chg-065---resolve-project-thumbnail); originals remain.
+
+**Reason / choices:** Built-in image editing recomposes the full cover rather
+than center-cropping it. The Resolve identity, complete headline, subtitle,
+PayPal/AI label and product panel fit inside generous margins. Navy/blue design
+and the existing reference balances are retained. JPEG encoding supplies a compact
+upload; no application, API, dependency, data model or final-video change occurs.
+
+**Actual validation:** Visually inspected the generated cover for full text and
+panel visibility. Pillow `Image.verify()` passed for both exports and reported
+1536×1024 for each, exactly3:2. PNG is1,559,351bytes; JPG is224,904bytes, both below
+the form's5MB limit. FFmpeg JPEG export completed successfully. Application tests
+and provider calls were not run or needed for this media-only correction.
+
+**Limits / next step:** Generated editorial artwork remains distinct from
+runtime financial evidence. The owner can replace the form's image with the3:2
+JPG; the upload form itself was not operated. No publication, commit or push.
+
+### CHG-067 - Evidence-grounded hackathon project story
+
+**Recorded:** 12 November 2026. **Objective:** Write the requested human-centered
+Resolve submission story after inspecting its implementation and decisions.
+
+**File / result:** `Resolve_Final_Submission_Package/Resolve_Project_Story.md`
+contains six connected Markdown sections and977 words, covering motivation,
+vision, architecture, supported challenges, lessons and realistic next steps.
+It distinguishes direct PayPal REST/OAuth from the custom Resolve TypeScript
+SDK and labels the demonstrated payment journey as Sandbox verification.
+
+**Reason / choices:** Organize the story around the gap between payment success
+and resolution, then explain trust boundaries through the existing demo. Use
+documented retry uncertainty, shared capture balances, evidence freshness/reuse
+and progressive case-loading work as challenges. Avoid invented customer
+anecdotes, team contributions, historical durations, impact metrics or production
+acceptance. Existing returns/replacements/evidence packages are identified as
+implemented paths needing broader operational verification, not promised new work.
+
+**Actual validation:** Read the relevant project log and SDK/AI/execution guides;
+checked manifests, Next.js workspace route, SDK methods, storefront authentication,
+PayPal OAuth/order/capture/refund source, reconciliation/approval rules and worker
+revision/freshness validation. The retained investigation proof supports the
+three-finding completed Sandbox refund example. A local Python UTF-8/regex check
+confirmed977 whitespace-delimited words and six level-two headings. No application
+tests, provider retest or new transaction was needed for this documentation change.
+
+**Limits / next step:** First-person project voice presents supported design
+intent; it does not invent a personal origin incident. Hosted acceptance and
+formal dispute submission remain future verification/work. The Markdown is ready
+to paste into the submission form; no external publication, commit or push.
+
+### CHG-068 - Add the owner's AI and security lessons to the story
+
+**Recorded:** 12 November 2026. **Objective:** Incorporate the owner's lessons
+about using ordinary code where appropriate, building agents beyond model API
+calls, restricting AI authority and adversarial testing.
+
+**Files / result:** Updated `Resolve_Final_Submission_Package/Resolve_Project_Story.md`
+and this log. The six-section story is now1021 whitespace-delimited words. The
+learning section explains deterministic financial/permission rules, evidence and
+worker orchestration, enforced limits on model authority and prompt-injection
+testing. A redundant persistence sentence was removed for length. No application,
+API, dependency or data-model behavior changed.
+
+**Reason / evidence:** The owner described successful red-teaming. The existing
+`backend/evals/results/extraction_2026-11-08_r1.md` supports a precise statement:
+one completed live Groq commitment-extraction evaluation on synthetic data had
+zero successful injections across50 attack cases. This measures those cases;
+it is not a claim that every attack on the application always passes, a repeat-run
+stability result or a production security audit. The report shows raw and
+validated injection counts were both zero; the story does not attribute all50
+outcomes to validator intervention.
+
+**Actual validation:** Read the existing evaluation report and relevant extraction,
+security and investigation test/source records; compared the proposed wording
+with the tested scope. PowerShell UTF-8 text inspection counted1021 words and
+confirmed the revised section. `git diff --check` passed after the update. No new
+tests, model calls, financial transactions or provider retests were performed or
+needed for this documentation change.
+
+**Limits / next step:** Expand adversarial coverage as behavior evolves. The saved
+Markdown is ready to paste into the submission; no upload, commit or push occurred.
+
+### CHG-069 - Improve readability of the final project story
+
+**Recorded:** 12 November 2026. **Objective:** Apply the owner's requested small
+editorial improvements and deliver properly formatted submission Markdown.
+
+**Files / result:** Updated `Resolve_Final_Submission_Package/Resolve_Project_Story.md`
+and this log. The opening retains its original first sentence and adds developer
+motivation without inventing a personal incident. A plain-language investigation
+sequence precedes the worker/Groq/evidence/revision details. The closing returns
+to the gap between a payment receipt and a fulfilled commitment. Six Markdown
+headings and selective bold emphasis remain; the challenges section is unchanged.
+
+**Reason / choices:** Preserve the engineering narrative and measured security
+claims while helping nontechnical judges follow the workflow. Correct the awkward
+SDK phrase about an owned customer to an order-ownership check. Keep PayPal REST
+integration distinct from the custom Resolve SDK, and hosted webhook verification
+separate from the demonstrated Sandbox journey. The revised story is1113 words;
+the owner's request to retain technical detail takes priority over trimming it.
+
+**Actual validation:** Rechecked storefront OAuth and approved-order capture in
+`examples/checkout-store/src/paypal.mjs`, PostgreSQL pooling in
+`backend/app/postgres.py` and dependencies, webhook verification in
+`backend/app/paypal.py`, the existing Sandbox investigation evidence and the
+completed synthetic extraction evaluation report. PowerShell UTF-8 inspection
+confirmed1113 whitespace-delimited words and six level-two headings.
+`git diff --check` passed. No new application tests, provider calls or transactions
+were performed for this editorial change.
+
+**Limits / next step:** Existing evidence is rechecked, not a fresh operational
+acceptance run. No application behavior changed; no external publication, commit
+or push occurred. The saved Markdown is ready for the owner's submission form.
+
+### CHG-070 - Final wording and Markdown checks for the project story
+
+**Recorded:** 12 November 2026. **Objective:** Apply the owner's four phrasing
+changes, ensure valid bold emphasis and preserve an accurate evaluation claim.
+
+**Files / result:** Updated `Resolve_Final_Submission_Package/Resolve_Project_Story.md`
+and this log. The story now says "We started thinking about the gap", explains
+insufficient evidence in plain language, states that PayPal confirmation is
+required for a completed refund and describes a Groq-powered AI agent. Existing
+bold emphasis uses plain paired double asterisks with no escaping. No application,
+configuration, API or evaluation behavior changed.
+
+**Reason / choices:** Adopt the owner's more natural wording while retaining
+financial authority boundaries and the precisely scoped one-run evaluation.
+`backend/evals/extraction/README.md` documents the synthetic injection dataset,
+live rerun command and offline rescore/replay tools. A rerunnable procedure and
+saved records support auditability; they do not guarantee identical future model
+outputs or establish complete repeated-run stability.
+
+**Actual validation:** Read the extraction evaluation README and runner, checked
+the original completed run and the limited14-case follow-up stability report.
+PowerShell UTF-8 inspection found1122 whitespace-delimited words, eight bold
+delimiters and no escaped asterisks in the story. `git diff --check` passed. No
+new live evaluation, offline rescore, provider call or application test was run
+for this wording-only change.
+
+**Limits / next step:** The recorded0/50 synthetic injection result remains a
+historical observed result. A fresh live run may differ. No external publication,
+commit or push occurred; the Markdown file is ready for submission.
+
+### CHG-071 - Polish the owner's revised project story
+
+**Recorded:** 12 November 2026. **Objective:** Apply the owner's corrections to
+the supplied Inspiration/Vision/Implementation/Challenges/Learnings/What's Next
+draft while keeping its conversational tone and technical substance.
+
+**Files / result:** Updated `Resolve_Final_Submission_Package/Resolve_Project_Story.md`
+and this log. The1042-word story correctly identifies the customer as payer and
+merchant as recipient, uses "open or create", removes redundant findings wording,
+distinguishes shared remaining refundable balance from refund amounts, and states
+that financial controls wait for required information. Uncertain provider outcomes
+are held for reconciliation rather than mislabeled as pending refunds. Fresh
+verified facts, prompt limits, model authority boundaries and the one-run50-case
+synthetic extraction evaluation remain. The closing returns to the customer's
+request and the merchant's fulfilled commitment.
+
+**Reason / choices:** Use the owner's revised six-heading structure. Retain the
+engineering challenges and precise REST/custom-SDK distinction. Keep hosted and
+webhook acceptance as future operational verification. An observed synthetic
+injection result supports confidence in tested cases, not a general assertion
+that the system is secure against every attack.
+
+**Actual validation:** Rechecked PayPal outcome-unknown handling in
+`backend/app/paypal.py` and the recorded extraction injection result. Existing
+CHG-069/070 source/evidence checks continue to support unchanged architecture
+claims. PowerShell UTF-8 inspection confirmed1042 whitespace-delimited words, six
+level-two headings and no escaped asterisks. `git diff --check` passed. No new
+application tests, model runs or provider calls were required or performed.
+
+**Limits / next step:** Editorial change only; existing evidence was not replaced
+with a fresh live run. The Markdown is ready to paste into the submission form.
+No publication, commit or push occurred.
+
+### CHG-072 - Create15 fresh Resolve gallery images
+
+**Recorded:** 12 November 2026. **Objective:** Fulfil the owner's request for15
+high-quality submission-gallery images, with fresh artwork rather than only
+reusing codebase screenshots, in3:2 format and below5MB per upload.
+
+**Files / result:** Added `Resolve_Final_Submission_Package/Resolve_Project_Gallery/`
+with15 `Upload_JPG` images,15 preserved original PNGs, three selected PNG revisions,
+the full generation recipe set, source/edit manifest, `Gallery_Guide.md`, technical
+export script, validation JSON and overview. The sibling
+`Resolve_15_Gallery_Images.zip` contains exactly the15 selected upload JPEGs.
+All uploads are1536×1024; sizes range185,148–247,372bytes. ZIP size is3,226,834bytes.
+No application, API, model, dependency or original media behavior changed.
+
+**Reason / choices:** Apply the imagegen skill using the built-in tool:15 original
+generations plus three focused edits. Use a consistent navy/cobalt glass-and-metal
+visual language with readable type and distinct compositions across the journey,
+PayPal, commitments, refunds, evidence, AI, security and architecture. Label the
+artwork as conceptual rather than inventing product screens or provider responses.
+Keep the eight-dollar example tied to the retained Sandbox demonstration and the
+0/50 injection claim scoped to the completed synthetic commitment-extraction run.
+Remove invented prominent logo symbols from13–15, status badges from13, and improve
+the closing headline in15. Preserve original generations separately.
+
+**Actual validation:** Visually inspected all generated images, the three selected
+edits and the final overview. Ran `python
+Resolve_Final_Submission_Package/Resolve_Project_Gallery/prepare_gallery.py`:
+15 exports passed FFprobe1536×1024/JPEG checks and full FFmpeg decoding with
+`-xerror`; all15 were below5,000,000bytes and had distinct SHA-256 hashes. ZIP
+member count15 and CRC integrity passed. The initial export attempt found no
+Pillow in the default Python environment; the final script uses standard-library
+orchestration with existing FFmpeg/FFprobe, without installing dependencies.
+`git diff --check` passed. No application tests or new financial/provider actions
+were performed or needed for this gallery-only work.
+
+**Limits / next step:** These are AI-generated editorial illustrations, not runtime
+UI or new payment/security evidence. Prompts and provenance are retained for future
+changes. The selected numbered JPEGs are ready for the owner's gallery form;
+no upload, publication, commit or push occurred.
+
+### CHG-073 - Create the Resolve YouTube submission thumbnail
+
+**Recorded:** 12 November 2026. **Objective:** Produce a new, readable YouTube
+thumbnail for the owner's Resolve submission video.
+
+**Files / result:** Added `Resolve_Final_Submission_Package/Resolve_YouTube_Thumbnail.jpg`,
+`Resolve_YouTube_Thumbnail_Original.png` and `YouTube_Thumbnail_Notes.md`; updated
+this log. The upload JPEG is 1280x720 and 189,438 bytes. Existing thumbnails,
+movies and the existing package ZIP are preserved; the ZIP was not rebuilt.
+No application, API, data-model or setup behavior changed.
+
+**Reason / choices:** Used the imagegen skill and built-in image-generation tool
+to make a purpose-specific video thumbnail. Short, large white/mint type reads
+"REFUNDS. RESOLVED." against navy/cobalt, alongside a screenshot-based Money
+summary. Existing operations and refund screenshots supply brand/content
+references. Preserve the USD 8.00 payment/promise/refund and USD 0.00 remaining,
+with visible Sandbox labeling. The check symbol is editorial artwork, not new
+provider verification. Retain the native 1672x941 PNG; use existing FFmpeg for
+Lanczos export to exact 16:9 JPEG without adding dependencies. The full prompt
+and provenance are saved in the notes.
+
+**Actual validation:** Visually inspected both reference images, generated
+original and final JPEG for headline spelling, key amounts, Sandbox labeling
+and composition. FFprobe confirmed MJPEG at 1280x720. PowerShell measured
+189,438 bytes. Full FFmpeg decoding with `-xerror` passed. `git diff --check`
+passed after the log update. No application
+tests or new payment/provider/investigation actions were required or performed.
+
+**Limits / next step:** AI-generated editorial artwork based on existing screens,
+not a new operational acceptance result. The JPEG is ready for the owner's
+YouTube thumbnail upload. No external upload, publication, commit or push occurred.
+
+### CHG-074 - Capture 15 actual Resolve dashboard gallery images
+
+**Recorded:** 12 November 2026. **Objective:** Correct the gallery interpretation
+after the owner clarified that they wanted dashboard images. Capture fresh real
+interface views instead of generating conceptual artwork.
+
+**Files / result:** Added `Resolve_Final_Submission_Package/Resolve_Dashboard_Gallery/`
+with capture/start/export scripts, 19 fresh source PNGs, the capture manifest,
+15 numbered `Upload_JPG` selections, overview, validation JSON and gallery guide.
+The sibling `Resolve_15_Dashboard_Images.zip` contains exactly the 15 JPEGs.
+Images are 1536×1024 (3:2), 86,253–373,371 bytes each; ZIP is 3,845,850 bytes.
+The disposable database is under `.local/dashboard-gallery`, backed up from the
+existing final-filming database. No application implementation, dependency,
+configuration file, API contract or original movie/art asset changed.
+
+**Reason / choices:** This supersedes the gallery asset choice in CHG-072 while
+preserving that earlier artwork. Use the actual existing Next.js preview build
+and real prior Sandbox case through an isolated local backend. Disable provider
+actions, automatic refresh and email, clear inherited Resolve/model variables and
+load no `.env` file. Capture browser navigation with existing Playwright; use no
+image generation or UI retouching. Preserve original record timestamps, the stale
+investigation warning and the store/provider discrepancy. Select operations,
+case, order, commitment, complaint/conversation, portal, approval/execution,
+timeline, AI, management, audit and final receipt views. Existing build summary
+wording differs from source, so capture selectors follow the observed rendered UI.
+
+**Actual validation:** Ran `capture_dashboard.mjs` and `capture_details.mjs`
+against the isolated local stack; authentication is local, and capture guards
+observed no case/payment/AI write requests. All selected screenshots were freshly
+rendered, not taken from old video frames. The first summary selector timed out
+on the preview build's shorter label and was corrected. An initial export found
+identical order/comparison views; recaptured a distinct integration-expanded order
+view before final export. `python
+Resolve_Final_Submission_Package/Resolve_Dashboard_Gallery/export_dashboard.py`
+then passed: 15 distinct SHA-256 hashes, FFprobe exact 1536×1024/JPEG checks,
+full FFmpeg `-xerror` decoding, all below 5,000,000 bytes, ZIP count 15 and valid
+CRC. Reviewed the overview and individual key screenshots. `git diff --check`
+passed. No app tests or new provider/model acceptance run was performed.
+
+**Limits / next step:** Fresh screenshots display historical genuine Sandbox
+evidence, not newly verified payments. Session/access audit records may be written
+only in the disposable copy. The saved investigation is stale and approval stays
+disabled; those boundaries remain visible. The owner's source database and
+previous gallery/video packages were not edited. Dashboard JPEGs are ready for
+the owner's form; no upload, publication, commit or push occurred.
+
+### CHG-075 - Package nonignored Resolve source for submission
+
+**Recorded:** 12 November 2026. **Objective:** Create a submission source ZIP
+below the owner's 35 MB limit without any Git-ignored files.
+
+**Files / result:** Added `Resolve_Source_Submission.zip` at the repository root
+and updated this log. The ZIP contains 378 files under a `Resolve/` folder:
+root project files, backend, frontend, examples, Postman contracts/context and
+the SDK. Compressed size is 1,008,884 bytes; source size is 4,843,296 bytes.
+Current working-tree file bytes are packaged, including existing unstaged work;
+this is not a committed release. Application/API/database behavior is unchanged.
+
+**Reason / choices:** Enumerate tracked and untracked nonignored paths with
+`git ls-files --cached --others --exclude-standard -z`, then explicitly filter
+with `git check-ignore --no-index --stdin -z`. The second step excludes 45 tracked
+paths that now match ignore rules; normal Git enumeration alone retains them.
+Respect the current broad ignore rules, including ignored documentation, scripts,
+media and local artifacts. Do not force-add these into the ZIP. Also omit Git
+metadata, `.agents`/`.codex` assistant tooling and existing archives: the previous
+submission archive alone is 54,308,366 bytes, and the bundled video skill's audio
+and examples are not needed to run Resolve. Existing source/package files and
+ignore rules remain unchanged. Standard-library ZIP deflate level 9 avoids
+dependency changes; reject symlinks and source paths outside the workspace.
+
+**Actual validation:** Built locally with Python's standard-library `zipfile` and
+Git path/ignore checks. Verified all 378 ZIP member names against the selected
+set, no duplicate/absolute/parent-traversal members, full ZIP CRC integrity and
+every member's SHA-256 against the bytes read from its source. Rechecked every
+member using `git check-ignore --no-index`: zero ignored members. Checked size
+against a strict 35,000,000-byte ceiling. Archive SHA-256:
+`40bc3dc8ba1fdf14e700a556889c063d33f5160caf355f0615ea76e9631166d8`.
+No application tests, fresh-environment install, provider calls or financial
+actions were performed; these checks establish packaging fidelity and integrity,
+not application acceptance.
+
+**Limits / next step:** Dependencies/build outputs must be installed or rebuilt.
+Ignored documentation, including this engineering log, is intentionally absent
+from the archive under the owner's exclusion requirement. The ZIP is ready for
+the submission upload. No upload, publication, commit or push occurred.
+
+### CHG-076 - Add formatted technical documentation to the submission
+
+**Recorded:** 12 November 2026. **Objective:** Create a professional, self-contained
+PDF and include it with the nonignored source package for reviewers.
+
+**Files / result:** Added `output/pdf/Resolve_Technical_Documentation.pdf`,
+`submission/Resolve_Technical_Documentation.md`, `submission/build_documentation.py`,
+`submission/package_submission.py`, `SUBMISSION_README.md` and
+`Resolve_Submission_With_Documentation.zip`. Updated `.gitignore`, `README.md`,
+`backend/README.md` and this log. The A4 PDF is 14 pages and 101,694 bytes, with a
+contents table, PDF outline bookmarks, architecture/workflow diagrams, setup,
+configuration/access, reconciliation, API/SDK, AI, Postman, historical validation,
+operations and package references. The ZIP is 1,113,877 bytes and contains 383
+files, including the PDF, its editable source/renderer and all 28 Postman files.
+The earlier 378-file source ZIP is preserved. No application/API/database schema,
+dependency lockfile or numbered migration changed; no API export was required.
+
+**Reason / choices:** Use the PDF skill and ReportLab for a restrained technical
+report with consistent Segoe UI typography, navy headings, fixed margins, table
+styles, code examples and page numbers. Keep the writing concrete and distinguish
+implemented behavior, retained local/simulated evidence and scoped account-backed
+Sandbox results. Do not invent human authorship or new test outcomes. Because
+`docs/` is broadly ignored, create nonignored deliverables under `submission/`
+and `output/pdf/`, and explain omitted historical links in the component READMEs
+and archive guide. Preserve provider authorization, pending/unknown outcomes,
+shared capture balances, acceptance/condition gates and AI authority boundaries.
+No product screen or payment evidence was fabricated for the diagrams.
+
+Install document tooling only through `uv run --no-project --with reportlab
+--with pypdf --with pillow`; application dependencies remain unchanged. The new
+`/tmp/pdfs/` ignore rule excludes regenerable render/QA outputs while retaining
+the final PDF. Packaging follows CHG-075's two-step Git filtering and exclusions,
+with a reusable standard-library script that refuses to replace an existing ZIP.
+
+**Actual validation:** Ran the PDF skill's `mark_artifact_operation_started.mjs`
+create marker successfully before authoring. Ran `uv run --no-project --with
+reportlab --with pypdf --with pillow python submission/build_documentation.py`:
+14 intended sections on 14 pages, text extraction and missing-glyph checks passed.
+`pdfinfo` confirmed A4, 14 pages, no encryption or JavaScript. Rendered all pages
+using `pdftoppm -scale-to 1200 -png`, reviewed every page in four overview sheets,
+then corrected the architecture caller arrow and widened the setting-name column.
+Rebuilt/rerendered and inspected the final changed pages and the Postman command
+page individually. No clipping, overlap or broken glyphs was observed.
+
+Static checks matched all 14 documented API operations to the included OpenAPI
+contract. PowerShell's parser accepted all nine documented PowerShell blocks;
+commands were parsed, not executed as payment/setup tests. Ran
+`python submission/package_submission.py`: 383 expected member names, full ZIP
+CRC and every member SHA-256 passed; zero ignored paths, 28 Postman files and
+size below 35,000,000 bytes. ZIP SHA-256:
+`c7662887097d7528ea0ff900da5e31f68803f72d99465058a827c23104a62b0c`.
+`git diff --check` passed before the final log entry. No application regression,
+fresh install, provider/model evaluation, deployment or financial action was run
+for this documentation/package change. Application test counts in the PDF are
+explicitly historical and retain their original scopes and skipped limitations.
+
+**Limits / next step:** The PDF covers the repository snapshot, not a newly
+accepted hosted release. Dependencies/build outputs require local installation;
+ignored historical documentation and runtime evidence remain omitted. Windows
+fonts are used for this verified PDF; fallback-font pagination on other systems
+has not been accepted. The documented ZIP is ready for the owner's upload;
+no external upload, publication, commit or push occurred.
+
+### CHG-077 - Deliver a PDF-only project documentation library
+
+**Recorded:** 12 November 2026. **Objective:** Fulfil the owner's clarified
+request for a ZIP containing only documentation PDFs: engineering history,
+technical/implementation design, database design, API, setup, user manual,
+testing/security and operations. This supersedes CHG-076's source-plus-PDF
+delivery choice for this request; the earlier archives remain preserved.
+
+**Files / result:** Added `submission/build_documentation_bundle.py`,
+`submission/package_pdf_library.py`, `submission/validate_documentation_bundle.py`
+and `output/pdf/Resolve_Documentation/`.
+Updated `SUBMISSION_README.md` as the documentation-library reading guide,
+linked it in `README.md`, corrected the obsolete demo-route table in
+`docs/MERCHANT_SIGN_IN.md`, and updated this log. The library has ten
+numbered PDFs, including an index rendered from SUBMISSION_README, the retained
+14-page technical guide and the retained 51-page illustrated manual. Missing
+implementation, database, API, setup, testing/security, operations and complete
+engineering-log books are newly typeset from maintained source material.
+The delivery ZIP is `Resolve_Documentation_PDFs_Only.zip`; no application source,
+Markdown, scripts, credentials, database files or video are included.
+
+**Reason / choices:** The owner explicitly requested the documentation itself,
+including the broadly ignored docs tree's engineering history, rather than an
+expanded source archive. Render selected maintained documents into PDFs while
+preserving original evidence dates, superseding decisions and limitations.
+Reuse existing suitable PDFs instead of replacing them. Generate the current
+API operation/model reference directly from the existing OpenAPI contract;
+178 current operations and 251 schemas are distinct from the historical
+175-operation audit. No API/model change or OpenAPI regeneration is needed.
+
+Create a fresh temporary SQLiteStore in `.local/documentation-schema/` for schema
+introspection, never the owner's configured database. Record all 70 tables,
+537 columns, 137 foreign-key rows, indexes, full stored definitions and the
+SQLite/PostgreSQL migration catalog. Numbered migrations remain untouched;
+PostgreSQL migration files are inspected, not executed. The PDF-only delivery
+does not relax application or financial authorization boundaries.
+
+**Actual validation:** Disposable SQLite initialization reached schema version
+28 and PRAGMA foreign_key_check passed. The illustrated manual remains byte-for-byte
+identical to its original. Technical-guide pages 1-13 are preserved; its final
+source-ZIP appendix is replaced in the library copy with PDF-volume references.
+The original guide remains unchanged. Initial rendering exposed a character-code comparison
+bug and a trailing-spacing/frame guard issue in the new renderer; both were
+corrected before acceptance. Normal-text and ASCII-code-point checks now reject
+the initial bad rendering. Generated volumes pass pypdf readability/missing-glyph
+checks. Poppler rendered all 577 pages in the first complete library pass;
+PyMuPDF text bounds remained inside every page. Reviewed representative covers,
+first/last pages, tables and intermediate pages for all ten volumes in overview
+sheets. Follow-up changes add the core relational map, correct the retired /demo
+description and adapt technical references to the PDF-only delivery. Changed
+volumes are regenerated and their render checks refreshed before packaging.
+
+`validate_documentation_bundle.py --content-only` verified all 178 operation IDs,
+251 model names, all 70 stored table definitions and all visible engineering-log
+CHG-ID occurrences (77 unique IDs). HTML comments are non-rendered Markdown;
+historical entry text remains. It also verified unchanged manual bytes and the
+first 13 technical-guide pages, the adapted appendix and corrected demo wording.
+The current database dictionary contains 537 columns and 137 foreign-key rows.
+
+`package_pdf_library.py --output tmp/pdfs/documentation_bundle/preflight.zip`
+passed with exactly ten PDFs, zero source files, valid CRC and matching per-file
+SHA-256 values, at about 5.7 MB. The final packager repeats these membership,
+header, CRC, content-hash and 35,000,000-byte checks. Machine validation records
+and all temporary renders stay under ignored tmp/pdfs; only PDFs enter the ZIP.
+`git diff --check` passed; the merchant guide emitted only the repository's
+ordinary LF-to-CRLF working-tree notice. Tooling is isolated via uv --no-project,
+including PyMuPDF for geometry checks. Application dependencies, source behavior,
+database migrations and the owner's data are unchanged.
+
+**Limits / next step:** This is a PDF-only documentation delivery, separate from
+the preserved source archives. Original chapter dates and historical local,
+simulated and Sandbox evidence scopes remain explicit. No new application test,
+provider/model evaluation, production deployment or financial action was run.
+The engineering-log PDF and index are refreshed after this entry before final
+packaging. The owner's next step is to upload the documentation ZIP; no external
+upload, publication, commit or push occurred.

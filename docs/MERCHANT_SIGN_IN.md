@@ -9,8 +9,8 @@ Staff roles apply to API writes as well as UI actions. See the
 
 | Route | What it opens |
 | --- | --- |
-| `/` | Public landing page with merchant, buyer, and demo entry points |
-| `/demo` | Isolated workspace using sample records |
+| `/` | Public landing page with merchant, buyer and documentation entry points |
+| `/demo` | Retired sample URL; redirects to `/login` and does not create sample records |
 | `/login` | Merchant sign-in with a Resolve access key or linked PayPal account |
 | `/workspace` | Signed-in merchant inbox |
 | `/workspace/settings` | Link or unlink PayPal, review session details, and sign out |

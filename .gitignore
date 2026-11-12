@@ -3,7 +3,8 @@
 
 # Regenerable video deliverables remain local; source, captions and provenance are reviewable.
 docs/presentation/video/*.mp4
-docs/presentation/video/*.mp3
+docs/presentation
+docs/user-manual
 
 # Hackathon film: public production source retained; generated footage/media kept local.
 video-production
@@ -34,3 +35,5 @@ video-production/scenes/master-steady/
 scripts
 PayPal_Resolve_Demo
 Resolve_Hackathon_Demo
+docs\presentation
+docs
